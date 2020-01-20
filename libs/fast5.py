@@ -1,7 +1,6 @@
-import logging
 import sys
-
 import h5py
+import logging
 import numpy as np
 
 
