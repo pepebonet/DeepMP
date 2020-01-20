@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
+import os
 import sys
 import argparse
 import time
 import h5py
 import random
+import logging
 import numpy as np
+from tqdm import tqdm
 
 import utils as ut
 import multiprocessing as mp
 from statsmodels import robust
+
+from fast5 import Fast5
 
 reads_group = 'Raw/Reads'
 queen_size_border = 2000
@@ -191,100 +196,6 @@ def _get_central_signals(signals_list, rawsignal_num=360):
     return cent_signals
 
 
-def _get_alignment_attrs_of_each_strand(strand_path, h5obj):
-    strand_basecall_group_alignment = h5obj['/'.join([strand_path, 'Alignment'])]
-    alignment_attrs = strand_basecall_group_alignment.attrs
-
-    if strand_path.endswith('template'):
-        strand = 't'
-    else:
-        strand = 'c'
-    if sys.version_info[0] >= 3:
-        try:
-            alignstrand = str(alignment_attrs['mapped_strand'], 'utf-8')
-            chrom = str(alignment_attrs['mapped_chrom'], 'utf-8')
-        except TypeError:
-            alignstrand = str(alignment_attrs['mapped_strand'])
-            chrom = str(alignment_attrs['mapped_chrom'])
-    else:
-        alignstrand = str(alignment_attrs['mapped_strand'])
-        chrom = str(alignment_attrs['mapped_chrom'])
-    chrom_start = alignment_attrs['mapped_start']
-
-    return strand, alignstrand, chrom, chrom_start
-
-
-def _get_readid_from_fast5(h5file):
-    first_read = list(h5file[reads_group].keys())[0]
-    if sys.version_info[0] >= 3:
-        try:
-            read_id = str(
-                h5file['/'.join(
-                    [reads_group, first_read])].attrs['read_id'], 'utf-8')
-        except TypeError:
-            read_id = str(
-                h5file['/'.join([reads_group, first_read])].attrs['read_id'])
-    else:
-        read_id = str(
-            h5file['/'.join([reads_group, first_read])].attrs['read_id'])
-
-    return read_id
-
-
-def _get_alignment_info_fast5(fast5_path, corrected_group='RawGenomeCorrected_000', 
-    basecall_subgroup='BaseCalled_template'):
-    try:
-        h5file = h5py.File(fast5_path, mode='r')
-        corrgroup_path = '/'.join(['Analyses', corrected_group])
-
-        if '/'.join([corrgroup_path, basecall_subgroup, 'Alignment']) in h5file:
-            # fileprefix = os.path.basename(fast5_path).split('.fast5')[0]
-            readname = _get_readid_from_fast5(h5file)
-            strand, alignstrand, chrom, chrom_start = \
-                _get_alignment_attrs_of_each_strand(
-                    '/'.join([corrgroup_path, basecall_subgroup]), h5file
-            )
-            h5file.close()
-            return readname, strand, alignstrand, chrom, chrom_start
-        else:
-            return '', '', '', '', ''
-    except IOError:
-        print("the {} can't be opened".format(fast5_path))
-        return '', '', '', '', ''
-
-
-def _get_label_raw(fast5_fn, correct_group, correct_subgroup):
-    try:
-        fast5_data = h5py.File(fast5_fn, 'r')
-    except IOError:
-        raise IOError('Error opening file. Likely a corrupted file.')
-
-    # Get raw data
-    try:
-        raw_dat = list(fast5_data[reads_group].values())[0]
-        raw_dat = raw_dat['Signal'][()]
-    except Exception:
-        raise RuntimeError('Raw data is not stored in Raw/Reads/Read_[read#] so '
-                           'new segments cannot be identified.')
-
-    # Get Events
-    try:
-        event = fast5_data['/Analyses/'+correct_group + '/' + correct_subgroup + '/Events']
-        corr_attrs = dict(list(event.attrs.items()))
-    except Exception:
-        raise RuntimeError('events not found.')
-
-    read_start_rel_to_raw = corr_attrs['read_start_rel_to_raw']
-
-    starts = list(map(lambda x: x+read_start_rel_to_raw, event['start']))
-    lengths = event['length'].astype(np.int)
-    base = [x.decode("UTF-8") for x in event['base']]
-    assert len(starts) == len(lengths)
-    assert len(lengths) == len(base)
-    events = list(zip(starts, lengths, base))
-    return raw_dat, events
-
-
 def _normalize_signals(signals, normalize_method='mad'):
     if normalize_method == 'zscore':
         sshift, sscale = np.mean(signals), np.float(np.std(signals))
@@ -305,20 +216,20 @@ def _extract_features(fast5s, corrected_group, basecall_subgroup,
     error = 0
     for fast5_fp in fast5s:
         try:
-            raw_signal, events = _get_label_raw(
-                fast5_fp, corrected_group, basecall_subgroup
-            )
+            raw_signal = fast5_fp.get_raw_signal()
             norm_signals = _normalize_signals(raw_signal, normalize_method)
             genomeseq, signal_list = "", []
+
+            events = fast5_fp.get_events(corrected_group, basecall_subgroup)
             for e in events:
                 genomeseq += str(e[2])
                 signal_list.append(norm_signals[e[0]:(e[0] + e[1])])
+            readname = fast5_fp.file.rsplit('/', 1)[1]
 
-            readname, strand, alignstrand, chrom, chrom_start = \
-                _get_alignment_info_fast5(
-                    fast5_fp, corrected_group, basecall_subgroup
-                )
-            
+            strand, alignstrand, chrom, chrom_start = fast5_fp.get_alignment_info(
+                corrected_group, basecall_subgroup
+            )
+
             chromlen = chrom2len[chrom]
             if alignstrand == '+':
                 chrom_start_in_alignstrand = chrom_start
@@ -399,10 +310,24 @@ def get_a_batch_features_str(fast5s_q, featurestr_q, errornum_q,
             time.sleep(time_wait)
 
 
+def find_fast5_files(fast5s_dir, file_list=None):
+    """Find appropriate fast5 files"""
+    logging.info("Reading fast5 folder...")
+    if file_list:
+        fast5s = []
+        for el in ut.load_txt(file_list):
+            fast5s.append(Fast5(os.path.join(fast5s_dir, el)))
+    else:
+        fast5s = [Fast5(os.path.join(fast5s_dir, f)) for f in tqdm(os.listdir(fast5s_dir))
+                  if os.path.isfile(os.path.join(fast5s_dir, f))]
+
+    return fast5s
+
+
 def _extract_preprocess(fast5_dir, is_recursive, motifs, is_dna, reference_path, 
         f5_batch_num, position_file):
     #Extract list of reads, target motifs and chrom lenghts of the ref genome
-    fast5_files = ut.get_fast5s(fast5_dir, is_recursive)
+    fast5_files = find_fast5_files(fast5_dir)
     print("{} fast5 files in total".format(len(fast5_files)))
 
     print("Parsing motifs string...")

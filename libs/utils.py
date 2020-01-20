@@ -35,22 +35,6 @@ def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
 
 
-def get_fast5s(fast5_dir, is_recursive=True):
-    fast5_dir = os.path.abspath(fast5_dir)
-    fast5s = []
-    if is_recursive:
-        for root, dirnames, filenames in os.walk(fast5_dir):
-            for filename in fnmatch.filter(filenames, '*.fast5'):
-                fast5_path = os.path.join(root, filename)
-                fast5s.append(fast5_path)
-    else:
-        for fast5_name in os.listdir(fast5_dir):
-            if fast5_name.endswith('.fast5'):
-                fast5_path = '/'.join([fast5_dir, fast5_name])
-                fast5s.append(fast5_path)
-    return fast5s
-
-
 def _convert_motif_seq(ori_seq, is_dna=True):
     outbases = []
     
