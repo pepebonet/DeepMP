@@ -9,8 +9,8 @@ from tqdm import tqdm
 import multiprocessing as mp
 from statsmodels import robust
 
-from libs import utils as ut
-from libs.fast5 import Fast5
+from deepmp import utils as ut
+from deepmp.fast5 import Fast5
 
 reads_group = 'Raw/Reads'
 queen_size_border = 2000

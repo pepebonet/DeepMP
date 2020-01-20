@@ -1,5 +1,7 @@
 import argparse
-import libs.feature_extraction as fe
+from argparse import Namespace
+
+import deepmp.feature_extraction as fe
 
 
 # ------------------------------------------------------------------------------
@@ -88,7 +90,7 @@ def parse_args():
 
     args = parser.parse_args()
 
-    return args
+    context_extraction(args)
 
 # ------------------------------------------------------------------------------
 # FUNCTIONS
@@ -101,20 +103,7 @@ def context_extraction(args):
         args.positions, args.normalize_method, args.mod_loc, args.kmer_len, \
         args.cent_signals_len, args.methy_label, args.write_path
     )
-    # results.update({label: result})
-    return
-
-
-def generate_output(args):
-    pass
-
-
-def main(args):
-    context_results = context_extraction(args)
-    
-    generate_output(args)
 
 
 if __name__ == '__main__':
-    args = parse_args()
-    main(args)
+    parse_args()
