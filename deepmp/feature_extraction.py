@@ -232,7 +232,7 @@ def find_fast5_files(fast5s_dir, file_list=None):
     return fast5s
 
 
-def _extract_preprocess(fast5_dir, is_recursive, motifs, is_dna, reference_path, 
+def _extract_preprocess(fast5_dir, motifs, is_dna, reference_path, 
         f5_batch_num, position_file):
     #Extract list of reads, target motifs and chrom lenghts of the ref genome
     fast5_files = find_fast5_files(fast5_dir)
@@ -256,12 +256,12 @@ def _extract_preprocess(fast5_dir, is_recursive, motifs, is_dna, reference_path,
     return motif_seqs, chrom2len, fast5s_q, len(fast5_files), positions
 
 
-def extract_features(fast5_dir, ref, recursive, cor_g, base_g, dna, motifs,
+def extract_features(fast5_dir, ref, cor_g, base_g, dna, motifs,
     nproc, position_file, norm_me, methyloc, kmer_len, raw_sig_len, methy_lab, 
-    write_fp):
+    write_fp, f5_batch_num):
     start = time.time()
     motif_seqs, chrom2len, fast5s_q, len_fast5s, positions = \
-        _extract_preprocess(fast5_dir, recursive, motifs, dna, ref, nproc, 
+        _extract_preprocess(fast5_dir, motifs, dna, ref, f5_batch_num, 
             position_file
     )
 

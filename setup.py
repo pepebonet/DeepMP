@@ -31,7 +31,7 @@ setup(
     install_requires=required,
     entry_points={
         'console_scripts': [
-            'DeepMP = deepmp.DeepMP:parse_args',
+            'DeepMP = deepmp.DeepMP:cli',
         ]
     }
 )
