@@ -1,0 +1,9 @@
+*.png
+*.pyc
+data/*
+
+# Pycharm files
+.idea
+
+# EGG info
+*.egg-info
