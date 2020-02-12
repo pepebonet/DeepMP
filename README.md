@@ -21,7 +21,7 @@ We highly recommend to use a virtual environment for the installation and employ
 
 `Option 2:` 
 
-        pip install -r requirements.txt
+        pip install -e .
 
 # Usage
 DeepMP can be run as follows: 
