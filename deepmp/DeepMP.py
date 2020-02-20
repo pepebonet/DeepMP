@@ -26,7 +26,7 @@ def cli(debug):
 
 @cli.command(short_help='')
 def train_NN():
-    """Train Neura Network"""
+    """Train Neural Network"""
     raise NotImplementedError
 
 

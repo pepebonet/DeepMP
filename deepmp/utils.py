@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import re
 import fnmatch
 
 basepairs = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N',
@@ -30,6 +31,9 @@ iupac_alphabets_rna = {'A': ['A'], 'C': ['C'], 'G': ['G'], 'U': ['U'],
                        'H': ['A', 'C', 'U'], 'V': ['A', 'C', 'G'],
                        'N': ['A', 'C', 'G', 'U']}
 
+# ------------------------------------------------------------------------------
+# DeepMP
+# ------------------------------------------------------------------------------
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
@@ -117,3 +121,22 @@ def get_refloc_of_methysite_in_motif(seqstr, motifset, methyloc_in_motif=0):
         if seqstr[i:i + motiflen] in motifset:
             sites.append(i+methyloc_in_motif)
     return sites
+
+
+# ------------------------------------------------------------------------------
+# SVM
+# ------------------------------------------------------------------------------
+
+def arrange_columns(cols_in):
+    cols = []
+    for c in cols_in.split(','):
+        if re.search (r'-',c):
+            c1,c2 = c.split('-')
+            cols +=  list (range(int(c1) - 1, int(c2)))
+        elif re.search(r':',c):
+            c1,c2 = c.split(':')
+            cols += list (range(int(c1) - 1, int(c2)))
+        else:
+            cols.append(int(c) - 1)
+
+    return list(set(cols))
