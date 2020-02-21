@@ -2,7 +2,8 @@ import os
 import click
 import pickle
 import collections
-import pandas as pd 
+import numpy as np 
+import pandas as pd
 from collections import Counter
 
 from sklearn import svm
@@ -18,60 +19,62 @@ from deepmp import utils as ut
 def get_data(features_model, cols, mod_col):
     df = pd.read_csv(features_model, sep='\t')
     names = list(df.columns[cols])
-
-    df_tmp = df.dropna(subset=names)
-    df_tmp = df_tmp.reset_index(drop=True) 
+    df_tmp = df.dropna(subset=names).reset_index(drop=True) 
 
     return df_tmp.iloc[:,cols], df_tmp.iloc[:,mod_col], df_tmp.index.tolist()
 
 
 def evaluate_on_test_data (test, predictions):
-    correct_classifications = 0
-    for i in range (len(test)):
-        if predictions[i] == test[i]:
-            correct_classifications += 1
-    accuracy = correct_classifications * 100 / len (test)
-    return accuracy
-
-#TODO Fix & Delete please
-def get_data_structure(row):
-    import statistics
-    listtt = [float(x) for x in row[0].split(',')]
-    return statistics.mean(listtt)
-
-
-def svm_prediction(kernels, X_train, Y_train, X_test, output):
-    models_dict = collections.defaultdict(list)
-    X_train = X_train.apply(lambda row: get_data_structure(row), axis=1)
-    X_test = X_test.apply(lambda row: get_data_structure(row), axis=1)
-    Y_train.loc[0] = 0
-    for _, kn in enumerate(kernels):
-        model = svm.SVC(kernel=kn, probability=True)
-        model_fit = model.fit (X_train.values.reshape(1000, 1), Y_train.values)
-        predictions = model_fit.predict(X_test.values.reshape(1000,1))
-        models_dict[kn].append((model, predictions))
-
-    return predictions
+    return np.sum(test.values == predictions) * 100 / len(test.values)
 
 
 def get_accuracy(predictions, Y_test, kernels):
     accuracies = {}
     for _, kn in enumerate(kernels):
-        accuracies[kn] = evaluate_on_test_data(Y_test, predictions)
+        accuracies[kn] = evaluate_on_test_data(Y_test, predictions[kn][0][1])
+
         acc_sort = sorted (accuracies.items(), key = lambda kv:kv[1])
-        best_kn  = acc_sort[-1][0]
-        best_acc = acc_sort[-1][1]
-        # best_prediciton = output + '.best-kernel.' + best_kn + '.accuracy' 
-        print ("Best accuracy {} %  obtained with kernel = {}".format(best_acc,best_kn))
+        best_kn = acc_sort[-1][0]; best_acc = acc_sort[-1][1]
+        print ("Best accuracy {} %  obtained with kernel = {}".format(
+            best_acc,best_kn))
+        
         del accuracies[best_kn]
         for k, v in accuracies.items ():
             print (" {} % accuracy obtained with kernel = {}".format(v,k))
 
 
-def save_model(output):
-    out_model = output + '.' + kn + '.model.dump'
-    pickle.dump (model,open (out_model,'wb'))
-    outh = open(output+'.kernel.' + kn + '.csv','w')
+#TODO Fix & Delete please (Get rid of the hardcoding)
+def get_data_structure(row):
+    import statistics
+    listtt = [float(x) for x in row[0].split(',')]
+    return statistics.mean(listtt)
+#TODO Fix & Delete please (Get rid of the hardcoding)
+def arrange_data(X, Y, X_test):
+    X = X.apply(lambda row: get_data_structure(row), axis=1)
+    Y.loc[0] = 0
+    X_test = X_test.apply(lambda row: get_data_structure(row), axis=1)
+    
+    return X.values.reshape(1000, 1), Y.values, X_test.values.reshape(1000,1)
+
+
+#Function still a bit ugly
+def svm_prediction(kernels, X_train, Y_train, X_test, output):
+    models_dict = collections.defaultdict(list)
+    X, Y, X_test = arrange_data(X_train, Y_train, X_test)
+
+    for _, kn in enumerate(kernels):
+        model = svm.SVC(kernel=kn, probability=True)
+        model_fit = model.fit (X, Y)
+        predictions = model_fit.predict(X_test)
+        models_dict[kn].append((model, predictions))
+
+    return models_dict
+
+
+def save_model(models, output, kernels):
+    for _, kn in enumerate(kernels):
+        out_model = os.path.join(output, '{}.model.dump'.format(kn))
+        pickle.dump(models[kn][0][0], open(out_model,'wb'))
 
 # ------------------------------------------------------------------------------
 # Click
@@ -126,6 +129,8 @@ def main(kernel, train_features, columns, predict_features,
 
     if accuracy_est:
         get_accuracy(predictions, Y_test, kernel)
+
+    save_model(predictions, output, kernel)
 
     
 if __name__ == '__main__':
