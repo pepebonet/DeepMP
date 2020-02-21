@@ -68,13 +68,26 @@ def svm_prediction(kernels, X_train, Y_train, X_test, output):
         predictions = model_fit.predict(X_test)
         models_dict[kn].append((model, predictions))
 
-    return models_dict
+    return models_dict, X_test
 
 
 def save_model(models, output, kernels):
     for _, kn in enumerate(kernels):
         out_model = os.path.join(output, '{}.model.dump'.format(kn))
         pickle.dump(models[kn][0][0], open(out_model,'wb'))
+
+
+#TODO <JB> Needs work 
+def save_predictions_to_file(models, output, kernels, X_test):
+    for _, kn in enumerate(kernels):
+        out_file = open(os.path.join(output, 'kernel.{}.csv'.format(kn)), 'w')
+
+        for t in range (len(X_test)):
+            original_line = ",".join(map(str, X_test[t]))
+            dist = map(str,models[kn][0][0].decision_function([X_test[t]]))
+            probM, probU = map(str,models[kn][0][0].predict_proba([X_test[t]])[0])
+            print(original_line + ',' + str(X_test[t][0]) +',' 
+                + ",".join (dist) + ',' +  probM + ',' + probU, file=out_file)
 
 # ------------------------------------------------------------------------------
 # Click
@@ -125,12 +138,14 @@ def main(kernel, train_features, columns, predict_features,
             predict_features, cols, mod_status_col
         )
     
-    predictions = svm_prediction(kernel, X_train, Y_train, X_test, output)
+    predictions, X_test = svm_prediction(kernel, X_train, Y_train, X_test, output)
 
     if accuracy_est:
         get_accuracy(predictions, Y_test, kernel)
 
-    save_model(predictions, output, kernel)
+    if output:
+        save_model(predictions, output, kernel)
+        save_predictions_to_file(predictions, output, kernel, X_test)
 
     
 if __name__ == '__main__':
