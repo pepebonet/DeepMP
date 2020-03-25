@@ -52,8 +52,8 @@ def train_NN():
     help='the way for normalizing signals in read level. mad or zscore, default mad'
 )
 @click.option(
-    '--methy-label', '-ml', type=click.Choice([1, 0]), 
-    default=1, help='the label of the interested modified '
+    '--methyl-label', '-ml', type=click.Choice(['1', '0']), 
+    default='1', help='the label of the interested modified '
     'bases, this is for training. 0 or 1, default 1'
 )
 @click.option(
@@ -98,7 +98,7 @@ def context_extraction(**kwargs):
         args.input, args.reference_path, args.corrected_group, \
         args.basecall_subgroup, args.is_dna, args.motifs, args.cpus, \
         args.positions, args.normalize_method, args.mod_loc, args.kmer_len, \
-        args.cent_signals_len, args.methy_label, args.write_path, args.f5_batch_num
+        args.cent_signals_len, args.methyl_label, args.write_path, args.f5_batch_num
     )
     
 
