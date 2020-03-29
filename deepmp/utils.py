@@ -2,6 +2,8 @@
 import os
 import re
 import fnmatch
+import numpy as np
+import tensorflow as tf
 
 basepairs = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N',
              'W': 'W', 'S': 'S', 'M': 'K', 'K': 'M', 'R': 'Y',
@@ -41,13 +43,13 @@ def str2bool(v):
 
 def _convert_motif_seq(ori_seq, is_dna=True):
     outbases = []
-    
+
     for bbase in ori_seq:
         if is_dna:
             outbases.append(iupac_alphabets[bbase])
         else:
             outbases.append(iupac_alphabets_rna[bbase])
-    
+
     def recursive_permute(bases_list):
         if len(bases_list) == 1:
             return bases_list[0]
@@ -121,6 +123,21 @@ def get_refloc_of_methysite_in_motif(seqstr, motifset, methyloc_in_motif=0):
         if seqstr[i:i + motiflen] in motifset:
             sites.append(i+methyloc_in_motif)
     return sites
+
+def parse_a_line(line):
+    def _kmer2code(kmer_bytes):
+        return np.array([base2code_dna[x] for x in kmer_bytes.decode("utf-8")], np.int32)
+
+    words = tf.decode_csv(line, [[""]] * 12, "\t")
+
+    kmer = tf.py_func(_kmer2code, [words[6]], tf.int32)
+    base_mean = tf.string_to_number(tf.string_split([words[7]], ",").values, tf.float32)
+    base_std = tf.string_to_number(tf.string_split([words[8]], ",").values, tf.float32)
+    base_signal_len = tf.string_to_number(tf.string_split([words[9]], ",").values, tf.int32)
+    cent_signals = tf.string_to_number(tf.string_split([words[10]], ",").values, tf.float32)
+    label = tf.string_to_number(words[11], tf.int32)
+
+    return kmer, base_mean, base_std, base_signal_len, cent_signals, label
 
 
 # ------------------------------------------------------------------------------
