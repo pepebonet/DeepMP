@@ -124,18 +124,18 @@ def get_refloc_of_methysite_in_motif(seqstr, motifset, methyloc_in_motif=0):
             sites.append(i+methyloc_in_motif)
     return sites
 
+
 def parse_a_line(line):
     def _kmer2code(kmer_bytes):
         return np.array([base2code_dna[x] for x in kmer_bytes.decode("utf-8")], np.int32)
 
-    words = tf.decode_csv(line, [[""]] * 12, "\t")
-
-    kmer = tf.py_func(_kmer2code, [words[6]], tf.int32)
-    base_mean = tf.string_to_number(tf.string_split([words[7]], ",").values, tf.float32)
-    base_std = tf.string_to_number(tf.string_split([words[8]], ",").values, tf.float32)
-    base_signal_len = tf.string_to_number(tf.string_split([words[9]], ",").values, tf.int32)
-    cent_signals = tf.string_to_number(tf.string_split([words[10]], ",").values, tf.float32)
-    label = tf.string_to_number(words[11], tf.int32)
+    words = tf.io.decode_csv(line, [[""]] * 12, "\t")
+    kmer = tf.py_function(_kmer2code, [words[6]], tf.int32)
+    base_mean = tf.strings.to_number(tf.strings.split([words[7]], ",").values, tf.float32)
+    base_std = tf.strings.to_number(tf.strings.split([words[8]], ",").values, tf.float32)
+    base_signal_len = tf.strings.to_number(tf.strings.split([words[9]], ",").values, tf.int32)
+    cent_signals = tf.strings.to_number(tf.strings.split([words[10]], ",").values, tf.float32)
+    label = tf.strings.to_number(words[11], tf.int32)
 
     return kmer, base_mean, base_std, base_signal_len, cent_signals, label
 
