@@ -1,5 +1,5 @@
 # DeepMP
-DeepMP is a deeplearning algorithm to detect DNA modifications of Nanopore sequenced samples. 
+DeepMP is a deeplearning algorithm to detect DNA modifications of Nanopore sequenced samples.
 
 # Contents
 - [Installation](#Installation)
@@ -13,21 +13,21 @@ First download BnpC from the github repository:
         git clone add/final/github/path
 
 ## Install dependencies
-We highly recommend to use a virtual environment for the installation and employment of DeepMP: 
+We highly recommend to use a virtual environment for the installation and employment of DeepMP:
 
 `Option 1:`
 
         conda create --name environment_name --file requirements.txt
 
-`Option 2:` 
+`Option 2:`
 
         pip install -e .
 
 # Usage
-DeepMP can be run as follows: 
+Feature extraction:
 
 ```
-    python DeepMP.py not/sure/how
+    DeepMP context-extraction path/to/fast5/files/ -rp path/to/reference/file/ -m CG -o extraction_outputs/
 ```
 
 ## Arguments
