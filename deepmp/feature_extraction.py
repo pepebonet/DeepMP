@@ -179,7 +179,6 @@ def _extract_features(fast5s, corrected_group, basecall_subgroup,
                     cent_signals = _get_central_signals(
                         k_signals, raw_signals_len
                     )
-                    print(genomeseq[loc_in_read])
                     features_list.append(
                         (chrom, pos, alignstrand, loc_in_ref, readname, strand,
                         k_mer, signal_means, signal_stds, signal_lens, 
