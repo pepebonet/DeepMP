@@ -3,6 +3,7 @@ import os
 import tensorflow as tf
 import pandas as pd
 import numpy as np
+import datetime
 from tensorflow.keras.callbacks import EarlyStopping
 from deepmp.utils import kmer2code
 from deepmp.model import *
@@ -26,16 +27,22 @@ def preprocess(train_file):
     return np.stack(kmer), np.stack(base_mean), np.stack(base_std), np.stack(base_signal_len), label
 
 
-def train(train_file):
+def train(train_file, val_file):
 
     kmer = 17
     bases, signal_means, signal_stds, signal_lens, label = preprocess(train_file)
+    v1, v2, v3, v4, vy  = preprocess(val_file)
     model = get_lstm_model(kmer)
-    model.fit([bases, signal_means, signal_stds, signal_lens], label, batch_size=120, epochs=100,
-                            callbacks = [EarlyStopping(monitor='val_loss', patience=15)],
-                            validation_split=0.2, shuffle=True)
+
+    log_dir = "logs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+
+
+    model.fit([bases, signal_means, signal_stds, signal_lens], label, batch_size=512, epochs=10,
+                            callbacks = [tensorboard_callback],
+                            validation_data=([v1, v2, v3, v4], vy))
     return None
 
 
 
-train("../data/extraction_outputs/val.tsv")
+train("../data/extraction_outputs/train.tsv","../data/extraction_outputs/val.tsv")
