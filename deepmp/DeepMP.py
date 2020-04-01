@@ -4,6 +4,7 @@ from argparse import Namespace
 
 import click
 
+from .train import *
 import deepmp.feature_extraction as fe
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -24,10 +25,43 @@ def cli(debug):
         logging.getLogger('bgdata').setLevel(logging.WARNING)
 
 
-@cli.command(short_help='')
-def train_NN():
-    """Train Neural Network"""
+@cli.command(short_help='Calling modifications')
+def call_modifications():
+    """Call modifications"""
+    
     raise NotImplementedError
+
+
+#TODO <MC,PB> An additional parser might be needed in train.py
+#TODO <MC,PB> Separate each NN module? 
+#TODO <MC, PB> How to combine outputs properly --> Joint model
+@cli.command(short_help='Trainining neural networks')
+@click.option(
+    '-ts', '--train_sequence', default='',  
+    help='path to sequence features for training'
+)
+@click.option(
+    '-vs', '--val_sequence', default='',  
+    help='path to sequence features for validation'
+)
+@click.option(
+    '-te', '--train_errors', default='',  
+    help='path to error features for training'
+)
+@click.option(
+    '-ve', '--val_errors', default='',  
+    help='path to error features for validation'
+)
+def train_nns(**kwargs):
+    """Train Neural Networks"""
+    args = Namespace(**kwargs)
+    
+    if args.train_sequence:
+        train_sequence(args.train_sequence, args.val_sequence)
+
+    if args.train_errors:
+        train_errors(args.train_errors, args.val_errors)
+
 
 
 @cli.command(short_help='Feature extraction on contexts')
@@ -48,8 +82,9 @@ def train_NN():
     help='Corrected subgroup of fast5 files. default BaseCalled_template'
 )
 @click.option(
-    '-nm', '--normalize-method', type=click.Choice(['mad', 'zscore']), default='mad', 
-    help='the way for normalizing signals in read level. mad or zscore, default mad'
+    '-nm', '--normalize-method', type=click.Choice(['mad', 'zscore']), 
+    default='mad', help='the way for normalizing signals in read level. '
+    'mad or zscore, default mad'
 )
 @click.option(
     '--methyl-label', '-ml', type=click.Choice(['1', '0']), 
@@ -98,7 +133,8 @@ def context_extraction(**kwargs):
         args.input, args.reference_path, args.corrected_group, \
         args.basecall_subgroup, args.is_dna, args.motifs, args.cpus, \
         args.positions, args.normalize_method, args.mod_loc, args.kmer_len, \
-        args.cent_signals_len, args.methyl_label, args.write_path, args.f5_batch_num
+        args.cent_signals_len, args.methyl_label, args.write_path, \
+        args.f5_batch_num
     )
     
 

@@ -52,3 +52,20 @@ def get_cnn_model():
     print(model.summary())
 
     return model
+
+
+#TODO <PB, MC> Need to obtain a proper joint model 
+def joint_model(event_output, signal_output, error_output): 
+    joint_input = tf.concat(
+        [event_output, signal_output, error_output], axis=1) 
+
+    joint_input_shape = joint_input.get_shape().as_list()
+    model = tf.keras.Sequential()
+    model.add(tf.keras.layers.Flatten(input_shape=(joint_input_shape)))
+    model.add(tf.keras.layers.Dense(128, activation=tf.nn.relu))
+    model.add(tf.keras.layers.Dropout(0.5))
+    model.add(tf.keras.layers.Dense(128, activation=tf.nn.relu))
+    model.add(tf.keras.layers.Dropout(0.5))
+    model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))
+
+    return model
