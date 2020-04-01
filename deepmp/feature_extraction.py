@@ -148,7 +148,7 @@ def _extract_features(fast5s, corrected_group, basecall_subgroup,
             tsite_locs = ut.get_refloc_of_methysite_in_motif(
                 genomeseq, set(motif_seqs), methyloc
             )
-            # print(tsite_locs)
+
             if kmer_len % 2 == 0:
                 raise ValueError("kmer_len must be odd")
             num_bases = (kmer_len - 1) // 2
@@ -179,7 +179,6 @@ def _extract_features(fast5s, corrected_group, basecall_subgroup,
                     cent_signals = _get_central_signals(
                         k_signals, raw_signals_len
                     )
-                    # print(cent_signals, k_signals)
                     features_list.append(
                         (chrom, pos, alignstrand, loc_in_ref, readname, strand,
                         k_mer, signal_means, signal_stds, signal_lens, 
@@ -264,7 +263,7 @@ def extract_features(fast5_dir, ref, cor_g, base_g, dna, motifs,
         _extract_preprocess(fast5_dir, motifs, dna, ref, f5_batch_num, 
             position_file
     )
-
+    
     featurestr_q = mp.Queue()
     errornum_q = mp.Queue()
 
