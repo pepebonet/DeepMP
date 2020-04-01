@@ -7,6 +7,7 @@ import tensorflow as tf
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.layers import *
 
+
 def get_lstm_model(base_num):
 
     vocab_size = 1024
@@ -19,11 +20,6 @@ def get_lstm_model(base_num):
     stds = Input(shape=(base_num,))
     sanums = Input(shape=(base_num,))
 
-    #embedded_base = tf.nn.embedding_lookup(weight_table, base_int)
-
-    #vector = tf.concat([embedded_base, tf.reshape(means, [-1, base_num, 1]),
-    #                                    tf.reshape(stds, [-1, base_num, 1]),
-    #                                    tf.reshape(sanums, [-1, base_num, 1])], axis=2)
     vector = tf.concat([tf.reshape(base_int, [-1, base_num, 1]), tf.reshape(means, [-1, base_num, 1]),
                                         tf.reshape(stds, [-1, base_num, 1]),
                                         tf.reshape(sanums, [-1, base_num, 1])], axis=2)
@@ -36,6 +32,26 @@ def get_lstm_model(base_num):
     model = Model([base_int, means, stds, sanums], outputs=out)
 
     model.compile(optimizer=tf.keras.optimizers.Adam(),loss='binary_crossentropy',metrics=['acc'])
+    print(model.summary())
+
+    return model
+
+
+def get_cnn_model():
+
+    model = tf.keras.Sequential()
+    model.add(tf.keras.layers.Conv1D(128, 3, input_shape=(20,1), activation='relu'))
+    model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
+    model.add(tf.keras.layers.MaxPooling1D(3))
+    model.add(tf.keras.layers.Conv1D(128, 3, activation='relu'))
+    model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
+    model.add(tf.keras.layers.GlobalAveragePooling1D())
+    model.add(tf.keras.layers.Dropout(0.5))
+    model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))
+
+    model.compile(
+        optimizer='adam', loss='binary_crossentropy', metrics=['acc']
+    )
     print(model.summary())
 
     return model

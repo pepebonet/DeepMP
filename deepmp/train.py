@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import time
 import tensorflow as tf
 import pandas as pd
 import numpy as np
@@ -7,6 +8,7 @@ import datetime
 from tensorflow.keras.callbacks import EarlyStopping
 from deepmp.utils import kmer2code
 from deepmp.model import *
+
 
 def preprocess(train_file):
     vocab_size = 1024
@@ -17,14 +19,20 @@ def preprocess(train_file):
                                 'k_mer','signal_means','signal_stds','signal_lens',
                                 'cent_signals','methy_label'])
     df = df.dropna()
+
     kmer = df['k_mer'].apply(kmer2code)
-    base_mean = df['signal_means'].apply(lambda x : [pd.to_numeric(i,downcast= tf.float32) for i in x.split(",")])
-    base_std = df['signal_stds'].apply(lambda x : [pd.to_numeric(i,downcast= tf.float32) for i in x.split(",")])
-    base_signal_len = df['signal_lens'].apply(lambda x : [pd.to_numeric(i,downcast= tf.float32) for i in x.split(",")])
-    #df['cent_signals'] = df['cent_signals'].apply(lambda x : [pd.to_numeric(i) for i in x.split(",")])
+
+    base_mean = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_means'].values]
+    base_std = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_stds'].values]
+    base_signal_len = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_lens'].values]
+    
     label = df['methy_label']
 
-    return np.stack(kmer), np.stack(base_mean), np.stack(base_std), np.stack(base_signal_len), label
+    return np.stack(kmer), np.stack(base_mean), np.stack(base_std), \
+        np.stack(base_signal_len), label
 
 
 def train(train_file, val_file):
@@ -34,7 +42,7 @@ def train(train_file, val_file):
     v1, v2, v3, v4, vy  = preprocess(val_file)
     model = get_lstm_model(kmer)
 
-    log_dir = "logs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_dir = "logs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S_lstm")
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
 
@@ -45,4 +53,4 @@ def train(train_file, val_file):
 
 
 
-train("../data/extraction_outputs/train.tsv","../data/extraction_outputs/val.tsv")
+train("../../val.tsv","../../val.tsv")

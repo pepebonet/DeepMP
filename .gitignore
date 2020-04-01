@@ -1,6 +1,7 @@
 *.png
 *.pyc
 data/*
+deepmp/logs/*
 
 # Pycharm files
 .idea
