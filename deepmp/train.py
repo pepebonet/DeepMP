@@ -8,41 +8,41 @@ import datetime
 from deepmp.utils import kmer2code
 from deepmp.model import *
 
-def preprocess(csv_file, vocab_size, embedding_size):
+def preprocess(csv_file, vocab_size):
 
     df = pd.read_csv(csv_file, delimiter = "\t",names = ['chrom','pos',
                                 'strand','pos_in_strand','readname','read_strand',
                                 'k_mer','signal_means','signal_stds','signal_lens',
                                 'cent_signals','methy_label'])
     df = df.dropna()
-
     kmer = df['k_mer'].apply(kmer2code)
+
+    base_one_hot = tf.one_hot(np.stack(kmer), vocab_size)
     base_mean = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['signal_means'].values]
     base_std = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['signal_stds'].values]
     base_signal_len = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['signal_lens'].values]
-
     label = df['methy_label']
 
-    return np.stack(kmer), np.stack(base_mean), np.stack(base_std), \
+    return base_one_hot, np.stack(base_mean), np.stack(base_std), \
         np.stack(base_signal_len), label
 
 
 def train_sequence(train_file, val_file):
 
     kmer = 17
-    vocab_size = 1024
-    embedding_size = 128
+    vocab_size = 5
 
     bases, signal_means, signal_stds, signal_lens, label = preprocess(
-        train_file, vocab_size, embedding_size)
-    v1, v2, v3, v4, vy  = preprocess(val_file, vocab_size, embedding_size)
-    model = get_lstm_model(kmer, embedding_size)
+                                                        train_file, vocab_size)
+    v1, v2, v3, v4, vy  = preprocess(val_file, vocab_size)
+    model = get_lstm_model(kmer,vocab_size)
 
     log_dir = "logs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S_lstm")
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(
+                                            log_dir=log_dir, histogram_freq=1)
 
     model.fit([bases, signal_means, signal_stds, signal_lens], label, batch_size=512, epochs=10,
                             callbacks = [tensorboard_callback],

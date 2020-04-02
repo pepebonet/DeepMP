@@ -7,27 +7,24 @@ import tensorflow as tf
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.layers import *
 
-def get_lstm_model(base_num):
+def get_lstm_model(base_num, vocab_size):
 
-    embedded_bases = Input(shape=(base_num,))
+    embedded_bases = Input(shape=(base_num, vocab_size))
     means = Input(shape=(base_num,))
     stds = Input(shape=(base_num,))
     sanums = Input(shape=(base_num,))
 
-    vector = tf.concat([tf.reshape(embedded_bases, [-1, base_num, 1]),
-                                    tf.reshape(means, [-1, base_num, 1]),
+    vector = tf.concat([embedded_bases, tf.reshape(means, [-1, base_num, 1]),
                                     tf.reshape(stds, [-1, base_num, 1]),
                                     tf.reshape(sanums, [-1, base_num, 1])],
                                     axis=2)
 
     x = Bidirectional(RNN([LSTMCell(100, dropout=0.2), \
-        LSTMCell(100, dropout=0.2),LSTMCell(100, dropout=0.2)]))(vector)
-
+                LSTMCell(100, dropout=0.2),LSTMCell(100, dropout=0.2)]))(vector)
     x = Dense(50, activation='relu', use_bias=False)(x)
     x = Dropout(0.2)(x)
     out = Dense(1, activation='sigmoid', use_bias=False)(x)
     model = Model([embedded_bases, means, stds, sanums], outputs=out)
-
     model.compile(optimizer=tf.keras.optimizers.Adam(),
         loss='binary_crossentropy', metrics=['acc'])
     print(model.summary())
