@@ -38,15 +38,28 @@ def train_sequence(train_file, val_file):
     bases, signal_means, signal_stds, signal_lens, label = preprocess(
                                                         train_file, vocab_size)
     v1, v2, v3, v4, vy  = preprocess(val_file, vocab_size)
-    model = get_lstm_model(kmer,vocab_size)
 
-    log_dir = "logs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S_lstm")
+    input_train = tf.concat([bases, tf.reshape(signal_means, [-1, kmer, 1]),
+                                    tf.reshape(signal_stds, [-1, kmer, 1]),
+                                    tf.reshape(signal_lens, [-1, kmer, 1])],
+                                    axis=2)
+    input_val = tf.concat([v1, tf.reshape(v2, [-1, kmer, 1]),
+                                        tf.reshape(v3, [-1, kmer, 1]),
+                                        tf.reshape(v4, [-1, kmer, 1])],
+                                        axis=2)
+
+    log_dir = "logs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S_conv1d")
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
-                                            log_dir=log_dir, histogram_freq=1)
+                                                log_dir=log_dir, histogram_freq=1)
+    model = get_conv1d_model(kmer, vocab_size)
+    model.fit(input_train, label, batch_size=512, epochs=10,
+                callbacks = [tensorboard_callback], validation_data=(input_val,vy))
 
-    model.fit([bases, signal_means, signal_stds, signal_lens], label, batch_size=512, epochs=10,
-                            callbacks = [tensorboard_callback],
-                            validation_data=([v1, v2, v3, v4], vy))
+    #model = get_lstm_model(kmer,vocab_size)
+    #log_dir = "logs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S_lstm")
+    #model.fit([bases, signal_means, signal_stds, signal_lens], label, batch_size=512, epochs=10,
+    #                        callbacks = [tensorboard_callback],
+    #                        validation_data=([v1, v2, v3, v4], vy))
     return None
 
 
