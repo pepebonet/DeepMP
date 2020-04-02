@@ -7,17 +7,18 @@ import tensorflow as tf
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.layers import *
 
-def get_lstm_model(base_num, embedding_size):
+def get_lstm_model(base_num):
 
-    embedded_bases = Input(shape=(base_num,embedding_size))
+    embedded_bases = Input(shape=(base_num,))
     means = Input(shape=(base_num,))
     stds = Input(shape=(base_num,))
     sanums = Input(shape=(base_num,))
 
-    vector = tf.concat([embedded_bases, tf.reshape(means, [-1, base_num, 1]),
-                                        tf.reshape(stds, [-1, base_num, 1]),
-                                        tf.reshape(sanums, [-1, base_num, 1])], 
-                                        axis=2)
+    vector = tf.concat([tf.reshape(embedded_bases, [-1, base_num, 1]),
+                                    tf.reshape(means, [-1, base_num, 1]),
+                                    tf.reshape(stds, [-1, base_num, 1]),
+                                    tf.reshape(sanums, [-1, base_num, 1])],
+                                    axis=2)
 
     x = Bidirectional(RNN([LSTMCell(100, dropout=0.2), \
         LSTMCell(100, dropout=0.2),LSTMCell(100, dropout=0.2)]))(vector)
@@ -27,7 +28,7 @@ def get_lstm_model(base_num, embedding_size):
     out = Dense(1, activation='sigmoid', use_bias=False)(x)
     model = Model([embedded_bases, means, stds, sanums], outputs=out)
 
-    model.compile(optimizer=tf.keras.optimizers.Adam(), 
+    model.compile(optimizer=tf.keras.optimizers.Adam(),
         loss='binary_crossentropy', metrics=['acc'])
     print(model.summary())
 
@@ -54,10 +55,10 @@ def get_cnn_model():
     return model
 
 
-#TODO <PB, MC> Need to obtain a proper joint model 
-def joint_model(event_output, signal_output, error_output): 
+#TODO <PB, MC> Need to obtain a proper joint model
+def joint_model(event_output, signal_output, error_output):
     joint_input = tf.concat(
-        [event_output, signal_output, error_output], axis=1) 
+        [event_output, signal_output, error_output], axis=1)
 
     joint_input_shape = joint_input.get_shape().as_list()
     model = tf.keras.Sequential()
