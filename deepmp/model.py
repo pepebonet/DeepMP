@@ -43,7 +43,7 @@ def get_cnn_model():
     model.add(tf.keras.layers.Conv1D(128, 3, activation='relu'))
     model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
     model.add(tf.keras.layers.GlobalAveragePooling1D())
-    model.add(tf.keras.layers.Dropout(0.5))
+    model.add(tf.keras.layers.Dropout(0.2))
     model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))
 
     model.compile(
@@ -63,9 +63,9 @@ def joint_model(event_output, signal_output, error_output):
     model = tf.keras.Sequential()
     model.add(tf.keras.layers.Flatten(input_shape=(joint_input_shape)))
     model.add(tf.keras.layers.Dense(128, activation=tf.nn.relu))
-    model.add(tf.keras.layers.Dropout(0.5))
+    model.add(tf.keras.layers.Dropout(0.2))
     model.add(tf.keras.layers.Dense(128, activation=tf.nn.relu))
-    model.add(tf.keras.layers.Dropout(0.5))
+    model.add(tf.keras.layers.Dropout(0.2))
     model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))
 
     return model
