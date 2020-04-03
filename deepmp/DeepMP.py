@@ -5,6 +5,7 @@ from argparse import Namespace
 import click
 
 from .train import *
+from .preprocess import preprocess_csv
 import deepmp.feature_extraction as fe
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -80,9 +81,30 @@ def train_nns(**kwargs):
                         )
 
     if args.train_errors:
-        train_errors(args.train_errors, args.val_errors)
+        train_errors(
+                        args.train_errors, args.val_errors,
+                        args.log_dir, args.model_dir
+                        )
 
 
+@cli.command(short_help='Preprocess data for NNs')
+@click.option(
+    '-tf', '--train_file', default='',
+    help='path to csv file for training'
+)
+@click.option(
+    '-vf', '--validation_file', default='',
+    help='path to csv file for validation'
+)
+@click.option(
+    '-mt', '--model_type',
+    default='', help='choose model to preprocess'
+)
+def preprocess(**kwargs):
+    """Preprocessing before trainning/test models """
+
+    args = Namespace(**kwargs)
+    preprocess_csv(args.train_file, args.validation_file, args.model_type)
 
 @cli.command(short_help='Feature extraction on contexts')
 @click.argument(

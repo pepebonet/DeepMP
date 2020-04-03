@@ -1,31 +1,32 @@
 #!/usr/bin/env python3
 
 import time
+import h5py
 import tensorflow as tf
-import pandas as pd
 import numpy as np
 import datetime
-from deepmp.utils import kmer2code
 from deepmp.model import *
 
-def preprocess(csv_file):
 
-    df = pd.read_csv(csv_file, delimiter = "\t",names = ['chrom','pos',
-                                'strand','pos_in_strand','readname','read_strand',
-                                'k_mer','signal_means','signal_stds','signal_lens',
-                                'cent_signals','methy_label'])
-    df = df.dropna()
-    kmer = df['k_mer'].apply(kmer2code)
-    base_mean = [tf.strings.to_number(i.split(','), tf.float32) \
-        for i in df['signal_means'].values]
-    base_std = [tf.strings.to_number(i.split(','), tf.float32) \
-        for i in df['signal_stds'].values]
-    base_signal_len = [tf.strings.to_number(i.split(','), tf.float32) \
-        for i in df['signal_lens'].values]
-    label = df['methy_label']
+def load_data(file):
 
-    return np.stack(kmer), np.stack(base_mean), np.stack(base_std), \
-            np.stack(base_signal_len), label
+    with h5py.File(file, 'r') as hf:
+        bases = hf['kmer'][:]
+        signal_means = hf['signal_means'][:]
+        signal_stds = hf['signal_stds'][:]
+        signal_lens = hf['signal_lens'][:]
+        label = hf['label'][:]
+
+    return bases, signal_means, signal_stds, signal_lens, label
+
+
+def load_error_data(file):
+
+    with h5py.File(file, 'r') as hf:
+        X = hf['X'][:]
+        Y = hf['Y'][:]
+
+    return X, Y
 
 
 def train_sequence(train_file, val_file, log_dir, model_dir,
@@ -35,8 +36,8 @@ def train_sequence(train_file, val_file, log_dir, model_dir,
     embedding_flag = ""
 
     ## preprocess data
-    bases, signal_means, signal_stds, signal_lens, label = preprocess(train_file)
-    v1, v2, v3, v4, vy  = preprocess(val_file)
+    bases, signal_means, signal_stds, signal_lens, label = load_data(train_file)
+    v1, v2, v3, v4, vy  = load_data(val_file)
 
     ## embed bases
     if one_hot:
@@ -90,28 +91,20 @@ def train_sequence(train_file, val_file, log_dir, model_dir,
     return None
 
 
-def preprocess_errors(file, feat):
-    df = pd.read_csv(file)
+def train_errors(train_file, val_file, log_dir, model_dir):
 
-    X = df[df.columns[:-1]].values
-    Y = df[df.columns[-1]].values
-
-    return X.reshape(X.shape[0], feat, 1), Y
-
-
-def train_errors(train_file, val_file):
-
-    X_train, Y_train = preprocess_errors(train_file, feat=20)
-    X_val, Y_val  = preprocess_errors(val_file, feat=20)
+    X_train, Y_train = load_error_data(train_file)
+    X_val, Y_val  = load_error_data(val_file)
 
     model = get_cnn_model()
 
-    log_dir = "logs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S_errors")
+    log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_errors")
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
-        log_dir=log_dir, histogram_freq=1
-    )
+                                                log_dir=log_dir, histogram_freq=1)
 
     model.fit(X_train, Y_train, batch_size=512, epochs=12,
                             callbacks = [tensorboard_callback],
                             validation_data=(X_val, Y_val))
+    model.save(model_dir + "error_model")
+
     return None
