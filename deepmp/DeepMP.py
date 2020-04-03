@@ -53,7 +53,11 @@ def call_modifications():
     help='rnn type'
 )
 @click.option(
-    '-ld', '--log_dir', default='',
+    '-md', '--model_dir', default='models/',
+    help='directory to trained model'
+)
+@click.option(
+    '-ld', '--log_dir', default='logs/',
     help='training log directory'
 )
 @click.option(
@@ -69,8 +73,11 @@ def train_nns(**kwargs):
     args = Namespace(**kwargs)
 
     if args.train_sequence:
-        train_sequence(args.train_sequence, args.val_sequence,
-                        args.one_hot_embedding, args.rnn_type, args.log_dir)
+        train_sequence(
+                        args.train_sequence, args.val_sequence,
+                        args.log_dir, args.model_dir,
+                        args.one_hot_embedding, args.rnn_type
+                        )
 
     if args.train_errors:
         train_errors(args.train_errors, args.val_errors)

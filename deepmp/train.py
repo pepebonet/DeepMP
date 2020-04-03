@@ -8,7 +8,7 @@ import datetime
 from deepmp.utils import kmer2code
 from deepmp.model import *
 
-def preprocess(csv_file, vocab_size, embedding_size, one_hot):
+def preprocess(csv_file):
 
     df = pd.read_csv(csv_file, delimiter = "\t",names = ['chrom','pos',
                                 'strand','pos_in_strand','readname','read_strand',
@@ -16,19 +16,6 @@ def preprocess(csv_file, vocab_size, embedding_size, one_hot):
                                 'cent_signals','methy_label'])
     df = df.dropna()
     kmer = df['k_mer'].apply(kmer2code)
-
-    if one_hot:
-        embedded_bases = tf.one_hot(np.stack(kmer), embedding_size)
-    else:
-        weight_table = tf.compat.v1.get_variable(
-                                "embedding",
-                                shape = [vocab_size, embedding_size],
-                                dtype=tf.float32,
-                                initializer = tf.compat.v1.truncated_normal_initializer(
-                                stddev = np.sqrt(2. / vocab_size)
-                                ))
-        embedded_bases = tf.nn.embedding_lookup(weight_table, np.stack(kmer))
-
     base_mean = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['signal_means'].values]
     base_std = [tf.strings.to_number(i.split(','), tf.float32) \
@@ -37,54 +24,68 @@ def preprocess(csv_file, vocab_size, embedding_size, one_hot):
         for i in df['signal_lens'].values]
     label = df['methy_label']
 
-    return embedded_bases, np.stack(base_mean), np.stack(base_std), \
-        np.stack(base_signal_len), label
+    return np.stack(kmer), np.stack(base_mean), np.stack(base_std), \
+            np.stack(base_signal_len), label
 
 
-def train_sequence(train_file, val_file, one_hot = False, rnn = None, log_dir = "logs/"):
+def train_sequence(train_file, val_file, log_dir, model_dir,
+                                            one_hot = False, rnn = None):
 
     kmer = 17
-    vocab_size = 1024
-    embedding_size = 128
     embedding_flag = ""
+
+    ## preprocess data
+    bases, signal_means, signal_stds, signal_lens, label = preprocess(train_file)
+    v1, v2, v3, v4, vy  = preprocess(val_file)
+
+    ## embed bases
     if one_hot:
         embedding_size = 5
         embedding_flag += "_one-hot_embedded"
+        embedded_bases = tf.one_hot(bases, embedding_size)
+        val_bases = tf.one_hot(v1, embedding_size)
 
-    bases, signal_means, signal_stds, signal_lens, label = preprocess(
-                                                        train_file, vocab_size,
-                                                        embedding_size, one_hot
-                                                        )
-    v1, v2, v3, v4, vy  = preprocess(val_file, vocab_size, embedding_size, one_hot)
+    else:
+        vocab_size = 1024
+        embedding_size = 128
+        weight_table = tf.compat.v1.get_variable(
+                                "embedding",
+                                shape = [vocab_size, embedding_size],
+                                dtype=tf.float32,
+                                initializer = tf.compat.v1.truncated_normal_initializer(
+                                stddev = np.sqrt(2. / vocab_size)
+                                ))
+        embedded_bases = tf.nn.embedding_lookup(weight_table, bases)
+        val_bases = tf.nn.embedding_lookup(weight_table, v1)
 
-    input_train = tf.concat([bases, tf.reshape(signal_means, [-1, kmer, 1]),
+    ## prepare inputs for NNs
+    input_train = tf.concat([embedded_bases,
+                                    tf.reshape(signal_means, [-1, kmer, 1]),
                                     tf.reshape(signal_stds, [-1, kmer, 1]),
                                     tf.reshape(signal_lens, [-1, kmer, 1])],
                                     axis=2)
-    input_val = tf.concat([v1, tf.reshape(v2, [-1, kmer, 1]),
+    input_val = tf.concat([val_bases, tf.reshape(v2, [-1, kmer, 1]),
                                         tf.reshape(v3, [-1, kmer, 1]),
                                         tf.reshape(v4, [-1, kmer, 1])],
                                         axis=2)
+
+    ## train model
     if rnn:
         model = get_brnn_model(kmer, embedding_size, rnn_cell = rnn)
 
-        log_dir = log_dir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S_lstm")\
-                                                                    + embedding_flag
-        tensorboard_callback = tf.keras.callbacks.TensorBoard(
-                                                log_dir=log_dir, histogram_freq=1)
-        model.fit(input_train, label, batch_size=512, epochs=10,
-                                                callbacks = [tensorboard_callback],
-                                                validation_data=(input_val, vy))
+        log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_lstm")\
+                                                                + embedding_flag
     else:
         model = get_conv1d_model(kmer, embedding_size)
 
-        log_dir = log_dir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S_conv1d")\
-                                                                    + embedding_flag
-        tensorboard_callback = tf.keras.callbacks.TensorBoard(
-                                                log_dir=log_dir, histogram_freq=1)
-        model.fit(input_train, label, batch_size=512, epochs=10,
+        log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_conv1d")\
+                                                                + embedding_flag
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(
+                                            log_dir = log_dir, histogram_freq=1)
+    model.fit(input_train, label, batch_size=512, epochs=10,
                                                 callbacks = [tensorboard_callback],
-                                                validation_data=(input_val, vy))
+                                                validation_data = (input_val, vy))
+    model.save(model_dir + "sequence_model")
 
     return None
 
