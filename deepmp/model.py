@@ -6,36 +6,30 @@ import tensorflow as tf
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.layers import *
 
-def get_brnn_model(base_num, vocab_size, gru_cell = False):
+def get_brnn_model(base_num, embedding_size, rnn_cell = "lstm"):
 
-    embedded_bases = Input(shape=(base_num, vocab_size))
-    means = Input(shape=(base_num,))
-    stds = Input(shape=(base_num,))
-    sanums = Input(shape=(base_num,))
+    depth = embedding_size + 3
+    input = Input(shape=(base_num, depth))
 
-    vector = tf.concat([embedded_bases, tf.reshape(means, [-1, base_num, 1]),
-                                    tf.reshape(stds, [-1, base_num, 1]),
-                                    tf.reshape(sanums, [-1, base_num, 1])],
-                                    axis=2)
-    if gru_cell:
+    if rnn_cell == "gru":
         x = Bidirectional(RNN([GRUCell(100, dropout=0.2), \
-                GRUCell(100, dropout=0.2),GRUCell(100, dropout=0.2)]))(vector)
+                GRUCell(100, dropout=0.2),GRUCell(100, dropout=0.2)]))(input)
     else:
         x = Bidirectional(RNN([LSTMCell(100, dropout=0.2), \
-                LSTMCell(100, dropout=0.2),LSTMCell(100, dropout=0.2)]))(vector)
+                LSTMCell(100, dropout=0.2),LSTMCell(100, dropout=0.2)]))(input)
     x = Dense(50, activation='relu', use_bias=False)(x)
     x = Dropout(0.2)(x)
     out = Dense(1, activation='sigmoid', use_bias=False)(x)
-    model = Model([embedded_bases, means, stds, sanums], outputs=out)
+    model = Model(input, outputs=out)
     model.compile(optimizer=tf.keras.optimizers.Adam(),
         loss='binary_crossentropy', metrics=['acc'])
     print(model.summary())
 
     return model
 
-def get_conv1d_model(base_num, vocab_size):
+def get_conv1d_model(base_num, embedding_size):
 
-    depth = vocab_size + 3
+    depth = embedding_size + 3
     model = Sequential()
     model.add(tf.keras.layers.InputLayer(input_shape=(base_num,depth)))
     model.add(tf.keras.layers.Conv1D(128, 5, activation='relu'))

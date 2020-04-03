@@ -28,36 +28,49 @@ def cli(debug):
 @cli.command(short_help='Calling modifications')
 def call_modifications():
     """Call modifications"""
-    
+
     raise NotImplementedError
 
 
 #TODO <MC,PB> An additional parser might be needed in train.py
-#TODO <MC,PB> Separate each NN module? 
+#TODO <MC,PB> Separate each NN module?
 #TODO <MC, PB> How to combine outputs properly --> Joint model
 @cli.command(short_help='Trainining neural networks')
 @click.option(
-    '-ts', '--train_sequence', default='',  
+    '-ts', '--train_sequence', default='',
     help='path to sequence features for training'
 )
 @click.option(
-    '-vs', '--val_sequence', default='',  
+    '-vs', '--val_sequence', default='',
     help='path to sequence features for validation'
 )
 @click.option(
-    '-te', '--train_errors', default='',  
+    '-one_hot', '--one_hot_embedding', is_flag=True,
+    help='use one hot embedding'
+)
+@click.option(
+    '-rnn', '--rnn_type', default='',
+    help='rnn type'
+)
+@click.option(
+    '-ld', '--log_dir', default='',
+    help='training log directory'
+)
+@click.option(
+    '-te', '--train_errors', default='',
     help='path to error features for training'
 )
 @click.option(
-    '-ve', '--val_errors', default='',  
+    '-ve', '--val_errors', default='',
     help='path to error features for validation'
 )
 def train_nns(**kwargs):
     """Train Neural Networks"""
     args = Namespace(**kwargs)
-    
+
     if args.train_sequence:
-        train_sequence(args.train_sequence, args.val_sequence)
+        train_sequence(args.train_sequence, args.val_sequence,
+                        args.one_hot_embedding, args.rnn_type, args.log_dir)
 
     if args.train_errors:
         train_errors(args.train_errors, args.val_errors)
@@ -69,25 +82,25 @@ def train_nns(**kwargs):
     'input'
 )
 @click.option(
-    '-rp', '--reference-path', required=True, 
+    '-rp', '--reference-path', required=True,
     help='Reference genome to be used. .fa file'
 )
 @click.option(
-    '-cg', '--corrected-group', default='RawGenomeCorrected_000', 
+    '-cg', '--corrected-group', default='RawGenomeCorrected_000',
     help='the corrected_group of fast5 files after tombo re-squiggle. '
     'default RawGenomeCorrected_000'
 )
 @click.option(
-    '-bs', '--basecall-subgroup', default='BaseCalled_template',  
+    '-bs', '--basecall-subgroup', default='BaseCalled_template',
     help='Corrected subgroup of fast5 files. default BaseCalled_template'
 )
 @click.option(
-    '-nm', '--normalize-method', type=click.Choice(['mad', 'zscore']), 
+    '-nm', '--normalize-method', type=click.Choice(['mad', 'zscore']),
     default='mad', help='the way for normalizing signals in read level. '
     'mad or zscore, default mad'
 )
 @click.option(
-    '--methyl-label', '-ml', type=click.Choice(['1', '0']), 
+    '--methyl-label', '-ml', type=click.Choice(['1', '0']),
     default='1', help='the label of the interested modified '
     'bases, this is for training. 0 or 1, default 1'
 )
@@ -106,7 +119,7 @@ def train_nns(**kwargs):
     '-cpu', '--cpus', default=1, help='number of processes to be used, default 1'
 )
 @click.option(
-    '--f5-batch-num', '-bn', default=100, 
+    '--f5-batch-num', '-bn', default=100,
     help='number of files to be processed by each process one time, default 100'
 )
 @click.option(
@@ -114,11 +127,11 @@ def train_nns(**kwargs):
     help='0-based location of the targeted base in the motif, default 0'
 )
 @click.option(
-    '--positions', '-p', default=None, 
+    '--positions', '-p', default=None,
     help='Tap delimited file with a list of positions. default None'
 )
 @click.option(
-    '--cent-signals-len', '-csl', default=360, 
+    '--cent-signals-len', '-csl', default=360,
     help='the number of signals to be used in deepsignal, '
     'default 360'
 )
@@ -136,7 +149,7 @@ def context_extraction(**kwargs):
         args.cent_signals_len, args.methyl_label, args.write_path, \
         args.f5_batch_num
     )
-    
+
 
 if __name__ == '__main__':
     cli()
