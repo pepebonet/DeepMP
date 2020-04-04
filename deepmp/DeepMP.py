@@ -5,7 +5,7 @@ from argparse import Namespace
 import click
 
 from .train import *
-from .preprocess import preprocess_csv
+from .preprocess import *
 import deepmp.feature_extraction as fe
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -88,23 +88,28 @@ def train_nns(**kwargs):
 
 
 @cli.command(short_help='Preprocess data for NNs')
-@click.option(
-    '-tf', '--train_file', default='',
-    help='path to csv file for training'
+@click.argument(
+    'filename', type=click.Path(exists=True)
 )
 @click.option(
-    '-vf', '--validation_file', default='',
-    help='path to csv file for validation'
+    '-mt', '--model_type', required=True,
+    type=click.Choice(['seq', 'err']),
+    help='model for preprocessing'
 )
 @click.option(
-    '-mt', '--model_type',
-    default='', help='choose model to preprocess'
+     '--feat', default=20,
+    help='feat'
 )
 def preprocess(**kwargs):
     """Preprocessing before trainning/test models """
 
     args = Namespace(**kwargs)
-    preprocess_csv(args.train_file, args.validation_file, args.model_type)
+    if args.model_type == 'seq':
+        preprocess_sequence(args.filename)
+    elif args.model_type == 'err':
+        preprocess_error(args.filename, args.feat)
+    else:
+        print("model type needs to be specified")
 
 @cli.command(short_help='Feature extraction on contexts')
 @click.argument(
