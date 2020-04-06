@@ -80,7 +80,7 @@ def train_errors(train_file, val_file):
         log_dir=log_dir, histogram_freq=1
     )
  
-    model.fit(X_train, Y_train, batch_size=512, epochs=12,
+    model.fit(X_train, Y_train, batch_size=512, epochs=50,
                             callbacks = [tensorboard_callback],
                             validation_data=(X_val, Y_val))
     return 

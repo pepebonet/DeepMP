@@ -50,7 +50,6 @@ def get_cnn_model():
         optimizer='adam', loss='binary_crossentropy', metrics=['acc']
     )
     print(model.summary())
-
     return model
 
 
