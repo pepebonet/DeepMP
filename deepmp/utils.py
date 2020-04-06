@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-import os
+
 import re
 import fnmatch
-import numpy as np
 
 basepairs = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N',
              'W': 'W', 'S': 'S', 'M': 'K', 'K': 'M', 'R': 'Y',
@@ -125,7 +124,7 @@ def get_refloc_of_methysite_in_motif(seqstr, motifset, methyloc_in_motif=0):
 
 
 def kmer2code(kmer_bytes):
-    return np.array([base2code_dna[x] for x in kmer_bytes], np.int32)
+    return [base2code_dna[x] for x in kmer_bytes]
 
 
 
