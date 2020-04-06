@@ -12,12 +12,13 @@ def get_brnn_model(base_num, embedding_size, rnn_cell = "lstm"):
     input = Input(shape=(base_num, depth))
 
     if rnn_cell == "gru":
-        x = Bidirectional(RNN([GRUCell(100, dropout=0.2), \
-                GRUCell(100, dropout=0.2),GRUCell(100, dropout=0.2)]))(input)
+        x = Bidirectional(RNN([GRUCell(256, dropout=0.2), \
+                GRUCell(256, dropout=0.2),GRUCell(256, dropout=0.2)]))(input)
     else:
-        x = Bidirectional(RNN([LSTMCell(100, dropout=0.2), \
-                LSTMCell(100, dropout=0.2),LSTMCell(100, dropout=0.2)]))(input)
-    x = Dense(50, activation='relu', use_bias=False)(x)
+        x = Bidirectional(RNN([LSTMCell(256, dropout=0.2), \
+                LSTMCell(256, dropout=0.2),LSTMCell(256, dropout=0.2)]))(input)
+    #x = Dense(50, activation='relu', use_bias=False)(x)
+    x = Dense(512, activation='relu', use_bias=False)(x)
     x = Dropout(0.2)(x)
     out = Dense(1, activation='sigmoid', use_bias=False)(x)
     model = Model(input, outputs=out)
@@ -32,11 +33,10 @@ def get_conv1d_model(base_num, embedding_size):
     depth = embedding_size + 3
     model = Sequential()
     model.add(tf.keras.layers.InputLayer(input_shape=(base_num,depth)))
-    model.add(tf.keras.layers.Conv1D(128, 5, activation='relu'))
+    model.add(tf.keras.layers.Conv1D(256, 5, activation='relu'))
     model.add(tf.keras.layers.LocallyConnected1D(128, 3, activation='relu'))
-    model.add(tf.keras.layers.MaxPool1D())
-    model.add(tf.keras.layers.Conv1D(64, 3, activation='relu'))
-    model.add(tf.keras.layers.LocallyConnected1D(64, 3, activation='relu'))
+    model.add(tf.keras.layers.Conv1D(256, 3, activation='relu'))
+    model.add(tf.keras.layers.LocallyConnected1D(128, 3, activation='relu'))
     model.add(tf.keras.layers.GlobalAveragePooling1D())
     model.add(tf.keras.layers.Dropout(0.2))
     model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))
