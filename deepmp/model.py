@@ -48,10 +48,10 @@ def get_conv1d_model(base_num, embedding_size):
     return model
 
 
-def get_cnn_model():
+def get_cnn_model(feat):
 
     model = tf.keras.Sequential()
-    model.add(tf.keras.layers.Conv1D(128, 3, input_shape=(20,1), activation='relu'))
+    model.add(tf.keras.layers.Conv1D(128, 3, input_shape=(feat, 1), activation='relu'))
     model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
     model.add(tf.keras.layers.MaxPooling1D(3))
     model.add(tf.keras.layers.Conv1D(128, 3, activation='relu'))

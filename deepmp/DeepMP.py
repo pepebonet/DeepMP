@@ -54,6 +54,14 @@ def call_modifications():
     help='rnn type'
 )
 @click.option(
+    '-ks', '--kmer_sequence', default=17,
+    help='kmer length for sequence training'
+)
+@click.option(
+    '-es', '--epochs_sequence', default=10,
+    help='Number of epochs for sequence training'
+)
+@click.option(
     '-md', '--model_dir', default='models/',
     help='directory to trained model'
 )
@@ -69,22 +77,35 @@ def call_modifications():
     '-ve', '--val_errors', default='',
     help='path to error features for validation'
 )
+@click.option(
+    '-fe', '--features_errors', default=20,
+    help='Number of error features to select'
+)
+@click.option(
+    '-ee', '--epochs_errors', default=20,
+    help='Number of epochs for error training'
+)
+@click.option(
+    '-bs', '--batch_size', default=512,
+    help='Batch size for training both models'
+)
 def train_nns(**kwargs):
     """Train Neural Networks"""
     args = Namespace(**kwargs)
 
     if args.train_sequence:
         train_sequence(
-                        args.train_sequence, args.val_sequence,
-                        args.log_dir, args.model_dir,
-                        args.one_hot_embedding, args.rnn_type
-                        )
+                args.train_sequence, args.val_sequence,
+                args.log_dir, args.model_dir, args.batch_size, args.kmer_sequence,
+                args.epochs_sequence, args.one_hot_embedding, args.rnn_type,
+                )
 
     if args.train_errors:
         train_errors(
-                        args.train_errors, args.val_errors,
-                        args.log_dir, args.model_dir
-                        )
+                args.train_errors, args.val_errors,
+                args.log_dir, args.model_dir, args.features_errors,
+                args.epochs_errors, args.batch_size
+                )
 
 
 @cli.command(short_help='Preprocess data for NNs')
@@ -98,7 +119,7 @@ def train_nns(**kwargs):
 )
 @click.option(
      '--feat', default=20,
-    help='feat'
+    help='# Error features to select'
 )
 def preprocess(**kwargs):
     """Preprocessing before trainning/test models """

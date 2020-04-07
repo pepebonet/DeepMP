@@ -29,10 +29,9 @@ def load_error_data(file):
     return X, Y
 
 
-def train_sequence(train_file, val_file, log_dir, model_dir,
-                                            one_hot = False, rnn = None):
-
-    kmer = 17
+def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
+                                kmer, epochs, one_hot = False, rnn = None):
+    
     embedding_flag = ""
 
     ## preprocess data
@@ -83,7 +82,7 @@ def train_sequence(train_file, val_file, log_dir, model_dir,
                                                                 + embedding_flag
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
                                             log_dir = log_dir, histogram_freq=1)
-    model.fit(input_train, label, batch_size=512, epochs=10,
+    model.fit(input_train, label, batch_size=batch_size, epochs=epochs,
                                                 callbacks = [tensorboard_callback],
                                                 validation_data = (input_val, vy))
     model.save(model_dir + "sequence_model")
@@ -91,19 +90,19 @@ def train_sequence(train_file, val_file, log_dir, model_dir,
     return None
 
 
-def train_errors(train_file, val_file, log_dir, model_dir):
-
+def train_errors(train_file, val_file, log_dir, model_dir, feat, 
+    epochs, batch_size):
     X_train, Y_train = load_error_data(train_file)
     X_val, Y_val  = load_error_data(val_file)
 
-    model = get_cnn_model()
+    model = get_cnn_model(feat)
 
     log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_errors")
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
         log_dir=log_dir, histogram_freq=1
     )
  
-    model.fit(X_train, Y_train, batch_size=512, epochs=50,
+    model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs,
                             callbacks = [tensorboard_callback],
                             validation_data=(X_val, Y_val))
     model.save(model_dir + "error_model")
