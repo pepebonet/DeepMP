@@ -18,7 +18,7 @@ def rename(filename, pattern='/Analyses/Basecall_1D_001',
             return 0, 1
 
 
-@click.command(short_help='Parser of fast5 files')
+@click.command(short_help='Parser of fast5 files (Rename hdf5)')
 @click.argument('input')
 @click.option(
     '-p', '--pattern', default='/Analyses/Basecall_1D_001', 

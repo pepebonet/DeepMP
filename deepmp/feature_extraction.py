@@ -12,6 +12,7 @@ from statsmodels import robust
 from deepmp import utils as ut
 from deepmp.fast5 import Fast5
 
+#TODO <JB, MC> add to parser and delete
 reads_group = 'Raw/Reads'
 queen_size_border = 2000
 time_wait = 5
