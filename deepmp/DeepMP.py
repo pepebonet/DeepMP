@@ -6,12 +6,13 @@ import click
 
 from .train import *
 from .preprocess import *
-import deepmp.feature_extraction as fe
+import deepmp.sequence_extraction as se
+import deepmp.error_extraction as ee
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 # ------------------------------------------------------------------------------
-# ARGPARSER
+# CLICK
 # ------------------------------------------------------------------------------
 
 @click.group(context_settings=CONTEXT_SETTINGS)
@@ -26,12 +27,20 @@ def cli(debug):
         logging.getLogger('bgdata').setLevel(logging.WARNING)
 
 
+# ------------------------------------------------------------------------------
+# CALL MODIFICATIONS
+# ------------------------------------------------------------------------------
+
 @cli.command(short_help='Calling modifications')
 def call_modifications():
     """Call modifications"""
 
     raise NotImplementedError
 
+
+# ------------------------------------------------------------------------------
+# TRAIN NEURAL NETWORKS
+# ------------------------------------------------------------------------------
 
 #TODO <MC,PB> An additional parser might be needed in train.py
 #TODO <MC,PB> Separate each NN module?
@@ -108,6 +117,10 @@ def train_nns(**kwargs):
                 )
 
 
+# ------------------------------------------------------------------------------
+# PREPROCESS DATA
+# ------------------------------------------------------------------------------
+
 @cli.command(short_help='Preprocess data for NNs')
 @click.argument(
     'filename', type=click.Path(exists=True)
@@ -132,7 +145,39 @@ def preprocess(**kwargs):
     else:
         print("model type needs to be specified")
 
-@cli.command(short_help='Feature extraction on contexts')
+
+# ------------------------------------------------------------------------------
+# ERROR FEATURE EXTRACTION
+# ------------------------------------------------------------------------------
+
+@cli.command(short_help='Extract error features after Epinano pipeline')
+@click.option(
+    '-ef', '--error-features', default='', 
+    help='extracted error through epinano pipeline'
+)
+@click.option(
+    '-l', '--label', default='1', type=click.Choice(['1', '0']),
+)
+@click.option(
+    '-m', '--motif', default='CG', help='motif of interest'
+)
+@click.option(
+    '-o', '--output', default='', help='Output file'
+)
+def error_sequence_extraction(**kwargs):
+    """Perform error feature extraction """
+
+    args = Namespace(**kwargs)
+    ee.process_error_features(
+        args.error_features, args.label, args.motif, args.output
+    )
+
+
+# ------------------------------------------------------------------------------
+# SEQUENCE FEATURE EXTRACTION
+# ------------------------------------------------------------------------------
+
+@cli.command(short_help='Extraction of sequence features')
 @click.argument(
     'input'
 )
@@ -193,11 +238,11 @@ def preprocess(**kwargs):
 @click.option(
     '-o', '--write_path', required=True, help='file path to save the features'
 )
-def context_extraction(**kwargs):
-    """Perform feature extraction"""
+def sequence_feature_extraction(**kwargs):
+    """Perform sequence feature extraction"""
 
     args = Namespace(**kwargs)
-    fe.extract_features(
+    se.extract_features(
         args.input, args.reference_path, args.corrected_group, \
         args.basecall_subgroup, args.is_dna, args.motifs, args.cpus, \
         args.positions, args.normalize_method, args.mod_loc, args.kmer_len, \
