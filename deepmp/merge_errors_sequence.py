@@ -1,63 +1,77 @@
 #!/usr/bin/env python3
 import os
+import h5py
 import click
 import numpy as np
 import pandas as pd
-from collections import Counter
+import tensorflow as tf
+from deepmp.utils import kmer2code
 from sklearn.model_selection import train_test_split
 
 
-def get_data(error_features, sequence_features):
-    errors = pd.read_csv(error_features, sep=',')
-    sequence = pd.read_csv(sequence_features, delimiter = "\t", 
-        names = ['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
-        'read_strand', 'kmer','signal_means', 'signal_stds', 'signal_lens', 
-        'cent_signals', 'methy_label'])
-
-    errors['label'] = 1
-
-    return errors, sequence
-
-
-#TODO <JB> automatize for every kmer possible and clean
-def get_modified_sites(df, kmer):
-    df['kmer'] = df['#Kmer'].apply(lambda x: list(x))
-    bases = pd.DataFrame(df['kmer'].values.tolist(), 
-        columns=['base1', 'base2', 'base3', 'base4', 'base5'])
-    positions = pd.DataFrame(
-        df['Window'].str.split(':').values.tolist(), 
-        columns=['pos1', 'pos2', 'pos3', 'pos4', 'pos5']
-    )
-    df2 = df.join(bases.join(positions))
-
-    return df2[(df2['base3'] == 'C') & (df2['base4'] == 'G')]
+def get_data(treated, untreated, names=''):
+    if names:
+        treat = pd.read_csv(treated, delimiter = "\t", names=names)
+        untreat = pd.read_csv(untreated, delimiter = "\t", names=names)
+    else:
+        treat = pd.read_csv(treated, sep=',')
+        untreat = pd.read_csv(untreated, sep=',')
+    return treat, untreat
 
 
 def get_merge_data(errors, sequence):
-    import pdb;pdb.set_trace()
-
+    errors['pos'] = errors['pos'].astype('int64')
+    return pd.merge(sequence, errors, on='pos', how='inner')
+    
 
 def get_training_test_data(df):
-    X = df[df.columns[:-1]]
-    Y = df[df.columns[-1]]
+    train, test = train_test_split(df, test_size=0.05, random_state=0)
+    train, val = train_test_split(train, test_size=test.shape[0], random_state=0)
+    
+    train_seq = train[train.columns[:12]]; train_err = train[train.columns[12:]]
+    test_seq = test[test.columns[:12]]; test_err = test[test.columns[12:]]
+    val_seq = val[val.columns[:12]]; val_err = val[val.columns[12:]]
 
-    X_train, X_test, Y_train, Y_test = train_test_split(
-        X, Y, test_size=0.05, random_state=0
-    )
-    X_test['label'] = Y_test
-
-    X_train, X_val, Y_train, Y_val = train_test_split(
-        X_train, Y_train, test_size=0.01, random_state=0
-    )
-    X_train['label'] = Y_train; X_val['label'] = Y_val
-
-    return X_train, X_test, X_val
+    return [(train_seq, train_err, 'train'), (test_seq, test_err, 'test'), 
+        (val_seq, val_err, 'val')]
 
 
-def save_files(train, test, val, output):
-    train.to_csv(os.path.join(output, 'train_errors.csv'), index=None)
-    test.to_csv(os.path.join(output, 'test_errors.csv'), index=None)
-    val.to_csv(os.path.join(output, 'val_errors.csv'), index=None)
+def preprocess_sequence(df, output, file):
+
+    df = df.dropna()
+    kmer = df['kmer'].apply(kmer2code)
+    base_mean = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_means'].values]
+    base_std = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_stds'].values]
+    base_signal_len = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_lens'].values]
+    label = df['methyl_label']
+
+    file_name = os.path.join(output, '{}_seq.h5'.format(file))
+
+    with h5py.File(file_name, 'a') as hf:
+        hf.create_dataset("kmer",  data=np.stack(kmer))
+        hf.create_dataset("signal_means",  data=np.stack(base_mean))
+        hf.create_dataset("signal_stds",  data=np.stack(base_std))
+        hf.create_dataset("signal_lens",  data=np.stack(base_signal_len))
+        hf.create_dataset("label",  data=label)
+
+    return None
+
+
+def preprocess_error(df, feat, output, file):
+
+    X = df[df.columns[:-1]].values
+    Y = df[df.columns[-1]].values
+
+    file_name = os.path.join(output, '{}_err.h5'.format(file))
+
+    with h5py.File(file_name, 'a') as hf:
+        hf.create_dataset("X", data=X.reshape(X.shape[0], feat, 1))
+        hf.create_dataset("Y", data=Y)
+
+    return None
 
 
 # ------------------------------------------------------------------------------
@@ -66,32 +80,40 @@ def save_files(train, test, val, output):
 
 @click.command(short_help='Merge error and sequence features')
 @click.option(
-    '-ef', '--error-features', default='', help='extracted error features'
+    '-et', '--error-treated', default='', help='extracted error features'
 )
 @click.option(
-    '-sf', '--sequence-features', default='', help='extracted sequence features'
+    '-eu', '--error-untreated', default='', help='extracted error features'
 )
 @click.option(
-    '-l', '--label', default='treat', type=click.Choice(['treat', 'untreat']),
+    '-st', '--sequence-treated', default='', help='extracted sequence features'
 )
 @click.option(
-    '-m', '--motif', default='GC', help='motif of interest'
+    '-su', '--sequence-untreated', default='', help='extracted sequence features'
+)
+@click.option(
+    '-nef', '--num-err-feat', default=20, help='# Error features to select'
 )
 @click.option(
     '-o', '--output', default='', help='Output file'
 )
-def main(error_features, sequence_features, label, motif, output):
-    errors, sequence = get_data(error_features, sequence_features)
+def main(error_treated, error_untreated, sequence_treated, 
+    sequence_untreated, num_err_feat, output):
+    #TODO add conditions if there is only seq or err and not both
+    seq_treat, seq_untreat = get_data(sequence_treated, sequence_untreated, 
+        names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 
+        'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_lens', 
+        'cent_signals', 'methyl_label'])
+    err_treat, err_untreat = get_data(error_treated, error_untreated)
     
-    error_kmer = get_modified_sites(errors, motif)
+    treat_merge = get_merge_data(err_treat, seq_treat)
+    untreat_merge = get_merge_data(err_untreat, seq_untreat)
+    
+    data = get_training_test_data(pd.concat([treat_merge, untreat_merge]))
 
-    sequence_error = get_merge_data(error_kmer, sequence)
-
-    train, test, val = get_training_test_data(sequence_error)
-
-    save_files(train, test, val, output)
-    import pdb;pdb.set_trace()
-
+    for el in data:
+        preprocess_sequence(el[0], output, el[2])
+        preprocess_error(el[1], num_err_feat, output, el[2])
 
     
 if __name__ == "__main__":

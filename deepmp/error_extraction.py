@@ -30,7 +30,7 @@ def get_motif_data(df, kmer):
 
 
 def clean_df(df):
-    return df.drop(columns=['Window', 'Ref', 'Coverage',
+    return df.drop(columns=['#Kmer', 'Window', 'Ref', 'Coverage',
         'base1', 'base2', 'base3', 'base4', 'base5', 'kmer',
         'pos1', 'pos2', 'pos4', 'pos5']).rename(columns={'pos3': 'pos'})
     
