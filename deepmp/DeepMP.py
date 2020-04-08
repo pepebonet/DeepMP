@@ -118,32 +118,47 @@ def train_nns(**kwargs):
 
 
 # ------------------------------------------------------------------------------
-# PREPROCESS DATA
+# MERGE & PREPROCESS DATA
 # ------------------------------------------------------------------------------
 
-@cli.command(short_help='Preprocess data for NNs')
-@click.argument(
-    'filename', type=click.Path(exists=True)
+@cli.command(short_help='Merge features and preprocess data for NNs')
+@click.option(
+    '-ft', '--feature_type', required=True,
+    type=click.Choice(['seq', 'err', 'both']),
+    help='which features is the input corresponding to? To the sequence, '
+    'to the errors or to both of them. If choice and files do not correlate '
+    'errors will rise throughout the script'
 )
 @click.option(
-    '-mt', '--model_type', required=True,
-    type=click.Choice(['seq', 'err']),
-    help='model for preprocessing'
+    '-et', '--error-treated', default='', help='extracted error features'
 )
 @click.option(
-     '--feat', default=20,
-    help='# Error features to select'
+    '-eu', '--error-untreated', default='', help='extracted error features'
 )
-def preprocess(**kwargs):
-    """Preprocessing before trainning/test models """
-
-    args = Namespace(**kwargs)
-    if args.model_type == 'seq':
-        preprocess_sequence(args.filename)
-    elif args.model_type == 'err':
-        preprocess_error(args.filename, args.feat)
+@click.option(
+    '-st', '--sequence-treated', default='', help='extracted sequence features'
+)
+@click.option(
+    '-su', '--sequence-untreated', default='', help='extracted sequence features'
+)
+@click.option(
+    '-nef', '--num-err-feat', default=20, help='# Error features to select'
+)
+@click.option(
+    '-o', '--output', default='', help='Output file'
+)
+def merge_and_preprocess(feature_type, error_treated, error_untreated, 
+    sequence_treated, sequence_untreated, num_err_feat, output):
+    if feature_type == 'both':
+        do_seq_err_preprocess(
+            sequence_treated, sequence_untreated, error_treated, 
+            error_untreated, output, num_err_feat
+        )
     else:
-        print("model type needs to be specified")
+        do_single_preprocess(
+            feature_type, sequence_treated, sequence_untreated, 
+            error_treated, error_untreated, output, num_err_feat
+        )
 
 
 # ------------------------------------------------------------------------------
