@@ -24,10 +24,21 @@ We highly recommend to use a virtual environment for the installation and employ
         pip install -e .
 
 # Usage
+### Merge and preprocess:
+Sequence and error features need to be combined so that the validation, test and train sets are obtained
+
+        DeepMP merge-and-preprocess -et path/to/treated_error_features.csv -eu path/to/untreated_error_features.csv -st path/to/treated_sequence_features.tsv -su path/to/untreated_sequence_features.tsv -o output/ -ft both
+
 ### Feature extraction:
 
+`Option 1:` Extract sequence features
 ```
-    DeepMP context-extraction path/to/fast5/files/ -rp path/to/reference/file/ -m CG -o extraction_outputs/
+    DeepMP sequence-extraction path/to/fast5/files/ -rp path/to/reference/file/ -m CG -o extraction_outputs/ -ml 1
+```
+
+`Option 2:` Extract error features
+```
+    DeepMP error-extraction -ef path/to/errors/extracted/by/epinano -rp path/to/reference/file/ -m CG -o output/error_features/ -l 1
 ```
 
 ### Train models

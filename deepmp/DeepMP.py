@@ -179,7 +179,7 @@ def merge_and_preprocess(feature_type, error_treated, error_untreated,
 @click.option(
     '-o', '--output', default='', help='Output file'
 )
-def error_sequence_extraction(**kwargs):
+def error_extraction(**kwargs):
     """Perform error feature extraction """
 
     args = Namespace(**kwargs)
