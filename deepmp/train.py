@@ -23,8 +23,8 @@ def load_data(file):
 def load_error_data(file):
 
     with h5py.File(file, 'r') as hf:
-        X = hf['X'][:]
-        Y = hf['Y'][:]
+        X = hf['err_X'][:]
+        Y = hf['err_Y'][:]
 
     return X, Y
 

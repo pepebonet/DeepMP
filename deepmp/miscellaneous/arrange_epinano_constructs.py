@@ -14,16 +14,19 @@ def error_features_kmer(df, meth_label):
         if j[j['relative_pos'] == 0]['Ref_base'].tolist()[0] == 'A':
             if Counter(j['Ref_base'])['A'] > 1:
                 counter += 1
-            features = np.concatenate(
+            
+            pos = j.iloc[2]['position'].split(':')[2]
+            features = list(np.concatenate(
                 [j['mean_q'].values, j['mis'].values, j['del'].values]
-            )
-            features = np.append(features, meth_label)
+            ))
+            features.append(meth_label)
+            features.append(pos)
 
             all_features.append(features)
 
     return pd.DataFrame(all_features, columns=['q1', 'q2', 'q3', 'q4', 'q5', 
         'mis1', 'mis2', 'mis3', 'mis4', 'mis5', 'del1', 'del2', 
-        'del3', 'del4', 'del5', 'label'])
+        'del3', 'del4', 'del5', 'label', 'pos'])
 
 
 def error_features_single(df, meth_label):
@@ -40,6 +43,7 @@ def sequence_features(df, methyl_label):
         sub = df[i:i+17]
         if sub['Ref_base'][8:9].tolist()[0] == 'A':
             kmer = ''.join([x for x in sub['Ref_base'].tolist()])
+    
             means_text = ','.join(
                 [str(x) for x in np.around(sub['mean_current'].tolist(), 
                 decimals=6)]
@@ -48,11 +52,11 @@ def sequence_features(df, methyl_label):
                 [str(x) for x in np.around(sub['std_current'].tolist(), 
                 decimals=6)]
             )
-            signal_len_text = ','.join(
-                [str(x) for x in sub['Depth'].astype('int32').tolist()]
-            )
+            signal_len_text = ','.join([str(x) for x in -np.ones(17)])
+            pos = sub[8:9]['position'].values[0].split(':')[2]
+
             features.append(
-                "\t".join(['-', '-', '-', '-', '-', '-', 
+                "\t".join(['-', pos, '-', '-', '-', '-', 
                 kmer, means_text, stds_text, signal_len_text, '-', methyl_label])
             )
     return features
