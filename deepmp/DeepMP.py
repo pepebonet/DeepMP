@@ -109,7 +109,7 @@ def train_nns(**kwargs):
                 args.epochs, args.batch_size
                 )
 
-    elif args.model == 'both':
+    elif args.model == 'joint':
         train_jm( args.train_file, args.val_file,
                                     args.log_dir, args.model_dir,
                                     args.features_errors, args.batch_size,
