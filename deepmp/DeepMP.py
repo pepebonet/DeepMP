@@ -48,7 +48,7 @@ def call_modifications():
 @cli.command(short_help='Trainining neural networks')
 @click.option(
     '-model', '--model', required=True,
-    type=click.Choice(['seq', 'err', 'both']),
+    type=click.Choice(['seq', 'err', 'joint']),
     help='choose model to train'
 )
 @click.option(

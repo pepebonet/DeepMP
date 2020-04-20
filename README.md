@@ -48,11 +48,15 @@ Preprocessing is needed before training. Use `--model_type` flag to specify mode
 ```
 Train sequence model from binary files.
 ```
-    DeepMP train-nns -ts path/to/train/data -vs path/to/validation/data -rnn lstm -md save/model/to/directory -ld save/log/to/directory
+    DeepMP train-nns -model seq -tf path/to/train/data -vf path/to/validation/data -rnn lstm -md save/model/to/directory -ld save/log/to/directory
 ```
 Train errors model from binary files.
 ```
-    DeepMP train-nns -te path/to/train/data -ve path/to/validation/data -md save/model/to/directory -ld save/log/to/directory
+    DeepMP train-nns -model err -tf path/to/train/data -vf path/to/validation/data -md save/model/to/directory -ld save/log/to/directory
+```
+Train joint model from binary files.
+```
+    DeepMP train-nns -model joint -tf path/to/train/data -vf path/to/validation/data -md save/model/to/directory -ld save/log/to/directory
 ```
 ### Plotting Arguments
 ### Other Arguments
