@@ -47,11 +47,16 @@ def call_modifications():
 #TODO <MC, PB> How to combine outputs properly --> Joint model
 @cli.command(short_help='Trainining neural networks')
 @click.option(
-    '-ts', '--train_sequence', default='',
+    '-model', '--model', required=True,
+    type=click.Choice(['seq', 'err', 'both']),
+    help='choose model to train'
+)
+@click.option(
+    '-tf', '--train_file', default='',
     help='path to sequence features for training'
 )
 @click.option(
-    '-vs', '--val_sequence', default='',
+    '-vf', '--val_file', default='',
     help='path to sequence features for validation'
 )
 @click.option(
@@ -67,8 +72,8 @@ def call_modifications():
     help='kmer length for sequence training'
 )
 @click.option(
-    '-es', '--epochs_sequence', default=10,
-    help='Number of epochs for sequence training'
+    '-ep', '--epochs', default=50,
+    help='Number of epochs for training'
 )
 @click.option(
     '-md', '--model_dir', default='models/',
@@ -79,20 +84,8 @@ def call_modifications():
     help='training log directory'
 )
 @click.option(
-    '-te', '--train_errors', default='',
-    help='path to error features for training'
-)
-@click.option(
-    '-ve', '--val_errors', default='',
-    help='path to error features for validation'
-)
-@click.option(
-    '-fe', '--features_errors', default=20,
+    '-fe', '--features_errors', default=15,
     help='Number of error features to select'
-)
-@click.option(
-    '-ee', '--epochs_errors', default=20,
-    help='Number of epochs for error training'
 )
 @click.option(
     '-bs', '--batch_size', default=512,
@@ -102,19 +95,27 @@ def train_nns(**kwargs):
     """Train Neural Networks"""
     args = Namespace(**kwargs)
 
-    if args.train_sequence:
+    if args.model == 'seq':
         train_sequence(
-                args.train_sequence, args.val_sequence,
+                args.train_file, args.val_file,
                 args.log_dir, args.model_dir, args.batch_size, args.kmer_sequence,
-                args.epochs_sequence, args.one_hot_embedding, args.rnn_type,
+                args.epochs, args.one_hot_embedding, args.rnn_type,
                 )
 
-    if args.train_errors:
+    elif args.model == 'err':
         train_errors(
-                args.train_errors, args.val_errors,
+                args.train_file, args.val_file,
                 args.log_dir, args.model_dir, args.features_errors,
-                args.epochs_errors, args.batch_size
+                args.epochs, args.batch_size
                 )
+
+    elif args.model == 'both':
+        train_jm( args.train_file, args.val_file,
+                                    args.log_dir, args.model_dir,
+                                    args.features_errors, args.batch_size,
+                                    args.kmer_sequence, args.epochs
+                                    )
+
 
 
 # ------------------------------------------------------------------------------
@@ -147,16 +148,16 @@ def train_nns(**kwargs):
 @click.option(
     '-o', '--output', default='', help='Output file'
 )
-def merge_and_preprocess(feature_type, error_treated, error_untreated, 
+def merge_and_preprocess(feature_type, error_treated, error_untreated,
     sequence_treated, sequence_untreated, num_err_feat, output):
     if feature_type == 'both':
         do_seq_err_preprocess(
-            sequence_treated, sequence_untreated, error_treated, 
+            sequence_treated, sequence_untreated, error_treated,
             error_untreated, output, num_err_feat
         )
     else:
         do_single_preprocess(
-            feature_type, sequence_treated, sequence_untreated, 
+            feature_type, sequence_treated, sequence_untreated,
             error_treated, error_untreated, output, num_err_feat
         )
 
@@ -167,7 +168,7 @@ def merge_and_preprocess(feature_type, error_treated, error_untreated,
 
 @cli.command(short_help='Extract error features after Epinano pipeline')
 @click.option(
-    '-ef', '--error-features', default='', 
+    '-ef', '--error-features', default='',
     help='extracted error through epinano pipeline'
 )
 @click.option(

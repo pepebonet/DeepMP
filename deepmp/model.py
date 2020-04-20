@@ -37,7 +37,7 @@ def get_conv1d_model(base_num, embedding_size):
     model.add(tf.keras.layers.LocallyConnected1D(128, 3, activation='relu'))
     model.add(tf.keras.layers.Conv1D(256, 3, activation='relu'))
     model.add(tf.keras.layers.LocallyConnected1D(128, 3, activation='relu'))
-    model.add(tf.keras.layers.GlobalAveragePooling1D())
+    model.add(tf.keras.layers.GlobalAveragePooling1D(name='seq_pooling_layer'))
     model.add(tf.keras.layers.Dropout(0.2))
     model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))
 
@@ -56,7 +56,7 @@ def get_cnn_model(feat):
     model.add(tf.keras.layers.MaxPooling1D(2))
     model.add(tf.keras.layers.Conv1D(128, 3, activation='relu'))
     model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
-    model.add(tf.keras.layers.GlobalAveragePooling1D())
+    model.add(tf.keras.layers.GlobalAveragePooling1D(name='err_pooling_layer'))
     model.add(tf.keras.layers.Dropout(0.2))
     model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))
 
@@ -68,17 +68,21 @@ def get_cnn_model(feat):
 
 
 #TODO <PB, MC> Need to obtain a proper joint model
-def joint_model(event_output, signal_output, error_output):
-    joint_input = tf.concat(
-        [event_output, signal_output, error_output], axis=1)
+def joint_model(base_num, embedding_size, feat):
 
-    joint_input_shape = joint_input.get_shape().as_list()
-    model = tf.keras.Sequential()
-    model.add(tf.keras.layers.Flatten(input_shape=(joint_input_shape)))
-    model.add(tf.keras.layers.Dense(128, activation=tf.nn.relu))
-    model.add(tf.keras.layers.Dropout(0.2))
-    model.add(tf.keras.layers.Dense(128, activation=tf.nn.relu))
-    model.add(tf.keras.layers.Dropout(0.2))
-    model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))
+    model1 = get_conv1d_model(base_num, embedding_size)
+    output1 = model1.get_layer("seq_pooling_layer").output
+    model2 = get_cnn_model(feat)
+    output2 = model2.get_layer("err_pooling_layer").output
+
+    x = concatenate([output1, output2],axis=-1)
+    x = Dense(512, activation='relu')(x)
+    x = Dropout(0.2)(x)
+    out = Dense(1, activation='sigmoid', use_bias=False)(x)
+    model = Model(inputs=[model1.input, model2.input], outputs=out)
+    model.compile(loss='binary_crossentropy',
+                  optimizer=tf.keras.optimizers.Adam(),
+                  metrics=['accuracy'])
+    print(model.summary())
 
     return model
