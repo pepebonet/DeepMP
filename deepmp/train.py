@@ -159,8 +159,3 @@ def train_jm(train_file, val_file, log_dir, model_dir, feat, batch_size, kmer, e
     model.save(model_dir + "joint_model")
 
     return None
-
-
-#train_jm('../data/extraction_outputs/epianano_constructs/val_train_test/rep2/train.h5',
-#            '../data/extraction_outputs/epianano_constructs/val_train_test/rep2/val.h5',
-#            'logs/', 'models/',15,256,17,200)
