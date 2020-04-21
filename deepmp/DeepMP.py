@@ -53,11 +53,11 @@ def call_modifications():
 )
 @click.option(
     '-tf', '--train_file', default='',
-    help='path to sequence features for training'
+    help='path to training set'
 )
 @click.option(
     '-vf', '--val_file', default='',
-    help='path to sequence features for validation'
+    help='path to validation set'
 )
 @click.option(
     '-one_hot', '--one_hot_embedding', is_flag=True,
