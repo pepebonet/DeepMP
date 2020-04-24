@@ -2,9 +2,10 @@
 
 import time
 import h5py
-import tensorflow as tf
-import numpy as np
 import datetime
+import numpy as np
+import tensorflow as tf
+
 from deepmp.model import *
 
 

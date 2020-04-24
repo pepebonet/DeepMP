@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 
 import re
+import os
+import h5py
 import fnmatch
+import numpy as np
+import tensorflow as tf
+
 
 basepairs = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N',
              'W': 'W', 'S': 'S', 'M': 'K', 'K': 'M', 'R': 'Y',
@@ -129,6 +134,63 @@ def kmer2code(kmer_bytes):
 
 
 # ------------------------------------------------------------------------------
+# TRAIN AND CALL MODIFICATIONS
+# ------------------------------------------------------------------------------
+
+def get_data_sequence(file, kmer, one_hot=False):
+    embedding_flag = ""
+
+    ## preprocess data
+    bases, signal_means, signal_stds, signal_lens, label = load_seq_data(file)
+
+    ## embed bases
+    if one_hot:
+        embedding_size = 5
+        embedding_flag += "_one-hot_embedded"
+        embedded_bases = tf.one_hot(bases, embedding_size)
+
+    else:
+        vocab_size = 1024
+        embedding_size = 128
+        weight_table = tf.compat.v1.get_variable(
+                                "embedding",
+                                shape = [vocab_size, embedding_size],
+                                dtype=tf.float32,
+                                initializer = tf.compat.v1.truncated_normal_initializer(
+                                stddev = np.sqrt(2. / vocab_size)
+                                ))
+        embedded_bases = tf.nn.embedding_lookup(weight_table, bases)
+
+    ## prepare inputs for NNs
+    return tf.concat([embedded_bases,
+                                    tf.reshape(signal_means, [-1, kmer, 1]),
+                                    tf.reshape(signal_stds, [-1, kmer, 1]),
+                                    tf.reshape(signal_lens, [-1, kmer, 1])],
+                                    axis=2), label
+
+
+def load_seq_data(file):
+
+    with h5py.File(file, 'r') as hf:
+        bases = hf['kmer'][:]
+        signal_means = hf['signal_means'][:]
+        signal_stds = hf['signal_stds'][:]
+        signal_lens = hf['signal_lens'][:]
+        label = hf['label'][:]
+
+    return bases, signal_means, signal_stds, signal_lens, label
+
+
+def load_error_data(file):
+
+    with h5py.File(file, 'r') as hf:
+        X = hf['err_X'][:]
+        Y = hf['err_Y'][:]
+
+    return X, Y
+
+
+# ------------------------------------------------------------------------------
 # SVM
 # ------------------------------------------------------------------------------
 
@@ -145,3 +207,17 @@ def arrange_columns(cols_in):
             cols.append(int(c) - 1)
 
     return list(set(cols))
+
+
+# ------------------------------------------------------------------------------
+# OUTPUT FUNCTIONS
+# ------------------------------------------------------------------------------
+
+def _write_to_file(file, content, attach=False):
+    if attach and os.path.exists(file):
+        open_flag = 'a'
+    else:
+        open_flag = 'w'
+
+    with open(file, open_flag) as f:
+        f.write(str(content))

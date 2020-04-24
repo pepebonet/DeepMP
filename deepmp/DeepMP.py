@@ -6,8 +6,10 @@ import click
 
 from .train import *
 from .preprocess import *
-import deepmp.sequence_extraction as se
+from .call_modifications import *
 import deepmp.error_extraction as ee
+import deepmp.sequence_extraction as se
+
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -31,11 +33,45 @@ def cli(debug):
 # CALL MODIFICATIONS
 # ------------------------------------------------------------------------------
 
+#TODO <JB, MC> improve way to combine both methods
 @cli.command(short_help='Calling modifications')
-def call_modifications():
+@click.option(
+    '-model', '--model', required=True,
+    type=click.Choice(['seq', 'err', 'joint']),
+    help='choose model to train'
+)
+@click.option(
+    '-tf', '--test_file', required=True,
+    help='path to training set'
+)
+@click.option(
+    '-one_hot', '--one_hot_embedding', is_flag=True,
+    help='use one hot embedding'
+)
+@click.option(
+    '-ks', '--kmer_sequence', default=17,
+    help='kmer length for sequence training'
+)
+@click.option(
+    '-me', '--model_err', default='',
+    help='directory to trained error model'
+)
+@click.option(
+    '-ms', '--model_seq', default='',
+    help='directory to trained sequence model'
+)
+@click.option(
+    '-o', '--output',
+    help='output path to save files'
+)
+def call_modifications(**kwargs):
     """Call modifications"""
+    args = Namespace(**kwargs)
 
-    raise NotImplementedError
+    call_mods(
+        args.model, args.test_file, args.model_err, args.model_seq, 
+        args.one_hot_embedding, args.kmer_sequence, args.output
+    )    
 
 
 # ------------------------------------------------------------------------------
