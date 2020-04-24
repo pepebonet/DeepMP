@@ -14,8 +14,9 @@ def error_features_kmer(df, meth_label):
         if j[j['relative_pos'] == 0]['Ref_base'].tolist()[0] == 'A':
             if Counter(j['Ref_base'])['A'] > 1:
                 counter += 1
-            
-            pos = j.iloc[2]['position'].split(':')[2]
+
+            pos = j.iloc[2]['replicate'] + '_' + \
+                j.iloc[2]['position'].split(':')[2]
             features = list(np.concatenate(
                 [j['mean_q'].values, j['mis'].values, j['del'].values]
             ))
@@ -53,7 +54,8 @@ def sequence_features(df, methyl_label):
                 decimals=6)]
             )
             signal_len_text = ','.join([str(x) for x in -np.ones(17)])
-            pos = sub[8:9]['position'].values[0].split(':')[2]
+            pos = sub[8:9]['replicate'].values[0] + '_' + \
+                sub[8:9]['position'].values[0].split(':')[2]
 
             features.append(
                 "\t".join(['-', pos, '-', '-', '-', '-', 
@@ -62,21 +64,27 @@ def sequence_features(df, methyl_label):
     return features
 
 
-def _write_featurestr_to_file(features_str, input, output):
-    write_fp = os.path.join(output, 'sequence_features_{}'.format(
-        input.rsplit('/', 1)[-1]
-    ))
+def _write_featurestr_to_file(features_str, input, output, methyl_label):
+    if methyl_label == '1':
+        status = 'MOD'
+    else:
+        status = 'UNM'
+    write_fp = os.path.join(output, 'sequence_features_{}.csv'.format(status))
+
     with open(write_fp, 'w') as wf:
         for one_features_str in features_str:
             wf.write(one_features_str + "\n")
         wf.flush()
 
 
-def save_output_errors(df, input, output):
+def save_output_errors(df, input, output, methyl_label):
+    if methyl_label == '1':
+        status = 'MOD'
+    else:
+        status = 'UNM'
+
     df['label'] = df['label'].astype('int32')
-    out_file = os.path.join(output, 'error_features_{}'.format(
-        input.rsplit('/', 1)[-1]
-    ))
+    out_file = os.path.join(output, 'error_features_{}.csv'.format(status))
     df.to_csv(out_file, index=None)
     
 
@@ -85,8 +93,8 @@ def save_output_errors(df, input, output):
 # ------------------------------------------------------------------------------
 
 @click.command(short_help='Arrange features epinano data')
-@click.argument(
-    'input'
+@click.option(
+    '-in', '--inputs', multiple=True, required=True
 )
 @click.option(
     '--methyl-label', '-ml', type=click.Choice(['1', '0']), 
@@ -101,18 +109,24 @@ def save_output_errors(df, input, output):
     '-o', '--output', default='', 
     help='Output file extension'
 )
-def main(input, methyl_label, feature_option, output):
-    data = pd.read_csv(input, sep=',')
+def main(inputs, methyl_label, feature_option, output):
+    data = pd.DataFrame()
+    for path in inputs:
+        input_n = pd.read_csv(path, sep=',')
+        input_n['replicate'] = path.rsplit('_', 1)[-1].split('.')[0]
+        data = pd.concat([data , input_n], sort=False)
+
     data = data[data['std_current'].notna()]
 
     if feature_option == 'single':
         errors = error_features_single(data.copy(), int(methyl_label))
     else:
         errors = error_features_kmer(data.copy(), int(methyl_label))
-    save_output_errors(errors, input, output)
+
+    save_output_errors(errors, input, output, methyl_label)
 
     sequence = sequence_features(data.copy(), methyl_label)
-    _write_featurestr_to_file(sequence, input, output)
+    _write_featurestr_to_file(sequence, input, output, methyl_label)
 
     
 if __name__ == "__main__":

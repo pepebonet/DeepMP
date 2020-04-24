@@ -24,8 +24,12 @@ def get_data(treated, untreated, names='', nopos=False):
 
 
 def get_merge_data(errors, sequence):
-    errors['pos'] = errors['pos'].astype('int64')
-    return pd.merge(sequence, errors, on='pos', how='inner')
+    # import pdb;pdb.set_trace()
+    try: 
+        return pd.merge(sequence, errors, on='pos', how='inner')
+    except:
+        errors['pos'] = errors['pos'].astype('int64')
+        return pd.merge(sequence, errors, on='pos', how='inner')
     
 
 def get_training_test_val(df):
@@ -118,7 +122,7 @@ def do_seq_err_preprocess(sequence_treated, sequence_untreated,
     untreat = get_merge_data(err_untreat, seq_untreat)
 
     data = get_training_test_val(pd.concat([treat, untreat]))
-
+    
     for el in data:
         preprocess_both(el[0], num_err_feat, output, el[1])
 
