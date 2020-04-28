@@ -75,18 +75,26 @@ def save_output(acc, output):
     df.to_csv(os.path.join(output, 'accuracy_measurements.txt'), index=False, sep='\t')
 
 
+def save_probs(probs, labels, output):
+    out_probs = os.path.join(output, 'test_pred_prob.txt')
+    probs_to_save = pd.DataFrame(columns=['labels', 'probs'])
+    probs_to_save['labels'] = labels
+    probs_to_save['probs'] = probs
+    probs_to_save.to_csv(out_probs, sep='\t', index=None)
+
+
 def call_mods(model, test_file, model_err, model_seq, one_hot_embedding, 
     kmer_sequence, output, figures=False):
 
     if model == 'seq':
-        data_seq, labels_seq = ut.get_data_sequence(
+        data_seq, labels = ut.get_data_sequence(
             test_file, kmer_sequence, one_hot_embedding
         )
-        acc = acc_test_single(data_seq, labels_seq, model_seq)
+        acc = acc_test_single(data_seq, labels, model_seq)
 
     elif model == 'err':
-        data_err, labels_err = ut.load_error_data(test_file)
-        acc = acc_test_single(data_err, labels_err, model_err)
+        data_err, labels = ut.load_error_data(test_file)
+        acc = acc_test_single(data_err, labels, model_err)
 
     elif model == 'joint':
         data_seq, labels_seq = ut.get_data_sequence(
@@ -95,8 +103,12 @@ def call_mods(model, test_file, model_err, model_seq, one_hot_embedding,
         data_err, labels_err = ut.load_error_data(test_file)
         acc, probs = acc_test_joint(data_seq, labels_seq, model_seq, data_err, 
             labels_err, model_err)
+        
+        save_probs(probs, labels, output)
+        labels = labels_seq
 
     save_output(acc, output)
+    
     
     if figures:
         out_fig = os.path.join(output, 'ROC_curve.png')
