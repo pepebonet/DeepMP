@@ -1,18 +1,55 @@
 #!/usr/bin/env python3
 import os
-import click
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.models import load_model
+from sklearn.metrics import precision_recall_fscore_support
 
 import deepmp.utils as ut
+import deepmp.plots as pl
 
 
-def acc_test_single(data, labels, model_file):
+def acc_test_single(data, labels, model_file, score_av='binary'):
     model = load_model(model_file)
     test_loss, test_acc = model.evaluate(data, tf.convert_to_tensor(labels))
 
-    return test_acc
+    pred =  model.predict(data).flatten()
+    inferred = np.zeros(len(pred))
+    inferred[np.argwhere(pred > 0.5)] = 1
+
+    precision, recall, f_score, _ = precision_recall_fscore_support(
+        labels, inferred, average=score_av
+    )
+
+    return [test_acc, precision, recall, f_score]
+
+
+def get_accuracy_joint(inferred, err_pred, seq_pred, labels, score_av='binary'):
+    probs = np.zeros(len(labels))
+    for i in range(len(labels)):
+        if err_pred[i] > 0.5 and seq_pred[i] > 0.5:
+            inferred[i] = 1
+            probs[i] = max(seq_pred[i], err_pred[i])
+        elif err_pred[i] < 0.5 and seq_pred[i] < 0.5:
+            inferred[i] = 0
+            probs[i] = min(seq_pred[i], err_pred[i])
+        else: 
+            val = (err_pred[i] + seq_pred[i]) / 2
+            if val > 0.5:
+                inferred[i] = 1
+                probs[i] = max(seq_pred[i], err_pred[i])
+            else: 
+                inferred[i] = 0
+                probs[i] = min(seq_pred[i], err_pred[i])
+
+    test_acc = round(1 - np.argwhere(labels != inferred).shape[0] / len(labels), 5)
+    
+    precision, recall, f_score, _ = precision_recall_fscore_support(
+        labels, inferred, average=score_av
+    )
+
+    return [test_acc, precision, recall, f_score], probs
 
 
 def acc_test_joint(data_seq, labels_seq, model_seq, 
@@ -28,37 +65,40 @@ def acc_test_joint(data_seq, labels_seq, model_seq,
     err_pred = model_err.predict(data_err).flatten()
     
     inferred = np.zeros(len(seq_pred))
-    #TODO improve
-    inferred[np.argwhere(seq_pred > 0.5)] = 1
-    inferred[np.argwhere(err_pred > 0.5)] = 1
 
-    test_acc = round(1 - np.argwhere(labels != inferred).shape[0] / len(labels), 5)
+    return get_accuracy_joint(inferred, err_pred, seq_pred, labels)
 
-    return test_acc
-    
+
+def save_output(acc, output):
+    col_names = ['Accuracy', 'Precision', 'Recall', 'F-score']
+    df = pd.DataFrame([acc], columns=col_names)
+    df.to_csv(os.path.join(output, 'accuracy_measurements.txt'), index=False, sep='\t')
+
 
 def call_mods(model, test_file, model_err, model_seq, one_hot_embedding, 
-    kmer_sequence, output):
-    #TODO <JB, MC> improve way to combine both methods
+    kmer_sequence, output, figures=False):
+
     if model == 'seq':
         data_seq, labels_seq = ut.get_data_sequence(
             test_file, kmer_sequence, one_hot_embedding
         )
-        test_acc = acc_test_single(data_seq, labels_seq, model_seq)
+        acc = acc_test_single(data_seq, labels_seq, model_seq)
 
     elif model == 'err':
         data_err, labels_err = ut.load_error_data(test_file)
-        test_acc = acc_test_single(data_err, labels_err, model_err)
+        acc = acc_test_single(data_err, labels_err, model_err)
 
     elif model == 'joint':
-        import pdb;pdb.set_trace()
         data_seq, labels_seq = ut.get_data_sequence(
             test_file, kmer_sequence, one_hot_embedding
         )
         data_err, labels_err = ut.load_error_data(test_file)
-        test_acc = acc_test_joint(data_seq, labels_seq, model_seq, data_err, 
+        acc, probs = acc_test_joint(data_seq, labels_seq, model_seq, data_err, 
             labels_err, model_err)
 
-    ut._write_to_file(
-        os.path.join(output, 'accuracy.txt'), test_acc
-    )
+    save_output(acc, output)
+    
+    if figures:
+        out_fig = os.path.join(output, 'ROC_curve.png')
+        pl.plot_ROC(labels_seq, probs, out_fig)
+
