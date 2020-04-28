@@ -221,3 +221,9 @@ def _write_to_file(file, content, attach=False):
 
     with open(file, open_flag) as f:
         f.write(str(content))
+
+
+def _write_list_to_file(file, data):
+    with open(file, 'w') as f:
+        for listitem in data:
+            f.write('%s\n' % listitem)
