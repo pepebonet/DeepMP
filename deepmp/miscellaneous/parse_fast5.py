@@ -6,8 +6,6 @@ import functools
 from multiprocessing import Pool
 from tqdm import tqdm
 
-import utils as ut
-
 
 def rename(filename, pattern='/Analyses/Basecall_1D_001', 
     replacement='/Analyses/Basecall_1D_000'):
@@ -48,8 +46,13 @@ def get_fastqs_multi(reads, basecall_g, basecall_sg, output, cpus):
             
     fastqs_sep = fastqs.split('\n')[:-1]
     out_file = os.path.join(output, '{}_{}.fastq'.format(basecall_g, basecall_sg))
-    ut._write_list_to_file(out_file, fastqs_sep)
+    _write_list_to_file(out_file, fastqs_sep)
 
+
+def _write_list_to_file(file, data):
+    with open(file, 'w') as f:
+        for listitem in data:
+            f.write('%s\n' % listitem)
 
 @click.command(short_help='Parser of fast5 files')
 @click.argument('input')
