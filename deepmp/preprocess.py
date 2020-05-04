@@ -70,8 +70,8 @@ def preprocess_error(df, feat, output, file):
     file_name = os.path.join(output, '{}_err.h5'.format(file))
 
     with h5py.File(file_name, 'a') as hf:
-        hf.create_dataset("X", data=X.reshape(X.shape[0], feat, 1))
-        hf.create_dataset("Y", data=Y)
+        hf.create_dataset("err_X", data=X.reshape(X.shape[0], feat, 1))
+        hf.create_dataset("err_Y", data=Y)
 
     return None
 

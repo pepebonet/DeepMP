@@ -104,13 +104,13 @@ def call_mods(model, test_file, model_err, model_seq, one_hot_embedding,
         acc, probs = acc_test_joint(data_seq, labels_seq, model_seq, data_err, 
             labels_err, model_err)
         
-        save_probs(probs, labels, output)
         labels = labels_seq
-
+        save_probs(probs, labels, output)
+        
     save_output(acc, output)
     
     
     if figures:
         out_fig = os.path.join(output, 'ROC_curve.png')
-        pl.plot_ROC(labels_seq, probs, out_fig)
+        pl.plot_ROC(labels, probs, out_fig)
 
