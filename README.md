@@ -33,7 +33,7 @@ Sequence and error features need to be combined so that the validation, test and
 
 `Option 1:` Extract sequence features
 ```
-    DeepMP sequence-extraction path/to/fast5/files/ -rp path/to/reference/file/ -m CG -o extraction_outputs/ -ml 1
+    DeepMP sequence_feature_extraction path/to/fast5/files/ -rp path/to/reference/file/ -m CG -o extraction_outputs/ -ml 1
 ```
 
 `Option 2:` Extract error features
