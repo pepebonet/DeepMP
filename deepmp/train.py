@@ -120,7 +120,7 @@ def train_jm(train_file, val_file, log_dir, model_dir, feat, batch_size, kmer, e
 
     ## embed bases
 
-    vocab_size = 1024
+    """vocab_size = 1024
     embedding_size = 128
     weight_table = tf.compat.v1.get_variable(
                                 "embedding",
@@ -130,7 +130,11 @@ def train_jm(train_file, val_file, log_dir, model_dir, feat, batch_size, kmer, e
                                 stddev = np.sqrt(2. / vocab_size)
                                 ))
     embedded_bases = tf.nn.embedding_lookup(weight_table, bases)
-    val_bases = tf.nn.embedding_lookup(weight_table, v1)
+    val_bases = tf.nn.embedding_lookup(weight_table, v1)"""
+
+    embedding_size = 5
+    embedded_bases = tf.one_hot(bases, embedding_size)
+    val_bases = tf.one_hot(v1, embedding_size)
 
     ## prepare inputs for NNs
     input_train = tf.concat([embedded_bases,

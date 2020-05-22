@@ -69,9 +69,9 @@ def call_modifications(**kwargs):
     args = Namespace(**kwargs)
 
     call_mods(
-        args.model, args.test_file, args.model_err, args.model_seq, 
+        args.model, args.test_file, args.model_err, args.model_seq,
         args.one_hot_embedding, args.kmer_sequence, args.output
-    )    
+    )
 
 
 # ------------------------------------------------------------------------------
@@ -254,7 +254,7 @@ def error_extraction(**kwargs):
 @click.option(
     '--methyl-label', '-ml', type=click.Choice(['1', '0']),
     default='1', help='the label of the interested modified '
-    'bases, this is for training. 0 or 1, default 1'
+    'bases, 0 or 1, default 1'
 )
 @click.option(
     '--is-dna', '-id', default='yes', help='whether the fast5 files from '
@@ -262,7 +262,7 @@ def error_extraction(**kwargs):
     'no/false/0 if the fast5 files are from RNA sample.'
 )
 @click.option(
-    '-kl', '--kmer_len', default=17, help='len of kmer. default 1'
+    '-kl', '--kmer_len', default=17, help='len of kmer. default 17'
 )
 @click.option(
     '-m', '--motifs', default='G', help='motif seq to be extracted, default:G.'
