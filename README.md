@@ -44,7 +44,7 @@ Sequence and error features need to be combined so that the validation, test and
 ### Call modifications
 
 ```
-    DeepMP call-modifications -model seq -tf path/to/test/data -one_hot -ms model/directory
+    DeepMP call-modifications -model seq -tf path/to/test/data -one_hot -ms model/directory -o output/
 ```
 
 ### Train models
