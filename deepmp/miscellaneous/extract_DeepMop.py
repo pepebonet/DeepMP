@@ -18,8 +18,6 @@ def get_label(treatment):
 def get_reads_info(fast5, index, label):
     ind = pd.read_csv(index, sep=' ', header=None).values[:, [3,4]]
 
-    # treat_pred = []; treat_true = []
-    # untreat_pred = []; untreat_true = []
     true = [] ; pred = []
     with h5py.File(fast5, 'r') as hf:
         for el in ind: 
@@ -32,16 +30,14 @@ def get_reads_info(fast5, index, label):
             df = pd.DataFrame(data[np.argwhere(chunks == 'CG')].flatten())
 
             if label == 1:
-                print('Modified')
-                print(df['mod_pred'].sum() / df.shape[0])
                 pred.append(df['mod_pred'].values)
                 true.append(np.ones(len(df['mod_pred'].values)))
+                import pdb;pdb.set_trace()
             else:
-                print('Unmodified')
-                print((df.shape[0] - df['mod_pred'].sum()) / df.shape[0])
                 pred.append(df['mod_pred'].values)
                 true.append(np.zeros(len(df['mod_pred'].values)))
-    
+    return true, pred
+
 
 def slice_chunks(l, n):
     for i in range(0, len(l) - n + 1):
@@ -67,6 +63,8 @@ def slice_chunks(l, n):
 )
 def main(detect_folder, file_id, label, output):
     
+    treat_true = []; treat_pred = []
+    untreat_true = []; untreat_pred = []
     treatments = os.listdir(detect_folder)
     for treat in treatments:
         label = get_label(treat)
@@ -76,21 +74,28 @@ def main(detect_folder, file_id, label, output):
             if os.path.isdir(os.path.join(detect_subfolder, el)):
                 read_folder = os.path.join(detect_subfolder, el)
                 reads = os.listdir(read_folder)
-                for i in range(1000):
-                    matching = [s for s in os.listdir(read_folder) if str(i) in s]
-                    if matching: 
-                        fast5 = os.path.join(read_folder, matching[0])
-                        index = os.path.join(read_folder, matching[1])
-                        # true, pred = 
-                        import pdb;pdb.set_trace()
-    
-    import pdb;pdb.set_trace()
+
+                for i in range(int(len(reads)/2)):
+                    fast5 = os.path.join(
+                        read_folder, 'rnn.pred.detail.fast5.{}'.format(i)
+                    )
+                    index = os.path.join(
+                        read_folder, 'Chromosome.rnn.pred.ind.{}'.format(i)
+                    )
+                    true, pred = get_reads_info(fast5, index, label)
+                    # import pdb;pdb.set_trace()
+                    if label == 1:
+                        treat_true.append(np.concatenate(true))
+                        treat_pred.append(np.concatenate(pred))
+                    else:
+                        untreat_true.append(np.concatenate(true))
+                        untreat_pred.append(np.concatenate(pred))
 
     treat_true = np.concatenate(treat_true)
     treat_pred = np.concatenate(treat_pred)
     untreat_true = np.concatenate(untreat_true)
     untreat_pred = np.concatenate(untreat_pred)
-    import pdb;pdb.set_trace()
+
     true = np.concatenate([treat_true, untreat_true])
     pred = np.concatenate([treat_pred, untreat_pred])
 

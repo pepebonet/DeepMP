@@ -1,5 +1,6 @@
 *.png
 *.pyc
+*.sh
 data/*
 deepmp/logs/*
 logs/*
