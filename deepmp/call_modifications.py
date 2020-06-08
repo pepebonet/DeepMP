@@ -117,6 +117,17 @@ def option_1(l):
     comb_pred = cc.pred_prob.mean()
 
 
+def get_accuracy_pos(meth_label, pred_label):
+    pos = np.argwhere(np.asarray(meth_label) == 1)
+    neg = np.argwhere(np.asarray(meth_label) == 0)
+
+    pred_pos = np.asarray(pred_label)[pos]
+    pred_neg = np.asarray(pred_label)[neg]
+
+    accuracy = (sum(pred_pos) + len(pred_neg) - sum(pred_neg)) / (len(pred_pos) + len(pred_neg)) 
+    return accuracy
+
+
 def do_per_position_analysis(df):
     df['id'] = df['chrom'] + '_' + df['pos'].astype(str)
     meth_label = []; pred_label = []
@@ -132,6 +143,10 @@ def do_per_position_analysis(df):
     precision, recall, f_score, _ = precision_recall_fscore_support(
         meth_label, pred_label, average='binary'
     )
+
+    #TODO generalize improve callin and test in the bigger pipeline. Do for others? 
+    accuracy = get_accuracy_pos(meth_label, pred_label)
+    save_output_positions([accuracy, precision, recall, f_score], '../test/test_positions/')
     import pdb; pdb.set_trace()
 
 
