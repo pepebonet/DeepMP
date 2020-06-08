@@ -60,7 +60,6 @@ def save_files(df, output, label):
 
 def process_error_features(error_features, label, motif, output):
     errors = get_data(error_features, label)
-    
     error_kmer = get_modified_sites(errors, motif)
 
     save_files(error_kmer, output, label)

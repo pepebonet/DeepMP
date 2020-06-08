@@ -101,6 +101,7 @@ def call_mods(model, test_file, model_err, model_seq, one_hot_embedding,
             test_file, kmer_sequence, one_hot_embedding
         )
         data_err, labels_err = ut.load_error_data(test_file)
+ 
         acc, probs = acc_test_joint(data_seq, labels_seq, model_seq, data_err, 
             labels_err, model_err)
         
