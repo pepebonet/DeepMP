@@ -14,6 +14,18 @@ from multiprocessing import Pool
 from sklearn.metrics import precision_recall_fscore_support
 
 
+def get_test_df(test_file):
+    test = pd.read_csv(test_file, sep='\t', nrows=11000,
+        names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 
+        'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_lens', 
+        'cent_signals', 'methyl_label'])
+    test['pos'] = test.pos.astype(int)
+
+    return  test.drop(['strand', 'pos_in_strand', 'readname', 
+        'read_strand', 'kmer', 'signal_means', 'signal_stds', 
+        'signal_lens', 'cent_signals'], axis=1).drop_duplicates()
+
+
 def get_label(treatment):
     if treatment == 'untreated':
         return 0
@@ -70,7 +82,7 @@ def get_reads_info(fast5, index, label, test=None):
                 else:
                     pred.append(df['mod_pred'].values)
                     true.append(np.zeros(len(df['mod_pred'].values)))
-
+    
     return true, pred, df_test
 
 
@@ -142,11 +154,34 @@ def accuracy_cov(pred, label, cov, output):
     fig, ax = plt.subplots(figsize=(5, 5))
 
     sns.barplot(cov, acc)
-    ax.set_ylim(0.7,1)
+    # ax.set_ylim(0.9,1)
     fig.tight_layout()
     
     plt.savefig(os.path.join(output, 'acc_vs_cov.png'))
     plt.close()
+
+
+def get_plots_and_accuracies(treat_true, treat_pred, untreat_true, untreat_pred,
+    output, test_all):
+    treat_true = np.concatenate(treat_true)
+    treat_pred = np.concatenate(treat_pred)
+    untreat_true = np.concatenate(untreat_true)
+    untreat_pred = np.concatenate(untreat_pred)
+
+    true = np.concatenate([treat_true, untreat_true])
+    pred = np.concatenate([treat_pred, untreat_pred])
+
+    precision, recall, f_score, _ = precision_recall_fscore_support(
+        true, pred, average='binary'
+    )
+    accuracy = get_accuracy_pos(true, pred)
+    save_output(
+        [accuracy, precision, recall, f_score], output, 'accuracy_all.txt'
+    )
+    print(precision, recall, f_score)
+
+    if not test_all.empty:
+        do_per_position_analysis(test_all, output)
 
 
 def save_output(acc, output, label):
@@ -182,11 +217,7 @@ def save_output(acc, output, label):
 def main(detect_folder, file_id, label, output, test_file, cpus):
     test = None
     if test_file:
-        test = pd.read_csv(test_file, sep='\t', nrows=11000,
-            names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 
-            'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_lens', 
-            'cent_signals', 'methyl_label'])
-        test['pos'] = test.pos.astype(int)
+        test = get_test_df(test_file)
     
     treat_true = []; treat_pred = []
     untreat_true = []; untreat_pred = []
@@ -196,7 +227,7 @@ def main(detect_folder, file_id, label, output, test_file, cpus):
         label = get_label(treat)
         detect_subfolder = os.path.join(detect_folder, treat, file_id)
         detect_reads = os.listdir(detect_subfolder)
-        for el in tqdm(detect_reads): 
+        for el in detect_reads: 
             if os.path.isdir(os.path.join(detect_subfolder, el)):
                 read_folder = os.path.join(detect_subfolder, el)
                 reads = os.listdir(read_folder)
@@ -207,7 +238,7 @@ def main(detect_folder, file_id, label, output, test_file, cpus):
 
                 with Pool(cpus) as p:
                     for i, rval in enumerate(p.imap_unordered(f, fast5_index)):
-                        print(i)
+                        print('Completed: ' +  str(round(i/ len(fast5_index), 3)) + ' %')
                         test_all = pd.concat([test_all, rval[2]])
                         if label == 1:
                             treat_true.append(np.concatenate(rval[0]))
@@ -216,38 +247,9 @@ def main(detect_folder, file_id, label, output, test_file, cpus):
                             untreat_true.append(np.concatenate(rval[0]))
                             untreat_pred.append(np.concatenate(rval[1]))
 
-                
-                # for i in tqdm(fast5_index):
-                #     true, pred, df_test = do_read_analysis(i, label, test)
-                #     test_all = pd.concat([test_all, df_test]) 
-
-                #     if label == 1:
-                #         treat_true.append(np.concatenate(true))
-                #         treat_pred.append(np.concatenate(pred))
-                #     else:
-                #         untreat_true.append(np.concatenate(true))
-                #         untreat_pred.append(np.concatenate(pred))
-
-    treat_true = np.concatenate(treat_true)
-    treat_pred = np.concatenate(treat_pred)
-    untreat_true = np.concatenate(untreat_true)
-    untreat_pred = np.concatenate(untreat_pred)
-
-    true = np.concatenate([treat_true, untreat_true])
-    pred = np.concatenate([treat_pred, untreat_pred])
-
-    precision, recall, f_score, _ = precision_recall_fscore_support(
-        true, pred, average='binary'
+    get_plots_and_accuracies(
+        treat_true, treat_pred, untreat_true, untreat_pred,output, test_all
     )
-    accuracy = get_accuracy_pos(true, pred)
-    save_output(
-        [accuracy, precision, recall, f_score], output, 'accuracy_all.txt'
-    )
-    print(precision, recall, f_score)
-
-    if test_file:
-        do_per_position_analysis(test_all, output)
-    # import pdb;pdb.set_trace()
 
 
 if __name__ == '__main__':
