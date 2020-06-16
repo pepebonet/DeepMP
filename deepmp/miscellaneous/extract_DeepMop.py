@@ -2,11 +2,14 @@
 import os
 import h5py
 import click
+import functools
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 import seaborn as sns
+from tqdm import tqdm
+import multiprocessing as mp
 import matplotlib.pyplot as plt
+from multiprocessing import Pool
 
 from sklearn.metrics import precision_recall_fscore_support
 
@@ -16,6 +19,25 @@ def get_label(treatment):
         return 0
     else: 
         return 1 
+
+
+def get_list(reads, read_folder):
+    fast5_index = []
+    for i in range(int(len(reads)/2)):
+        fast5 = os.path.join(
+            read_folder, 'rnn.pred.detail.fast5.{}'.format(i)
+        )
+        index = os.path.join(
+            read_folder, 'Chromosome.rnn.pred.ind.{}'.format(i)
+        )
+        fast5_index.append((fast5, index))
+
+    return fast5_index
+
+
+def do_read_analysis(reads, label, test):
+    fast5 = reads[0]; index = reads[1]
+    return get_reads_info(fast5, index, label, test)
 
 
 def get_reads_info(fast5, index, label, test=None):
@@ -49,10 +71,7 @@ def get_reads_info(fast5, index, label, test=None):
                     pred.append(df['mod_pred'].values)
                     true.append(np.zeros(len(df['mod_pred'].values)))
 
-    if test is not None:
-        return true, pred, df_test
-    else:
-        return true, pred
+    return true, pred, df_test
 
 
 def slice_chunks(l, n):
@@ -154,10 +173,14 @@ def save_output(acc, output, label):
     help='Test file to save only given positions.'
 )
 @click.option(
+    '-cpu', '--cpus', default=1, 
+    help='Select number of cpus to run'
+)
+@click.option(
     '-o', '--output', default='', help='output folder'
 )
-def main(detect_folder, file_id, label, output, test_file):
-
+def main(detect_folder, file_id, label, output, test_file, cpus):
+    test = None
     if test_file:
         test = pd.read_csv(test_file, sep='\t', nrows=11000,
             names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 
@@ -177,26 +200,33 @@ def main(detect_folder, file_id, label, output, test_file):
             if os.path.isdir(os.path.join(detect_subfolder, el)):
                 read_folder = os.path.join(detect_subfolder, el)
                 reads = os.listdir(read_folder)
+                fast5_index = get_list(reads, read_folder)
 
-                for i in tqdm(range(int(len(reads)/2))):
-                    fast5 = os.path.join(
-                        read_folder, 'rnn.pred.detail.fast5.{}'.format(i)
-                    )
-                    index = os.path.join(
-                        read_folder, 'Chromosome.rnn.pred.ind.{}'.format(i)
-                    )
-                    if test_file: 
-                        true, pred, df_test = get_reads_info(fast5, index, label, test)
-                        test_all = pd.concat([test_all, df_test]) 
-                    else:
-                        true, pred = get_reads_info(fast5, index, label)
 
-                    if label == 1:
-                        treat_true.append(np.concatenate(true))
-                        treat_pred.append(np.concatenate(pred))
-                    else:
-                        untreat_true.append(np.concatenate(true))
-                        untreat_pred.append(np.concatenate(pred))
+                f = functools.partial(do_read_analysis, label=label, test=test)
+
+                with Pool(cpus) as p:
+                    for i, rval in enumerate(p.imap_unordered(f, fast5_index)):
+                        print(i)
+                        test_all = pd.concat([test_all, rval[2]])
+                        if label == 1:
+                            treat_true.append(np.concatenate(rval[0]))
+                            treat_pred.append(np.concatenate(rval[1]))
+                        else:
+                            untreat_true.append(np.concatenate(rval[0]))
+                            untreat_pred.append(np.concatenate(rval[1]))
+
+                
+                # for i in tqdm(fast5_index):
+                #     true, pred, df_test = do_read_analysis(i, label, test)
+                #     test_all = pd.concat([test_all, df_test]) 
+
+                #     if label == 1:
+                #         treat_true.append(np.concatenate(true))
+                #         treat_pred.append(np.concatenate(pred))
+                #     else:
+                #         untreat_true.append(np.concatenate(true))
+                #         untreat_pred.append(np.concatenate(pred))
 
     treat_true = np.concatenate(treat_true)
     treat_pred = np.concatenate(treat_pred)
