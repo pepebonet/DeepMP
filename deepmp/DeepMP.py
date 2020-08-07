@@ -214,6 +214,10 @@ def merge_and_preprocess(feature_type, error_treated, error_untreated,
     '-m', '--motif', default='CG', help='motif of interest'
 )
 @click.option(
+    '-me', '--memory_efficient', default=False, 
+    help='If input features file is too large activate to demand less memory'
+)
+@click.option(
     '-o', '--output', default='', help='Output file'
 )
 def error_extraction(**kwargs):
@@ -221,7 +225,8 @@ def error_extraction(**kwargs):
 
     args = Namespace(**kwargs)
     ee.process_error_features(
-        args.error_features, args.label, args.motif, args.output
+        args.error_features, args.label, args.motif, args.output, 
+        args.memory_efficient
     )
 
 
