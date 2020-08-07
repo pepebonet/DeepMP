@@ -3,6 +3,8 @@ import os
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import seaborn as sns
+import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 from sklearn.metrics import precision_recall_fscore_support
 
@@ -70,16 +72,10 @@ def acc_test_joint(data_seq, labels_seq, model_seq,
     return get_accuracy_joint(inferred, err_pred, seq_pred, labels)
 
 
-def save_output(acc, output):
+def save_output(acc, output, label):
     col_names = ['Accuracy', 'Precision', 'Recall', 'F-score']
     df = pd.DataFrame([acc], columns=col_names)
-    df.to_csv(os.path.join(output, 'accuracy_measurements.txt'), index=False, sep='\t')
-
-
-def save_output_positions(acc, output):
-    col_names = ['Accuracy', 'Precision', 'Recall', 'F-score']
-    df = pd.DataFrame([acc], columns=col_names)
-    df.to_csv(os.path.join(output, 'accuracy_measurements_positions.txt'), index=False, sep='\t')
+    df.to_csv(os.path.join(output, label), index=False, sep='\t')
 
 
 def save_probs(probs, labels, output):
@@ -91,30 +87,25 @@ def save_probs(probs, labels, output):
 
 
 def pred_site(df, pred_label, meth_label):
-    comb_pred = df.pred_prob.mean()
-    if comb_pred >= 0.5:
-        pred_label.append(1)
-    else: 
-        pred_label.append(0)
-    meth_label.append(df.methyl_label.unique()[0])
-
-    return pred_label, meth_label
-
-
-def pred_site_2(df, pred_label, meth_label):
     comb_pred = df.pred_prob.min() + df.pred_prob.max()
     if comb_pred >= 1:
         pred_label.append(1)
     else: 
         pred_label.append(0)
     meth_label.append(df.methyl_label.unique()[0])
-    # import pdb;pdb.set_trace()
+
     return pred_label, meth_label
 
 
-def option_1(l):
-    cc = pd.concat([l[l['pred_prob'] > 0.9], l[l['pred_prob'] < 0.1]])
-    comb_pred = cc.pred_prob.mean()
+def pred_site_deepmod(df, pred_label, meth_label, threshold=0.3):
+    inferred = df['inferred_label'].values
+    if np.sum(inferred) / len(inferred) >= threshold:
+        pred_label.append(1)
+    else: 
+        pred_label.append(0)
+    meth_label.append(df.methyl_label.unique()[0])
+
+    return pred_label, meth_label
 
 
 def get_accuracy_pos(meth_label, pred_label):
@@ -124,30 +115,71 @@ def get_accuracy_pos(meth_label, pred_label):
     pred_pos = np.asarray(pred_label)[pos]
     pred_neg = np.asarray(pred_label)[neg]
 
-    accuracy = (sum(pred_pos) + len(pred_neg) - sum(pred_neg)) / (len(pred_pos) + len(pred_neg)) 
-    return accuracy
+    accuracy = (sum(pred_pos) + len(pred_neg) - sum(pred_neg)) / \
+        (len(pred_pos) + len(pred_neg)) 
+    return accuracy[0]
 
 
-def do_per_position_analysis(df):
+def do_per_position_analysis(df, output):
     df['id'] = df['chrom'] + '_' + df['pos'].astype(str)
-    meth_label = []; pred_label = []
+    meth_label = []; pred_label = []; cov = []; new_df = pd.DataFrame()
+    pred_label_cov = []
     for i, j in df.groupby('id'):
         if len(j.methyl_label.unique()) > 1:
             for k, l in j.groupby('methyl_label'):
                 if len(l) > 0:
-                    pred_label, meth_label = pred_site_2(l, pred_label, meth_label)
+                    pred_label, meth_label = pred_site(l, pred_label, meth_label)
+                    cov.append(len(l))
         else:
             if len(j) > 0:
-                pred_label, meth_label = pred_site_2(j, pred_label, meth_label)
+                pred_label, meth_label = pred_site(j, pred_label, meth_label)
+                cov.append(len(j))
             
     precision, recall, f_score, _ = precision_recall_fscore_support(
         meth_label, pred_label, average='binary'
     )
 
-    #TODO generalize improve callin and test in the bigger pipeline. Do for others? 
+    accuracy_cov(pred_label, meth_label, cov, output)
+    # TODO generalize for test with no label 
+    # TODO improve calling of a methylation
+    # TODO Add to the joint analysis 
+    # TODO delete all unnecessary functions
     accuracy = get_accuracy_pos(meth_label, pred_label)
-    save_output_positions([accuracy, precision, recall, f_score], '../test/test_positions/')
-    import pdb; pdb.set_trace()
+    save_output(
+        [accuracy, precision, recall, f_score], output, 'position_accuracy.txt'
+    )
+
+
+#TODO send to plots once done
+def plot_distributions(df, output):
+    fig, ax = plt.subplots(figsize=(5, 5))
+
+    sns.kdeplot(df['pred_prob'], shade=True)
+    fig.tight_layout()
+    ax.set_xlim(0,1)
+    plt.savefig(os.path.join(output, 'distributions.png'))
+    plt.close()
+
+
+def accuracy_cov(pred, label, cov, output):
+    df_dict = {'predictions': pred, 'methyl_label': label, 'Coverage': cov}
+    df = pd.DataFrame(df_dict)
+    cov = []; acc = []
+
+    for i, j in df.groupby('Coverage'):
+        cov.append(i)
+        acc.append(get_accuracy_pos(
+            j['methyl_label'].tolist(), j['predictions'].tolist())
+        )
+    
+    fig, ax = plt.subplots(figsize=(5, 5))
+
+    sns.barplot(cov, acc)
+    ax.set_ylim(0.92,1)
+    fig.tight_layout()
+    
+    plt.savefig(os.path.join(output, 'acc_vs_cov.png'))
+    plt.close()
 
 
 def call_mods(model, test_file, model_err, model_seq, one_hot_embedding, 
@@ -167,8 +199,12 @@ def call_mods(model, test_file, model_err, model_seq, one_hot_embedding,
             test_file, kmer_sequence, one_hot_embedding
         )
         acc, pred, inferred = acc_test_single(data_seq, labels, model_seq)
-        test['pred_prob'] = pred; test['inferred_label'] = inferred
-        do_per_position_analysis(test)
+        try:
+            test['pred_prob'] = pred; test['inferred_label'] = inferred
+            plot_distributions(test, output)
+            do_per_position_analysis(test, output)
+        except: 
+            print('No position analysis performed. Only per-read accuracy run')
 
     elif model == 'err':
         data_err, labels = ut.load_error_data(test_file)
@@ -186,7 +222,7 @@ def call_mods(model, test_file, model_err, model_seq, one_hot_embedding,
         labels = labels_seq
         save_probs(probs, labels, output)
         
-    save_output(acc, output)
+    save_output(acc, output, 'accuracy_measurements.txt')
     
     
     if figures:
