@@ -95,19 +95,22 @@ def main(svm_output, deepmp_output, deepsignal_output, original_test, output):
         deepmp = pd.read_csv(deepmp_output, sep='\t')
 
     if deepsignal_output:
+        #TODO <JB> Fix sorting
         deepsignal = pd.read_csv(deepsignal_output, sep='\t', header=None)
         original = pd.read_csv(original_test, sep='\t', header=None)
 
-        original = original.sort_values(by=[1])
-        deepsignal = deepsignal.sort_values(by=[1])
+        # original = original.sort_values(by=[1])
+        # deepsignal = deepsignal.sort_values(by=[1])
         precision, recall, f_score, _ = precision_recall_fscore_support(
             original[11].values, deepsignal[8].values, average='binary'
         )
 
+    save_output([precision, recall, f_score], output)
+
     out_fig = os.path.join(output, 'AUC_comparison.png')
     plot_ROC(deepsignal, deepmp, original, out_fig)
 
-    save_output([precision, recall, f_score], output)
+    
 
 
 if __name__ == "__main__":

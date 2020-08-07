@@ -118,7 +118,7 @@ def split_treatments(method, treated_path, untreated_path, output, positions_lis
         positions = pd.read_csv(positions_list, sep='\t')
         positions['class'] = 1
     else:
-        raise NotImplementedError('A lost of positions needs to be given')
+        raise NotImplementedError('A list of positions needs to be given')
 
     iterate_chunks(
         treat_chunks, positions, tmp_train, tmp_test, output, label='treat'

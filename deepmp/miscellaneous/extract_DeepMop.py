@@ -215,6 +215,7 @@ def save_output(acc, output, label):
     '-o', '--output', default='', help='output folder'
 )
 def main(detect_folder, file_id, label, output, test_file, cpus):
+    #TODO adapt for human
     test = None
     if test_file:
         test = get_test_df(test_file)
