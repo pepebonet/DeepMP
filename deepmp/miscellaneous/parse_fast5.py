@@ -40,6 +40,7 @@ def get_fastq(read, group, subgroup):
 def get_fastqs_multi(reads, basecall_g, basecall_sg, output, cpus):
     fastqs = ''
     f = functools.partial(get_fastq, group=basecall_g, subgroup=basecall_sg) 
+
     with Pool(cpus) as p:
         for i, rval in enumerate(p.imap_unordered(f, tqdm(reads))):
             fastqs += rval
@@ -84,12 +85,20 @@ def _write_list_to_file(file, data):
     help='Corrected subgroup of fast5 files. default BaseCalled_template'
 )
 @click.option(
+    '-rec', '--recursive', default=False, help='Find subfolders containing reads'
+)
+@click.option(
     '-o', '--output', default='', help='output folder'
 )
 def main(input, rename_fast5, pattern, replacement, cpus, fastq_fast5, output,
-    basecall_group, basecall_subgroup):
-    path = os.path.join(input, '*.fast5')
-    reads = glob.glob(path)
+    basecall_group, basecall_subgroup, recursive):
+
+    if recursive: 
+        rec_reads = [glob.glob(re) for re in [os.path.join(el, '*.fast5') \
+            for el in [x[0] for x in os.walk(input)][1:]]]
+        reads = [i for sub in rec_reads for i in sub]
+    else:
+        reads = glob.glob(os.path.join(input, '*.fast5'))
 
     if rename_fast5:
         rename_multiprocess(reads, pattern, replacement, cpus)

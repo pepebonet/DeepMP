@@ -33,12 +33,18 @@ Sequence and error features need to be combined so that the validation, test and
 
 `Option 1:` Extract sequence features
 ```
-    DeepMP sequence-extraction path/to/fast5/files/ -rp path/to/reference/file/ -m CG -o extraction_outputs/ -ml 1
+    DeepMP sequence-feature-extraction path/to/fast5/files/ -rp path/to/reference/file/ -m CG -o extraction_outputs/ -ml 1
 ```
 
 `Option 2:` Extract error features
 ```
     DeepMP error-extraction -ef path/to/errors/extracted/by/epinano -rp path/to/reference/file/ -m CG -o output/error_features/ -l 1
+```
+
+### Call modifications
+
+```
+    DeepMP call-modifications -model seq -tf path/to/test/data -one_hot -ms model/directory -o output/
 ```
 
 ### Train models
