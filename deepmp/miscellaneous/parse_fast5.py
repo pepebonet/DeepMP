@@ -37,7 +37,7 @@ def get_fastq(read, group, subgroup):
         return ''
 
 
-def get_fastqs_multi(reads, basecall_g, basecall_sg, output, cpus, recursive):
+def get_fastqs_multi(reads, basecall_g, basecall_sg, output, cpus):
     fastqs = ''
     f = functools.partial(get_fastq, group=basecall_g, subgroup=basecall_sg) 
 
@@ -104,7 +104,7 @@ def main(input, rename_fast5, pattern, replacement, cpus, fastq_fast5, output,
         rename_multiprocess(reads, pattern, replacement, cpus)
 
     if fastq_fast5:
-        get_fastqs_multi(reads, basecall_group, basecall_subgroup, output, cpus, recursive)
+        get_fastqs_multi(reads, basecall_group, basecall_subgroup, output, cpus)
 
 
 if __name__ == '__main__':
