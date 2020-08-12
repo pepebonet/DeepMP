@@ -61,10 +61,13 @@ Site-based data
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/deepmod_training_set/train_seq.h5`
 
 # Trained models
-##### On 10M ecoli
-17-mer
+##### DeepMP on 10M ecoli
+17-mer:
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepmp/models/ecoli/latest_17mer_seq/`
-``
+
+##### Deepsignal on 10M ecoli
+17-mer:
+`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepsignal/trained_model/ecoli_sites/`
 ``
 ``
 ``
