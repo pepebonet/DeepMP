@@ -233,7 +233,6 @@ def find_fast5_files(fast5s_dir, recursive, file_list=None):
                     rec_reads = ([glob.glob(re) for re in \
                         [os.path.join(fast5s_dir, el, '*.fast5') for el in x[1]]])
             fast5s = [Fast5(i) for sub in rec_reads for i in sub]
-            import pdb;pdb.set_trace()
 
         else:
             fast5s = [Fast5(os.path.join(fast5s_dir, f)) for f in tqdm(os.listdir(fast5s_dir))
