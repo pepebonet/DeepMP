@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
+import glob
 import time
 import random
 import logging
@@ -218,7 +219,7 @@ def get_a_batch_features_str(fast5s_q, featurestr_q, errornum_q,
             time.sleep(time_wait)
 
 
-def find_fast5_files(fast5s_dir, file_list=None):
+def find_fast5_files(fast5s_dir, recursive, file_list=None):
     """Find appropriate fast5 files"""
     logging.info("Reading fast5 folder...")
     if file_list:
@@ -226,16 +227,25 @@ def find_fast5_files(fast5s_dir, file_list=None):
         for el in ut.load_txt(file_list):
             fast5s.append(Fast5(os.path.join(fast5s_dir, el)))
     else:
-        fast5s = [Fast5(os.path.join(fast5s_dir, f)) for f in tqdm(os.listdir(fast5s_dir))
+        if recursive:
+            for x in os.walk(fast5s_dir):
+                if x[1]:    
+                    rec_reads = ([glob.glob(re) for re in \
+                        [os.path.join(fast5s_dir, el, '*.fast5') for el in x[1]]])
+            fast5s = [Fast5(i) for sub in rec_reads for i in sub]
+            import pdb;pdb.set_trace()
+
+        else:
+            fast5s = [Fast5(os.path.join(fast5s_dir, f)) for f in tqdm(os.listdir(fast5s_dir))
                   if os.path.isfile(os.path.join(fast5s_dir, f))]
 
     return fast5s
 
 
 def _extract_preprocess(fast5_dir, motifs, is_dna, reference_path, 
-        f5_batch_num, position_file):
+        f5_batch_num, position_file, recursive):
     #Extract list of reads, target motifs and chrom lenghts of the ref genome
-    fast5_files = find_fast5_files(fast5_dir)
+    fast5_files = find_fast5_files(fast5_dir, recursive)
     print("{} fast5 files in total".format(len(fast5_files)))
 
     print("Parsing motifs string...")
@@ -258,11 +268,11 @@ def _extract_preprocess(fast5_dir, motifs, is_dna, reference_path,
 
 def extract_features(fast5_dir, ref, cor_g, base_g, dna, motifs,
     nproc, position_file, norm_me, methyloc, kmer_len, raw_sig_len, methy_lab, 
-    write_fp, f5_batch_num):
+    write_fp, f5_batch_num, recursive):
     start = time.time()
     motif_seqs, chrom2len, fast5s_q, len_fast5s, positions = \
         _extract_preprocess(fast5_dir, motifs, dna, ref, f5_batch_num, 
-            position_file
+            position_file, recursive
     )
     
     featurestr_q = mp.Queue()

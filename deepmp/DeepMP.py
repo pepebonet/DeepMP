@@ -293,6 +293,9 @@ def error_extraction(**kwargs):
     'default 360'
 )
 @click.option(
+    '--recursive', '-r', is_flag=True, help='Find reads recursively in subfolders'
+)
+@click.option(
     '-o', '--write_path', required=True, help='file path to save the features'
 )
 def sequence_feature_extraction(**kwargs):
@@ -304,7 +307,7 @@ def sequence_feature_extraction(**kwargs):
         args.basecall_subgroup, args.is_dna, args.motifs, args.cpus, \
         args.positions, args.normalize_method, args.mod_loc, args.kmer_len, \
         args.cent_signals_len, args.methyl_label, args.write_path, \
-        args.f5_batch_num
+        args.f5_batch_num, args.recursive
     )
 
 
