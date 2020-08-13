@@ -226,6 +226,7 @@ def find_fast5_files(fast5s_dir, file_list=None):
         for el in ut.load_txt(file_list):
             fast5s.append(Fast5(os.path.join(fast5s_dir, el)))
     else:
+        
         fast5s = [Fast5(os.path.join(fast5s_dir, f)) for f in tqdm(os.listdir(fast5s_dir))
                   if os.path.isfile(os.path.join(fast5s_dir, f))]
 
