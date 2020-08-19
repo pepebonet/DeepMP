@@ -302,6 +302,21 @@ def error_extraction(**kwargs):
     help='number of reads per file for parallel computing'
 )
 @click.option(
+    '-kl', '--kmer_len', default=17, help='len of kmer. default 17'
+)
+@click.option(
+    '--is-dna', '-id', default='yes', help='whether the fast5 files from '
+    'DNA sample or RNA. default true, t, yes, 1. set this option to '
+    'no/false/0 if the fast5 files are from RNA sample.'
+)
+@click.option(
+    '-mol', '--mod-loc', default=0,
+    help='0-based location of the targeted base in the motif, default 0'
+)
+@click.option(
+    '-cpu', '--cpus', default=1, help='number of processes to be used, default 1'
+)
+@click.option(
     '-o', '--output', default='', help='Output file'
 )
 def single_read_error_extraction(**kwargs):
@@ -311,7 +326,8 @@ def single_read_error_extraction(**kwargs):
 
     sre.single_read_errors(
         args.error_features, args.label, args.motif, args.output, 
-        args.memory_efficient, args.reads_per_file
+        args.memory_efficient, args.reads_per_file, args.cpus, args.mod_loc,
+        args.kmer_len, args.is_dna
     )
 
 

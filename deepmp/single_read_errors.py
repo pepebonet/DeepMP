@@ -3,14 +3,12 @@
 import os
 import shutil
 import numpy as np
-import pandas as pd
-import os, sys, gzip, bz2, re
+import os, gzip, bz2, re
+from itertools import islice
 from collections import defaultdict
 from collections import OrderedDict
 
-from tqdm import tqdm
-
-
+from deepmp import utils as ut
 
 def openfile(f):
     if f.endswith ('.gz'):
@@ -25,7 +23,7 @@ def openfile(f):
 def get_tmp_dir(features_path):
     if os.path.isfile(features_path):
         
-        tmp_dir =  os.path.dirname(features_path) + '/tmp1/'
+        tmp_dir =  os.path.dirname(features_path) + '/tmp2'
         if not os.path.exists(tmp_dir):
             os.mkdir(tmp_dir)
         else:
@@ -37,39 +35,38 @@ def get_tmp_dir(features_path):
 
 
 def get_reads_in_tmp(features_path, reads_per_file, tmp_dir):
-    file_idx = 0; reads_cnt = 0; filenames = []
-    reads = set();  last_reads = dict(); zero_counts = dict()
+    file_idx = 0; filenames = set(); reads = set();  last_reads = dict();
+
     with openfile(features_path) as fh:
         for l in fh:
             if l.startswith('#'):
                 continue
-            rd = l.split()[0]; reads.add(rd)
-            import pdb;pdb.set_trace()
-            test = get_feature_2(l)
-            # l = all_in_one(l)       
+
+            rd = l.split()[0]; reads.add(rd)   
             if len(reads) % reads_per_file == 1:
                 if rd not in last_reads:
-                    file_idx += 1
-                    last_reads[rd] = True
+                    file_idx += 1; last_reads[rd] = True
+
                 filename = os.path.join(tmp_dir, 'tmp_{}.tsv'.format(file_idx))
-                smallfile = open(filename,'a'); filenames.append(filename)
-            if l:
-                smallfile.write(l)
+                smallfile = open(filename,'a'); filenames.add(filename)
+
+            smallfile.write(l)
     smallfile.close()
+
     return filenames
 
 
-def get_reads_in_tmp_2(features_path, reads_per_file, tmp_dir):
+def get_features_from_tmp(feat_path):
     last_read = ''; lines = [];
-    tmp_file = os.path.join(tmp_dir, 'tmp_file.tsv')
-    with openfile(features_path) as fh:
+    out_tmp = feat_path.rsplit('.', 1)[0] + '_freq.tsv'
+    with openfile(feat_path) as fh:
         for l in fh:
             if l.startswith('#'):
                 continue
             rd = l.split()[0]
             if rd != last_read:
                 if lines:
-                    get_feature_set(lines, last_read, tmp_file)
+                    get_feature_set(lines, last_read, out_tmp)
                 last_read = rd; lines = []
             lines.append(l.strip().split())
 
@@ -133,7 +130,7 @@ def get_feature_set(lines, read, out_file):
 
 def arrange_output(qual, mis, mat, ins, dele, base, read, out_file):
     outh = open(out_file, 'a')
-    for k in tqdm(base.keys()):
+    for k in base.keys():
         Mis = mis[k]; Mat = mat[k]
         Del = dele[k]; Ins = ins[k]; q_lst = qual[k]
         
@@ -141,40 +138,67 @@ def arrange_output(qual, mis, mat, ins, dele, base, read, out_file):
         outh.write(",".join (inf) + '\n')
 
 
+def get_kmer_set(lines, read, out_file, kmer_len, motif, mod_loc):
+    position = slice_chunks([item[-7] for item in lines], kmer_len)
+    sequence = slice_chunks([item[-6] for item in lines], kmer_len)
+    quality = slice_chunks([item[-5] for item in lines], kmer_len)
+    mismatch = slice_chunks([item[-3] for item in lines], kmer_len)
+    insertion = slice_chunks([item[-2] for item in lines], kmer_len)
+    deletion = slice_chunks([item[-1] for item in lines], kmer_len)
+
+    loc = int(np.floor(kmer_len / 2))
+    motiflen = len(list(motif)[0])
+
+    outh = open(out_file, 'a')
+
+    for pos, seq, qual, mis, ins, dele in zip(
+        position, sequence, quality, mismatch, insertion, deletion): 
+        if ''.join(seq[loc - mod_loc: loc + motiflen - mod_loc]) in motif:
+
+            pos = pos[loc]; seq = ''.join(seq)
+            qual = ','.join(qual); mis = ','.join(mis)
+            ins = ','.join(ins); dele = ','.join(dele)
+
+            inf = map(str, [read, pos, lines[0][1], seq, qual, mis, ins, dele])
+            
+            outh.write("\t".join(inf) + '\n')
 
 
-def all_in_one(line):
-    ary = line.strip().split()
-    if ary[-1] in ['M', 'D', 'I']:
-        return get_feature(ary)
-        
-
-def get_feature(ary):
-    feature = np.zeros(4); feature[0] = ord(ary[-4])- 33
-    #TODO <JB> Fix problem with Insertions!! 
-    if ary[-1] == 'M':
-        aln_mem = (ary[0],ary[2],int(ary[-3]))
-        if (ary[-2] != ary[4]):
-            feature[1] = 1
-    if ary[-1] == 'D':
-        aln_mem = (ary[0],ary[2],int(ary[-3]))
-        feature[2] = 1
-    if ary[-1] == 'I':
-        import pdb;pdb.set_trace()
-        feature[3] = 1
-    
-    del ary[1]; del ary[2:5]; del ary[-1] 
-    ary.extend(list(feature))
-
-    return "\t".join(map(str, ary)) + '\n'
+def get_kmer_features(feat_path, kmer_len, motif, mod_loc):
+    last_read = ''; lines = [];
+    out_tmp = feat_path.rsplit('.', 1)[0] + '_kmer.tsv'
+    with openfile(feat_path) as fh:
+        for l in fh:
+            rd = l.split(',')[0]
+            if rd != last_read:
+                if lines:
+                    get_kmer_set(lines, last_read, out_tmp, kmer_len, motif, mod_loc)
+                last_read = rd; lines = []
+            lines.append(l.strip().split(','))
 
 
-def single_read_errors(features_path, label, motif, output, 
-    memory_efficient, reads_per_file):
-    tmp_dir = get_tmp_dir(features_path)
-    tmp_list = get_reads_in_tmp_2(features_path, reads_per_file, tmp_dir)
+def slice_chunks(l, n):
+    for i in range(0, len(l) - n):
+        yield l[i:i + n]
 
-    # get_feature_2('/workspace/projects/nanopore/stockholm/EpiNano/novoa_features/ecoli/treated/complement/sample.tsv')
-    
+
+def single_read_errors(features_path, label, motifs, output, 
+    memory_efficient, reads_per_file, cpus, mod_loc, kmer_len, is_dna):
+    # tmp_dir = get_tmp_dir(features_path)
+    # tmp_list = get_reads_in_tmp(features_path, reads_per_file, tmp_dir)
+
+    #TODO multiprocessing comes here (twice)
+    # for file in tmp_list:
+    #     get_features_from_tmp(file)    
     #TODO <JB> problem with read name needs to be fixed
     
+    #kmer len and motif (do as sequence module extraction)
+    print("Parsing motifs string...")
+    motif_seqs = ut.get_motif_seqs(motifs, is_dna)
+
+    print("Getting kmer features...")
+    tmp_list = ['/workspace/projects/nanopore/stockholm/EpiNano/novoa_features/ecoli/treated/complement/tmp2/tmp_1_freq.tsv']
+    for file in tmp_list: #new ones .freq
+        get_kmer_features(file, kmer_len, motif_seqs, mod_loc)
+    
+    #TODO concat all output
