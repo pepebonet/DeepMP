@@ -2,6 +2,7 @@
 
 import os
 import shutil
+import subprocess
 import numpy as np
 import os, gzip, bz2, re
 from itertools import islice
@@ -59,6 +60,7 @@ def get_reads_in_tmp(features_path, reads_per_file, tmp_dir):
 def get_features_from_tmp(feat_path):
     last_read = ''; lines = [];
     out_tmp = feat_path.rsplit('.', 1)[0] + '_freq.tsv'
+
     with openfile(feat_path) as fh:
         for l in fh:
             if l.startswith('#'):
@@ -69,6 +71,8 @@ def get_features_from_tmp(feat_path):
                     get_feature_set(lines, last_read, out_tmp)
                 last_read = rd; lines = []
             lines.append(l.strip().split())
+
+    return out_tmp
 
 
 def get_insertions(ary, ins, ins_q, aln_mem):
@@ -167,12 +171,15 @@ def get_kmer_set(lines, read, out_file, kmer_len, motif, mod_loc):
 def get_kmer_features(feat_path, kmer_len, motif, mod_loc):
     last_read = ''; lines = [];
     out_tmp = feat_path.rsplit('.', 1)[0] + '_kmer.tsv'
+    
     with openfile(feat_path) as fh:
         for l in fh:
             rd = l.split(',')[0]
             if rd != last_read:
                 if lines:
-                    get_kmer_set(lines, last_read, out_tmp, kmer_len, motif, mod_loc)
+                    get_kmer_set(
+                        lines, last_read, out_tmp, kmer_len, motif, mod_loc
+                    )
                 last_read = rd; lines = []
             lines.append(l.strip().split(','))
 
@@ -182,23 +189,34 @@ def slice_chunks(l, n):
         yield l[i:i + n]
 
 
+def concat_features(tmp_dir):
+    all_files = os.path.join(tmp_dir, '*_kmer.tsv')
+    out_file = os.path.join(tmp_dir.rsplit('/', 1)[0], 'single_read_errors.tsv')
+    cmd = 'cat {} > {}'. format(all_files, out_file)
+    subprocess.call(cmd, shell=True)
+    subprocess.call('rm -r {}'.format(tmp_dir), shell=True)
+
+
 def single_read_errors(features_path, label, motifs, output, 
     memory_efficient, reads_per_file, cpus, mod_loc, kmer_len, is_dna):
-    # tmp_dir = get_tmp_dir(features_path)
-    # tmp_list = get_reads_in_tmp(features_path, reads_per_file, tmp_dir)
+    tmp_dir = get_tmp_dir(features_path)
+    tmp_list = get_reads_in_tmp(features_path, reads_per_file, tmp_dir)
 
     #TODO multiprocessing comes here (twice)
-    # for file in tmp_list:
-    #     get_features_from_tmp(file)    
-    #TODO <JB> problem with read name needs to be fixed
+    print("Getting error features...")
+    out_features = []
+    for file in tmp_list:
+        out_features.append(get_features_from_tmp(file))    
     
-    #kmer len and motif (do as sequence module extraction)
+    
     print("Parsing motifs string...")
     motif_seqs = ut.get_motif_seqs(motifs, is_dna)
 
-    print("Getting kmer features...")
-    tmp_list = ['/workspace/projects/nanopore/stockholm/EpiNano/novoa_features/ecoli/treated/complement/tmp2/tmp_1_freq.tsv']
-    for file in tmp_list: #new ones .freq
+    print("Getting kmer error features...")
+    for file in out_features:
         get_kmer_features(file, kmer_len, motif_seqs, mod_loc)
     
-    #TODO concat all output
+    print("Concating output...")
+    concat_features(tmp_dir)
+
+    #TODO <JB> problem with read name needs to be fixed
