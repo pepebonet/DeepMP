@@ -2,10 +2,12 @@
 
 import os
 import shutil
+import functools
 import subprocess
 import numpy as np
 import os, gzip, bz2, re
 from itertools import islice
+from multiprocessing import Pool
 from collections import defaultdict
 from collections import OrderedDict
 
@@ -24,7 +26,7 @@ def openfile(f):
 def get_tmp_dir(features_path):
     if os.path.isfile(features_path):
         
-        tmp_dir =  os.path.dirname(features_path) + '/tmp2'
+        tmp_dir =  os.path.dirname(features_path) + '/tmp'
         if not os.path.exists(tmp_dir):
             os.mkdir(tmp_dir)
         else:
@@ -71,6 +73,9 @@ def get_features_from_tmp(feat_path):
                     get_feature_set(lines, last_read, out_tmp)
                 last_read = rd; lines = []
             lines.append(l.strip().split())
+    
+    if lines:
+        get_feature_set(lines, last_read, out_tmp)
 
     return out_tmp
 
@@ -183,6 +188,11 @@ def get_kmer_features(feat_path, kmer_len, motif, mod_loc):
                 last_read = rd; lines = []
             lines.append(l.strip().split(','))
 
+        if lines: 
+            get_kmer_set(
+                lines, last_read, out_tmp, kmer_len, motif, mod_loc
+            )
+
 
 def slice_chunks(l, n):
     for i in range(0, len(l) - n):
@@ -199,22 +209,27 @@ def concat_features(tmp_dir):
 
 def single_read_errors(features_path, label, motifs, output, 
     memory_efficient, reads_per_file, cpus, mod_loc, kmer_len, is_dna):
+
     tmp_dir = get_tmp_dir(features_path)
+    
+    print("Splitting into several files...")
     tmp_list = get_reads_in_tmp(features_path, reads_per_file, tmp_dir)
 
-    #TODO multiprocessing comes here (twice)
     print("Getting error features...")
     out_features = []
-    for file in tmp_list:
-        out_features.append(get_features_from_tmp(file))    
-    
-    
+    with Pool(cpus) as p:
+        for i, rval in enumerate(p.imap_unordered(get_features_from_tmp, tmp_list)):
+            out_features.append(rval)
+
     print("Parsing motifs string...")
     motif_seqs = ut.get_motif_seqs(motifs, is_dna)
 
     print("Getting kmer error features...")
-    for file in out_features:
-        get_kmer_features(file, kmer_len, motif_seqs, mod_loc)
+    f = functools.partial(get_kmer_features, kmer_len=kmer_len, \
+            motif=motif_seqs, mod_loc=mod_loc)
+    with Pool(cpus) as p:
+        for i, rval in enumerate(p.imap_unordered(f, out_features)):
+            pass
     
     print("Concating output...")
     concat_features(tmp_dir)
