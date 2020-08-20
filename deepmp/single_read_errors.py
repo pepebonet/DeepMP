@@ -147,7 +147,7 @@ def arrange_output(qual, mis, mat, ins, dele, base, read, out_file):
         outh.write(",".join (inf) + '\n')
 
 
-def get_kmer_set(lines, read, out_file, kmer_len, motif, mod_loc):
+def get_kmer_set(lines, read, out_file, kmer_len, motif, mod_loc, label):
     position = slice_chunks([item[-7] for item in lines], kmer_len)
     sequence = slice_chunks([item[-6] for item in lines], kmer_len)
     quality = slice_chunks([item[-5] for item in lines], kmer_len)
@@ -168,12 +168,12 @@ def get_kmer_set(lines, read, out_file, kmer_len, motif, mod_loc):
             qual = ','.join(qual); mis = ','.join(mis)
             ins = ','.join(ins); dele = ','.join(dele)
 
-            inf = map(str, [read, pos, lines[0][1], seq, qual, mis, ins, dele])
+            inf = map(str, [read, pos, lines[0][1], seq, qual, mis, ins, dele, label])
             
             outh.write("\t".join(inf) + '\n')
 
 
-def get_kmer_features(feat_path, kmer_len, motif, mod_loc):
+def get_kmer_features(feat_path, kmer_len, motif, mod_loc, label):
     last_read = ''; lines = [];
     out_tmp = feat_path.rsplit('.', 1)[0] + '_kmer.tsv'
     
@@ -183,14 +183,14 @@ def get_kmer_features(feat_path, kmer_len, motif, mod_loc):
             if rd != last_read:
                 if lines:
                     get_kmer_set(
-                        lines, last_read, out_tmp, kmer_len, motif, mod_loc
+                        lines, last_read, out_tmp, kmer_len, motif, mod_loc, label
                     )
                 last_read = rd; lines = []
             lines.append(l.strip().split(','))
 
         if lines: 
             get_kmer_set(
-                lines, last_read, out_tmp, kmer_len, motif, mod_loc
+                lines, last_read, out_tmp, kmer_len, motif, mod_loc, label
             )
 
 
@@ -199,16 +199,19 @@ def slice_chunks(l, n):
         yield l[i:i + n]
 
 
-def concat_features(tmp_dir):
+def concat_features(tmp_dir, output):
     all_files = os.path.join(tmp_dir, '*_kmer.tsv')
-    out_file = os.path.join(tmp_dir.rsplit('/', 1)[0], 'single_read_errors.tsv')
+    if output:
+        out_file = output
+    else:
+        out_file = os.path.join(tmp_dir.rsplit('/', 1)[0], 'single_read_errors.tsv')
     cmd = 'cat {} > {}'. format(all_files, out_file)
     subprocess.call(cmd, shell=True)
     subprocess.call('rm -r {}'.format(tmp_dir), shell=True)
 
 
-def single_read_errors(features_path, label, motifs, output, 
-    memory_efficient, reads_per_file, cpus, mod_loc, kmer_len, is_dna):
+def single_read_errors(features_path, label, motifs, output, reads_per_file, 
+    cpus, mod_loc, kmer_len, is_dna):
 
     tmp_dir = get_tmp_dir(features_path)
     
@@ -226,12 +229,10 @@ def single_read_errors(features_path, label, motifs, output,
 
     print("Getting kmer error features...")
     f = functools.partial(get_kmer_features, kmer_len=kmer_len, \
-            motif=motif_seqs, mod_loc=mod_loc)
+            motif=motif_seqs, mod_loc=mod_loc, label=label)
     with Pool(cpus) as p:
         for i, rval in enumerate(p.imap_unordered(f, out_features)):
             pass
     
     print("Concating output...")
-    concat_features(tmp_dir)
-
-    #TODO <JB> problem with read name needs to be fixed
+    concat_features(tmp_dir, output)
