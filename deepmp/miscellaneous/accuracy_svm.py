@@ -98,7 +98,7 @@ def main(svm_output, deepmp_output, deepsignal_output, original_test, output):
         #TODO <JB> Fix sorting
         deepsignal = pd.read_csv(deepsignal_output, sep='\t', header=None)
         original = pd.read_csv(original_test, sep='\t', header=None)
-
+        import pdb;pdb.set_trace()
         # original = original.sort_values(by=[1])
         # deepsignal = deepsignal.sort_values(by=[1])
         precision, recall, f_score, _ = precision_recall_fscore_support(
