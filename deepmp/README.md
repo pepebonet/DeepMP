@@ -69,7 +69,7 @@ Site-based data
 # Trained models
 ##### DeepMP on 10M ecoli
 17-mer:
-`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepmp/models/ecoli/latest_17mer_seq/`
+`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepmp/models/ecoli/latest_17mer_seq/sequence_model/`
 
 ##### Deepsignal on 10M ecoli
 17-mer:
