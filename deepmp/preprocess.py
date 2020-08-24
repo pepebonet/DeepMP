@@ -25,12 +25,12 @@ def get_data(treated, untreated, names='', nopos=False):
 
 def get_merge_data(errors, sequence):
     # import pdb;pdb.set_trace()
-    try: 
+    try:
         return pd.merge(sequence, errors, on='pos', how='inner')
     except:
         errors['pos'] = errors['pos'].astype('int64')
         return pd.merge(sequence, errors, on='pos', how='inner')
-    
+
 
 def get_training_test_val(df):
     train, test = train_test_split(df, test_size=0.05, random_state=0)
@@ -40,7 +40,7 @@ def get_training_test_val(df):
 
 def preprocess_sequence(df, output, file):
 
-    df = df.dropna()
+    #df = df.dropna()
     kmer = df['kmer'].apply(kmer2code)
     base_mean = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['signal_means'].values]
@@ -110,24 +110,24 @@ def preprocess_both(data, err_feat, output, file):
     return None
 
 
-def do_seq_err_preprocess(sequence_treated, sequence_untreated, 
+def do_seq_err_preprocess(sequence_treated, sequence_untreated,
     error_treated, error_untreated, output, num_err_feat):
-    seq_treat, seq_untreat = get_data(sequence_treated, sequence_untreated, 
-            names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 
-            'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_lens', 
+    seq_treat, seq_untreat = get_data(sequence_treated, sequence_untreated,
+            names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
+            'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_lens',
             'cent_signals', 'methyl_label'])
     err_treat, err_untreat = get_data(error_treated, error_untreated)
-    
+
     treat = get_merge_data(err_treat, seq_treat)
     untreat = get_merge_data(err_untreat, seq_untreat)
 
     data = get_training_test_val(pd.concat([treat, untreat]))
-    
+
     for el in data:
         preprocess_both(el[0], num_err_feat, output, el[1])
 
 
-def do_single_preprocess(feature_type, sequence_treated, sequence_untreated, 
+def do_single_preprocess(feature_type, sequence_treated, sequence_untreated,
     error_treated, error_untreated, output, num_err_feat):
     if feature_type == 'err':
         treat, untreat = get_data(error_treated, error_untreated, nopos=True)
@@ -135,10 +135,10 @@ def do_single_preprocess(feature_type, sequence_treated, sequence_untreated,
         for el in data:
             preprocess_error(el[0], num_err_feat, output, el[1])
 
-    else: 
-        treat, untreat = get_data(sequence_treated, sequence_untreated, 
-            names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 
-            'read_strand', 'kmer', 'signal_means', 'signal_stds', 
+    else:
+        treat, untreat = get_data(sequence_treated, sequence_untreated,
+            names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
+            'read_strand', 'kmer', 'signal_means', 'signal_stds',
             'signal_lens', 'cent_signals', 'methyl_label'])
         data = get_training_test_val(pd.concat([treat, untreat]))
         for el in data:

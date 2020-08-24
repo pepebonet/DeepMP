@@ -33,10 +33,10 @@ def get_conv1d_model(base_num, embedding_size):
     depth = embedding_size + 3
     model = Sequential()
     model.add(tf.keras.layers.InputLayer(input_shape=(base_num,depth)))
-    model.add(tf.keras.layers.Conv1D(256, 5, activation='relu'))
-    model.add(tf.keras.layers.LocallyConnected1D(128, 3, activation='relu'))
     model.add(tf.keras.layers.Conv1D(256, 3, activation='relu'))
-    model.add(tf.keras.layers.LocallyConnected1D(128, 3, activation='relu'))
+    model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
+    model.add(tf.keras.layers.Conv1D(256, 3, activation='relu'))
+    model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
     model.add(tf.keras.layers.GlobalAveragePooling1D(name='seq_pooling_layer'))
     model.add(tf.keras.layers.Dropout(0.2))
     model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))
@@ -67,7 +67,6 @@ def get_cnn_model(feat):
     return model
 
 
-#TODO <PB, MC> Need to obtain a proper joint model
 def joint_model(base_num, embedding_size, feat):
 
     model1 = get_conv1d_model(base_num, embedding_size)
