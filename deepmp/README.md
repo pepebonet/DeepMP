@@ -37,6 +37,15 @@ read-based test data
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/extract_outputs/positions/1m_test.tsv`
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/extract_outputs/positions/1m_test_seq.h5`
 
+#### single read error feature
+
+treated
+
+`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/single_read_error/whole_set/single_error_features/treated/template/single_read_errors.tsv`
+
+untreated
+
+`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/single_read_error/whole_set/single_error_features/untreated/template/single_read_errors.tsv`
 
 ## Human data
 ### Simpson's
