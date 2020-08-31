@@ -80,6 +80,9 @@ Site-based data
 17-mer:
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepmp/models/ecoli/latest_17mer_seq/sequence_model/`
 
+17-mer without number of signal:
+`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepmp/models/ecoli/seq_model_2_features/`
+
 ##### Deepsignal on 10M ecoli
 17-mer:
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepsignal/trained_model/ecoli_sites/`
