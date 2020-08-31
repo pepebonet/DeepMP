@@ -78,13 +78,25 @@ Site-based data
 # Trained models
 ##### DeepMP on 10M ecoli
 17-mer:
+
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepmp/models/ecoli/latest_17mer_seq/sequence_model/`
 
+| Accuracy  |  Precision | Recall  |  F-score |
+|---|---|---|---|
+| 0.9340299963951111  |  0.9243327612129679 | 0.8985630651780053  |  0.9112657642146945 |
+
+
 17-mer without number of signal:
+
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepmp/models/ecoli/seq_model_2_features/`
+
+| Accuracy  |  Precision | Recall  |  F-score |
+|---|---|---|---|
+| 0.930446982383728  | 0.9116686886216159  |  0.9030062363554855 | 0.9073167871383186  |
 
 ##### Deepsignal on 10M ecoli
 17-mer:
+
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepsignal/trained_model/ecoli_sites/`
 ``
 ``
