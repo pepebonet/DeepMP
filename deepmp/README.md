@@ -12,12 +12,12 @@ The whole set
 
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/training/seq_feature/full.tsv`
 
-Site-based training data (full)
+Training data (full)
 
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/extract_outputs/positions/train.tsv`
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/extract_outputs/positions/train_seq.h5`
 
-Site-based training data (10M subset)
+Training data (10M subset)
 
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/extract_outputs/positions/10m_train.tsv`
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/extract_outputs/positions/10m_train_seq.h5`
@@ -32,7 +32,7 @@ Site-based test data
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/extract_outputs/positions/test.tsv`
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/extract_outputs/positions/test_seq.h5`
 
-read-based test data
+Read-based test data
 
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/extract_outputs/positions/1m_test.tsv`
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/extract_outputs/positions/1m_test_seq.h5`
