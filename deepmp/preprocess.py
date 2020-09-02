@@ -46,6 +46,14 @@ def preprocess_sequence(df, output, file):
         for i in df['signal_means'].values]
     base_std = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['signal_stds'].values]
+    base_median = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_median'].values]
+    base_skew = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_skew'].values]
+    base_kurt = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_kurt'].values]
+    base_diff = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_diff'].values]
     base_signal_len = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['signal_lens'].values]
     label = df['methyl_label']
@@ -56,6 +64,10 @@ def preprocess_sequence(df, output, file):
         hf.create_dataset("kmer",  data=np.stack(kmer))
         hf.create_dataset("signal_means",  data=np.stack(base_mean))
         hf.create_dataset("signal_stds",  data=np.stack(base_std))
+        hf.create_dataset("signal_median",  data=np.stack(base_median))
+        hf.create_dataset("signal_skew",  data=np.stack(base_skew))
+        hf.create_dataset("signal_kurt",  data=np.stack(base_kurt))
+        hf.create_dataset("signal_diff",  data=np.stack(base_diff))
         hf.create_dataset("signal_lens",  data=np.stack(base_signal_len))
         hf.create_dataset("label",  data=label)
 
@@ -138,8 +150,9 @@ def do_single_preprocess(feature_type, sequence_treated, sequence_untreated,
     else: 
         treat, untreat = get_data(sequence_treated, sequence_untreated, 
             names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 
-            'read_strand', 'kmer', 'signal_means', 'signal_stds', 
-            'signal_lens', 'cent_signals', 'methyl_label'])
+            'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_median',
+            'signal_skew', 'signal_kurt', 'signal_diff',  
+            'signal_lens', 'methyl_label', 'flag'])
         data = get_training_test_val(pd.concat([treat, untreat]))
         for el in data:
             preprocess_sequence(el[0], output, el[1])

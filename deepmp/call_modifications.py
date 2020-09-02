@@ -199,6 +199,7 @@ def call_mods(model, test_file, model_err, model_seq, one_hot_embedding,
             test_file, kmer_sequence, one_hot_embedding
         )
         acc, pred, inferred = acc_test_single(data_seq, labels, model_seq)
+        save_probs(pred, labels, output)
         try:
             test['pred_prob'] = pred; test['inferred_label'] = inferred
             plot_distributions(test, output)

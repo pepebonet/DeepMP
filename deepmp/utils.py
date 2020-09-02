@@ -141,7 +141,8 @@ def get_data_sequence(file, kmer, one_hot=False):
     embedding_flag = ""
 
     ## preprocess data
-    bases, signal_means, signal_stds, signal_lens, label = load_seq_data(file)
+    bases, signal_means, signal_stds, signal_median, signal_skew, \
+        signal_kurt, signal_diff, signal_lens, label = load_seq_data(file)
 
     ## embed bases
     if one_hot:
@@ -163,8 +164,12 @@ def get_data_sequence(file, kmer, one_hot=False):
 
     ## prepare inputs for NNs
     return tf.concat([embedded_bases,
-                                    tf.reshape(signal_means, [-1, kmer, 1]),
-                                    tf.reshape(signal_stds, [-1, kmer, 1]),
+                                    # tf.reshape(signal_means, [-1, kmer, 1])],
+                                    # tf.reshape(signal_stds, [-1, kmer, 1])],
+                                    # tf.reshape(signal_median, [-1, kmer, 1])],
+                                    # tf.reshape(signal_skew, [-1, kmer, 1])],
+                                    # tf.reshape(signal_kurt, [-1, kmer, 1])],
+                                    # tf.reshape(signal_diff, [-1, kmer, 1])],
                                     tf.reshape(signal_lens, [-1, kmer, 1])],
                                     axis=2), label
 
@@ -175,10 +180,15 @@ def load_seq_data(file):
         bases = hf['kmer'][:]
         signal_means = hf['signal_means'][:]
         signal_stds = hf['signal_stds'][:]
+        signal_median = hf['signal_median'][:]
+        signal_skew = hf['signal_skew'][:]
+        signal_kurt = hf['signal_kurt'][:]
+        signal_diff = hf['signal_diff'][:]
         signal_lens = hf['signal_lens'][:]
         label = hf['label'][:]
 
-    return bases, signal_means, signal_stds, signal_lens, label
+    return bases, signal_means, signal_stds, signal_median, signal_skew, \
+        signal_kurt, signal_diff, signal_lens, label
 
 
 def load_error_data(file):
@@ -188,6 +198,21 @@ def load_error_data(file):
         Y = hf['err_Y'][:]
 
     return X, Y
+
+
+def select_columns(df, columns):
+    cols = []
+    for c in columns.split(','):
+        if re.search (r'-',c):
+            c1,c2 = c.split('-')
+            cols +=  list (range(int(c1), int(c2)+1))
+        elif re.search(r':',c):
+            c1,c2 = c.split(':')
+            cols += list (range(int(c1), int(c2)+1))
+        else:
+            cols.append(int(c))
+        
+    return df[df.columns[cols]]
 
 
 # ------------------------------------------------------------------------------

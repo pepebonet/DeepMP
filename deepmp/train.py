@@ -15,10 +15,15 @@ def load_data(file):
         bases = hf['kmer'][:]
         signal_means = hf['signal_means'][:]
         signal_stds = hf['signal_stds'][:]
+        signal_median = hf['signal_median'][:]
+        signal_skew = hf['signal_skew'][:]
+        signal_kurt = hf['signal_kurt'][:]
+        signal_diff = hf['signal_diff'][:]
         signal_lens = hf['signal_lens'][:]
         label = hf['label'][:]
 
-    return bases, signal_means, signal_stds, signal_lens, label
+    return bases, signal_means, signal_stds, signal_median, signal_skew, \
+        signal_kurt, signal_diff, signal_lens, label
 
 
 def load_error_data(file):
@@ -36,8 +41,9 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
     embedding_flag = ""
 
     ## preprocess data
-    bases, signal_means, signal_stds, signal_lens, label = load_data(train_file)
-    v1, v2, v3, v4, vy  = load_data(val_file)
+    bases, signal_means, signal_stds, signal_median, signal_skew, \
+        signal_kurt, signal_diff, signal_lens, label = load_data(train_file)
+    v1, v2, v3, v4, v5, v6, v7, v8, vy  = load_data(val_file)
 
     ## embed bases
     if one_hot:
@@ -61,14 +67,23 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
 
     ## prepare inputs for NNs
     input_train = tf.concat([embedded_bases,
-                                    tf.reshape(signal_means, [-1, kmer, 1]),
-                                    tf.reshape(signal_stds, [-1, kmer, 1]),
-                                    tf.reshape(signal_lens, [-1, kmer, 1])],
+                                    # tf.reshape(signal_means, [-1, kmer, 1]),
+                                    # tf.reshape(signal_stds, [-1, kmer, 1]),
+                                    # tf.reshape(signal_median, [-1, kmer, 1]),
+                                    # tf.reshape(signal_skew, [-1, kmer, 1]),
+                                    # tf.reshape(signal_kurt, [-1, kmer, 1]),
+                                    tf.reshape(signal_diff, [-1, kmer, 1])],
+                                    # tf.reshape(signal_lens, [-1, kmer, 1])],
                                     axis=2)
-    input_val = tf.concat([val_bases, tf.reshape(v2, [-1, kmer, 1]),
-                                        tf.reshape(v3, [-1, kmer, 1]),
-                                        tf.reshape(v4, [-1, kmer, 1])],
-                                        axis=2)
+    input_val = tf.concat([val_bases, 
+                                    # tf.reshape(v2, [-1, kmer, 1]),
+                                    # tf.reshape(v3, [-1, kmer, 1]),
+                                    # tf.reshape(v4, [-1, kmer, 1]),
+                                    # tf.reshape(v5, [-1, kmer, 1]),
+                                    # tf.reshape(v6, [-1, kmer, 1]),
+                                    tf.reshape(v7, [-1, kmer, 1])],
+                                    # tf.reshape(v8, [-1, kmer, 1])],
+                                    axis=2)
 
     ## train model
     if rnn:

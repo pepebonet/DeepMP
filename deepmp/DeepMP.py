@@ -294,10 +294,6 @@ def error_extraction(**kwargs):
     '-m', '--motif', default='CG', help='motif of interest'
 )
 @click.option(
-    '-me', '--memory_efficient', default=False, 
-    help='If input features file is too large activate to demand less memory'
-)
-@click.option(
     '-rpf', '--reads_per_file', default=1500, 
     help='number of reads per file for parallel computing'
 )
@@ -326,7 +322,7 @@ def single_read_error_extraction(**kwargs):
 
     sre.single_read_errors(
         args.error_features, args.label, args.motif, args.output, 
-        args.memory_efficient, args.reads_per_file, args.cpus, args.mod_loc,
+        args.reads_per_file, args.cpus, args.mod_loc,
         args.kmer_len, args.is_dna
     )
 
