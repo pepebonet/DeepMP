@@ -133,6 +133,10 @@ def kmer2code(kmer_bytes):
     return [base2code_dna[x] for x in kmer_bytes]
 
 
+def slice_chunks(l, n):
+    for i in range(0, len(l) - n):
+        yield l[i:i + n]
+
 
 # ------------------------------------------------------------------------------
 # TRAIN AND CALL MODIFICATIONS

@@ -13,6 +13,14 @@ import multiprocessing as mp
 from statsmodels import robust
 from scipy.stats import kurtosis, skew
 
+
+import shutil
+import functools
+import gzip, bz2, re
+from itertools import islice
+from collections import defaultdict
+from collections import OrderedDict
+
 from deepmp import utils as ut
 from deepmp.fast5 import Fast5
 
@@ -68,7 +76,7 @@ def init_params():
         defaultdict(int), defaultdict(list), {}
 
 
-def get_feature_set(lines, read, out_file):
+def get_feature_set(lines):
     qual, mis, mat, ins, dele, ins_q, base = init_params()
     for ary in lines:
         if ary[-1] == 'M':
@@ -80,27 +88,70 @@ def get_feature_set(lines, read, out_file):
             
         if ary[-1] == 'I':
             ins, ins_q = get_insertions(ary, ins, ins_q, aln_mem)
+    
+    return arrange_features(qual, mis, mat, ins, dele, base)
 
-    arrange_output(qual, mis, mat, ins, dele, base, read, out_file)
+
+def arrange_features(qual, mis, mat, ins, dele, base):
+    lines = []
+    for k in base.keys():
+        Mis = mis[k]; Mat = mat[k]
+        Del = dele[k]; Ins = ins[k]; q_lst = qual[k]
+        lines.append([k[0], k[1], base[k], q_lst, Mat, Mis, Ins, Del])
+
+    return lines
 
 
-def get_error_features(feat_path):
+def get_kmer_set(features, kmer_len, motif, mod_loc):
+    position = ut.slice_chunks([item[-7] for item in features], kmer_len)
+    sequence = ut.slice_chunks([item[-6] for item in features], kmer_len)
+    quality = ut.slice_chunks([item[-5] for item in features], kmer_len)
+    mismatch = ut.slice_chunks([item[-3] for item in features], kmer_len)
+    insertion = ut.slice_chunks([item[-2] for item in features], kmer_len)
+    deletion = ut.slice_chunks([item[-1] for item in features], kmer_len)
+
+    loc = int(np.floor(kmer_len / 2))
+    motiflen = len(list(motif)[0])
+
+    lines = []
+    for pos, seq, qual, mis, ins, dele in zip(
+        position, sequence, quality, mismatch, insertion, deletion): 
+        if ''.join(seq[loc - mod_loc: loc + motiflen - mod_loc]) in motif:
+
+            pos = pos[loc]; seq = ''.join(seq)
+            # qual = ','.join(qual); mis = ','.join(mis)
+            # ins = ','.join(ins); dele = ','.join(dele)
+
+            lines.append([pos, features[0][1], seq, qual, mis, ins, dele])
+            
+    return lines
+
+
+def openfile(f):
+    if f.endswith ('.gz'):
+        fh = gzip.open (f,'rt')
+    elif f.endswith ('bz') or f.endswith ('bz2'):
+        fh = bz2.open(f,'rt')
+    else:
+        fh = open(f,'rt')
+    return fh
+
+
+def get_error_features(feat_path, kmer_len, motif, mod_loc):
     lines = [];
-
     with openfile(feat_path) as fh:
         for l in fh:
             if l.startswith('#'):
                 continue
             lines.append(l.strip().split())
-    import pdb;pdb.set_trace()
-    get_feature_set(lines, last_read, out_tmp)
-    import pdb;pdb.set_trace()
-    return out_tmp
+
+    features = get_feature_set(lines)
+    return get_kmer_set(features, kmer_len, motif, mod_loc)
+
 
 # ------------------------------------------------------------------------------
 # SEQUENCE FUNCTIONS
 # ------------------------------------------------------------------------------
-
 
 def _write_featurestr_to_file(write_fp, featurestr_q):
     with open(write_fp, 'w') as wf:
@@ -119,7 +170,7 @@ def _write_featurestr_to_file(write_fp, featurestr_q):
 def _features_to_str(features):
     chrom, pos, alignstrand, loc_in_ref, readname, strand, k_mer, signal_means, \
         signal_stds, signal_median, signal_skew, signal_kurt, signal_diff, \
-            signal_lens, methy_label, flag = features
+        signal_lens, qual, mis, ins, dele, methy_label, flag = features
     means_text = ','.join([str(x) for x in np.around(signal_means, decimals=6)])
     stds_text = ','.join([str(x) for x in np.around(signal_stds, decimals=6)])
     median_text = ','.join([str(x) for x in np.around(signal_median, decimals=6)])
@@ -127,10 +178,15 @@ def _features_to_str(features):
     kurt_text = ','.join([str(x) for x in np.around(signal_kurt, decimals=6)])
     diff_text = ','.join([str(x) for x in np.around(signal_diff, decimals=6)])
     signal_len_text = ','.join([str(x) for x in signal_lens])
+    qual_text = ','.join([str(x) for x in qual])
+    mis_text = ','.join([str(x) for x in mis])
+    ins_text = ','.join([str(x) for x in ins])
+    dele_text = ','.join([str(x) for x in dele])
 
     return "\t".join([chrom, str(pos), alignstrand, str(loc_in_ref), readname, \
         strand, k_mer, means_text, stds_text, median_text, skew_text, \
-        kurt_text, diff_text, signal_len_text, str(methy_label), str(flag)])
+        kurt_text, diff_text, signal_len_text, qual_text, mis_text, ins_text, \
+            dele_text, str(methy_label), str(flag)])
 
 
 def _read_position_file(position_file):
@@ -183,11 +239,12 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
             )
 
             if dict_names:
-                import pdb;pdb.set_trace()
                 error_read = os.path.join(
                     errors, '{}.txt'.format(dict_names[readname.split('.')[0]])
                 )
-                get_error_features(error_read)
+                error_features = get_error_features(
+                    error_read, kmer_len, motif_seqs, methyloc
+                )
             else:
                 raise NotImplementedError('not sure how to deal with it')
 
@@ -232,6 +289,18 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                     signal_skew = [skew(x) for x in k_signals]
                     signal_kurtosis = [kurtosis(x) for x in k_signals]
 
+                    pos_err = [item[0] - 1 for item in error_features]
+                    comb_err = error_features[np.argwhere(np.asarray(pos_err) == pos)[0][0]]
+                    try: 
+                        qual = comb_err[-4]
+                        mis = comb_err[-3]
+                        ins = comb_err[-2]
+                        dele = comb_err[-1]
+                    except: 
+                        print('Error in the error features occurred...')
+                        error += 1
+                        continue
+                    
                     if np.mean(signal_lens) > 7:
                         flag = 0
                     else:
@@ -241,19 +310,19 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                         (chrom, pos, alignstrand, loc_in_ref, readname, strand,
                         k_mer, signal_means, signal_stds, signal_median,  
                         signal_skew, signal_kurtosis, signal_diff, signal_lens, 
-                        methy_label, flag)
+                        qual, mis, ins, dele, methy_label, flag)
                     )
-
         except Exception:
             error += 1
+            # print(error)
             continue
 
     return features_list, error
 
 
-def get_a_batch_features_str(fast5s_q, featurestr_q, errornum_q,
+def get_a_batch_features_str(fast5s_q, featurestr_q, errornum_q, err_path,
     corrected_group, basecall_subgroup, normalize_method, motif_seqs, methyloc, 
-    chrom2len, kmer_len, raw_signals_len, methy_label, positions):
+    chrom2len, kmer_len, raw_signals_len, methy_label, positions, dict_names):
     #Obtain features from every read 
     while not fast5s_q.empty():
         try:
@@ -262,9 +331,9 @@ def get_a_batch_features_str(fast5s_q, featurestr_q, errornum_q,
             break
 
         features_list, error_num = _extract_features(
-            fast5s, corrected_group, basecall_subgroup,normalize_method, 
-            motif_seqs, methyloc,chrom2len, kmer_len, raw_signals_len, 
-            methy_label, positions
+            fast5s, err_path, corrected_group, basecall_subgroup, normalize_method, 
+            motif_seqs, methyloc, chrom2len, kmer_len, raw_signals_len, 
+            methy_label, positions, dict_names
         )
         features_str = []
         for features in features_list:
@@ -316,18 +385,17 @@ def _extract_preprocess(fast5_dir, motifs, is_dna, reference_path,
         positions = _read_position_file(position_file)
 
     #Distribute reads into processes
-    fast5s_q = []
-    # fast5s_q = mp.Queue()
-    # _fill_files_queue(fast5s_q, fast5_files, f5_batch_num)
+    fast5s_q = mp.Queue()
+    _fill_files_queue(fast5s_q, fast5_files, f5_batch_num)
 
-    return motif_seqs, chrom2len, fast5_files, len(fast5_files), positions
+    return motif_seqs, chrom2len, fast5s_q, len(fast5_files), positions
 
 
 def combine_extraction(fast5_dir, read_errors, ref, cor_g, base_g, dna, motifs,
     nproc, position_file, norm_me, methyloc, kmer_len, raw_sig_len, methy_lab, 
     write_fp, f5_batch_num, recursive, dict_names):
     start = time.time()
-    motif_seqs, chrom2len, fast5s_files, len_fast5s, positions = \
+    motif_seqs, chrom2len, fast5s_q, len_fast5s, positions = \
         _extract_preprocess(fast5_dir, motifs, dna, ref, f5_batch_num, 
             position_file, recursive
     )
@@ -336,52 +404,52 @@ def combine_extraction(fast5_dir, read_errors, ref, cor_g, base_g, dna, motifs,
         dict_names = ut.load_obj(dict_names)  
         dict_names = {v: k for k, v in dict_names.items()}
 
-    features_list, error_num = _extract_features(
-        fast5s_files, read_errors, cor_g, base_g, norm_me, 
-        motif_seqs, methyloc,chrom2len, kmer_len, raw_sig_len, 
-        methy_lab, positions, dict_names
-    )
-    # featurestr_q = mp.Queue()
-    # errornum_q = mp.Queue()
-
-    # print('Getting features from nanopore reads...')
-    # #Start process for feature extraction in every core
-    # featurestr_procs = []
-    # if nproc > 1:
-    #     nproc -= 1
-    # for _ in range(nproc):
-    #     p = mp.Process(
-    #         target=get_a_batch_features_str, args=(fast5s_q, featurestr_q, 
-    #         errornum_q, cor_g, base_g, norm_me, motif_seqs, methyloc, chrom2len, 
-    #         kmer_len, raw_sig_len, methy_lab, positions)
-    #     )
-    #     p.daemon = True
-    #     p.start()
-    #     featurestr_procs.append(p)
-
-    # print("Writing features to file...")
-    # p_w = mp.Process(
-    #     target=_write_featurestr_to_file, args=(write_fp, featurestr_q)
+    # features_list, error_num = _extract_features(
+    #     fast5s_files, read_errors, cor_g, base_g, norm_me, 
+    #     motif_seqs, methyloc,chrom2len, kmer_len, raw_sig_len, 
+    #     methy_lab, positions, dict_names
     # )
-    # p_w.daemon = True 
-    # p_w.start()
+    featurestr_q = mp.Queue()
+    errornum_q = mp.Queue()
 
-    # errornum_sum = 0
-    # while True:
-    #     running = any(p.is_alive() for p in featurestr_procs)
-    #     while not errornum_q.empty():
-    #         errornum_sum += errornum_q.get()
-    #     if not running:
-    #         break
+    print('Getting features from nanopore reads...')
+    #Start process for feature extraction in every core
+    featurestr_procs = []
+    if nproc > 1:
+        nproc -= 1
+    for _ in range(nproc):
+        p = mp.Process(
+            target=get_a_batch_features_str, args=(fast5s_q, featurestr_q, 
+            errornum_q, read_errors, cor_g, base_g, norm_me, motif_seqs, methyloc, chrom2len, 
+            kmer_len, raw_sig_len, methy_lab, positions, dict_names)
+        )
+        p.daemon = True
+        p.start()
+        featurestr_procs.append(p)
 
-    # for p in featurestr_procs:
-    #     p.join() 
+    print("Writing features to file...")
+    p_w = mp.Process(
+        target=_write_featurestr_to_file, args=(write_fp, featurestr_q)
+    )
+    p_w.daemon = True 
+    p_w.start()
 
-    # print("finishing the writing process..")
-    # featurestr_q.put("kill")
+    errornum_sum = 0
+    while True:
+        running = any(p.is_alive() for p in featurestr_procs)
+        while not errornum_q.empty():
+            errornum_sum += errornum_q.get()
+        if not running:
+            break
 
-    # p_w.join()
+    for p in featurestr_procs:
+        p.join() 
 
-    # print("%d of %d fast5 files failed..\n"
-    #       "extract_features costs %.1f seconds.." % (errornum_sum, len_fast5s,
-    #                                                  time.time() - start))
+    print("finishing the writing process..")
+    featurestr_q.put("kill")
+
+    p_w.join()
+
+    print("%d of %d fast5 files failed..\n"
+          "extract_features costs %.1f seconds.." % (errornum_sum, len_fast5s,
+                                                     time.time() - start))
