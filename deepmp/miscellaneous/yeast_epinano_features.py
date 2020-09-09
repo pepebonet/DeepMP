@@ -61,7 +61,7 @@ def main(features, output):
     mod_sites = get_modified_sites(df)
     mod_sites['Cov'] = mod_sites['Coverage'].apply(get_coverage)
     mod_sites = mod_sites[mod_sites['Cov'] >=5].drop(columns=['Coverage'])
-
+    print(mod_sites.shape)
     mod_sites.to_csv(output, sep='\t', index=None)
     
 

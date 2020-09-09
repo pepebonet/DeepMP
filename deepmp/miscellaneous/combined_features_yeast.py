@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 from functools import reduce
+from collections import Counter
 from tensorflow.keras.models import load_model
 
 import sys
@@ -117,7 +118,7 @@ def get_mod_score(s1, s2, s3):
 def call_mod(ko, wt):
     mods = []
     for i in range(len(ko)):
-        if wt[i] / ko[i] > 1.5 and wt[i] > 0.5:
+        if wt[i] / ko[i] > 1 and wt[i] > 0.5:
             mods.append(1)
         else:
             mods.append(0)
@@ -169,7 +170,7 @@ def do_analysis(df, genes, error_model):
 
 
 def get_results(df):
-    mod_list = [df['mod'], df['mod_x'], df['mod_y']]
+    mod_list = [df['pred'], df['pred_x'], df['pred_y']]
     av = np.average(np.asarray(list(filter(lambda x: x != -1, mod_list))))
     if av > 0.5:
         return 1
@@ -183,6 +184,14 @@ def get_results_both(df):
         return 1
     else:
         return 0
+
+
+def do_genes_subset(df):
+    if Counter(df['fullcons'][2:7])['A'] > 1:
+        return 0
+    else:
+        return 1
+
 
 
 def do_ind_analyses(ko1_err, ko2_err, ko3_err, wt1_err, wt2_err, wt3_err, genes, error_model):
@@ -213,7 +222,7 @@ def do_ind_analyses(ko1_err, ko2_err, ko3_err, wt1_err, wt2_err, wt3_err, genes,
     
 
 if __name__ == "__main__":
-    err_model_file = '/workspace/projects/nanopore/DeepMP/models/epinano_combined/error_model/'  
+    err_model_file = '/workspace/projects/nanopore/DeepMP/models/error_model/'  
     bd = '/workspace/projects/nanopore/stockholm/EpiNano/novoa_features/yeast_epinano/'
     ko1_err = get_id(pd.read_csv(os.path.join(bd, 'KO1/RRACH_5x_errors.tsv'), sep='\t'), 'ko1')
     ko2_err = get_id(pd.read_csv(os.path.join(bd, 'KO2/RRACH_5x_errors.tsv'), sep='\t'), 'ko2')
@@ -224,9 +233,11 @@ if __name__ == "__main__":
 
     genes = pd.read_csv(os.path.join(bd, 'sk1_highconf_m6Asites.txt'), sep='\t')
     genes['id'] = genes['chr'] + '_' + genes['peakgenomepos'].astype(str)
-
-    do_ind_analyses(ko1_err, ko2_err, ko3_err, wt1_err, wt2_err, wt3_err, genes, err_model_file)
+    genes['select'] = genes.apply(do_genes_subset, axis=1)
+    genes = genes[genes['select'] == 1].drop(columns=['select']) 
     import pdb;pdb.set_trace()
+    # do_ind_analyses(ko1_err, ko2_err, ko3_err, wt1_err, wt2_err, wt3_err, genes, err_model_file)
+    
 
     ko1_err, ko2_err, ko3_err, wt1_err, wt2_err, wt3_err = merge_all(
         ko1_err, ko2_err, ko3_err, wt1_err, wt2_err, wt3_err)

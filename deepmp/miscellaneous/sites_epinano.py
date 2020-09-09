@@ -65,6 +65,7 @@ def extract_sites(df):
 )
 def main(input, output):
     genes = pd.read_csv(input, sep='\t')
+    import pdb;pdb.set_trace()
     extract_sites(genes)
 
 
