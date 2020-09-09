@@ -35,6 +35,16 @@ def load_error_data(file):
     return X, Y
 
 
+def load_error_data_kmer(file):
+
+    with h5py.File(file, 'r') as hf:
+        bases = hf['kmer'][:]
+        X = hf['err_X'][:]
+        Y = hf['err_Y'][:]
+
+    return X, Y, bases
+
+
 def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
                                 kmer, epochs, one_hot = False, rnn = None):
 
@@ -108,9 +118,15 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
 
 def train_errors(train_file, val_file, log_dir, model_dir, feat,
     epochs, batch_size):
-    X_train, Y_train = load_error_data(train_file)
-    X_val, Y_val  = load_error_data(val_file)
+    X_train, Y_train= load_error_data(train_file)
+    X_val, Y_val = load_error_data(val_file)
 
+    import pdb;pdb.set_trace()
+    #TODO DELETE
+    # X_train = X_train[:, 15:20] 
+    # X_val = X_val[:, 15:20]
+    # feat = 5
+    
     model = get_cnn_model(feat)
 
     log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_errors")
@@ -124,6 +140,45 @@ def train_errors(train_file, val_file, log_dir, model_dir, feat,
     model.save(model_dir + "error_model")
 
     return None
+
+
+
+def train_errors_kmer(train_file, val_file, log_dir, model_dir, feat,
+    epochs, batch_size):
+    X_train, Y_train, bases_train = load_error_data_kmer(train_file)
+    X_val, Y_val, bases_val = load_error_data_kmer(val_file)
+
+    #TODO DELETE
+    # import pdb;pdb.set_trace()
+    # X_train = X_train[:, 10:15] 
+    # X_val = X_val[:, 10:15]
+
+    X_train = tf.convert_to_tensor(X_train, dtype=tf.float32)
+    X_val = tf.convert_to_tensor(X_val, dtype=tf.float32)
+
+    embedding_size = 5
+    embedded_bases = tf.one_hot(bases_train, embedding_size)
+    val_bases = tf.one_hot(bases_val, embedding_size)
+    
+    size_feat = int(X_train.shape[1] / 5)
+
+    input_train = tf.concat([embedded_bases, tf.reshape(X_train, [-1, 5, size_feat])], axis=2)
+    input_val = tf.concat([val_bases, tf.reshape(X_val, [-1, 5, size_feat])], axis=2)
+
+    model = get_cnn_model_kmer(embedding_size + size_feat)
+
+    log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_errors")
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(
+        log_dir=log_dir, histogram_freq=1
+    )
+
+    model.fit(input_train, Y_train, batch_size=batch_size, epochs=epochs,
+                            callbacks = [tensorboard_callback],
+                            validation_data=(input_val, Y_val))
+    model.save(model_dir + "error_model")
+
+    return None
+
 
 def train_jm(train_file, val_file, log_dir, model_dir, feat, batch_size, kmer, epochs):
 

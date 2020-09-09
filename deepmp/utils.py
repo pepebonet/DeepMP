@@ -141,8 +141,7 @@ def get_data_sequence(file, kmer, one_hot=False):
     embedding_flag = ""
 
     ## preprocess data
-    bases, signal_means, signal_stds, signal_median, signal_skew, \
-        signal_kurt, signal_diff, signal_lens, label = load_seq_data(file)
+    bases, signal_means, signal_stds, signal_median, signal_lens, label = load_seq_data(file)
 
     ## embed bases
     if one_hot:
@@ -164,12 +163,12 @@ def get_data_sequence(file, kmer, one_hot=False):
 
     ## prepare inputs for NNs
     return tf.concat([embedded_bases,
-                                    # tf.reshape(signal_means, [-1, kmer, 1])],
-                                    # tf.reshape(signal_stds, [-1, kmer, 1])],
-                                    # tf.reshape(signal_median, [-1, kmer, 1])],
-                                    # tf.reshape(signal_skew, [-1, kmer, 1])],
-                                    # tf.reshape(signal_kurt, [-1, kmer, 1])],
-                                    # tf.reshape(signal_diff, [-1, kmer, 1])],
+                                    tf.reshape(signal_means, [-1, kmer, 1]),
+                                    tf.reshape(signal_stds, [-1, kmer, 1]),
+                                    tf.reshape(signal_median, [-1, kmer, 1]),
+                                    # tf.reshape(signal_skew, [-1, kmer, 1]),
+                                    # tf.reshape(signal_kurt, [-1, kmer, 1]),
+                                    # tf.reshape(signal_diff, [-1, kmer, 1]),
                                     tf.reshape(signal_lens, [-1, kmer, 1])],
                                     axis=2), label
 
@@ -189,15 +188,17 @@ def load_seq_data(file):
 
     return bases, signal_means, signal_stds, signal_median, signal_skew, \
         signal_kurt, signal_diff, signal_lens, label
+    # return bases, signal_means, signal_stds, signal_median, signal_lens, label
 
 
 def load_error_data(file):
 
     with h5py.File(file, 'r') as hf:
+        bases = hf['kmer'][:]
         X = hf['err_X'][:]
         Y = hf['err_Y'][:]
 
-    return X, Y
+    return X, Y, bases
 
 
 def select_columns(df, columns):

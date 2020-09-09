@@ -81,6 +81,47 @@ def _normalize_signals(signals, normalize_method='mad'):
     return np.around(norm_signals, decimals=6)
 
 
+#Extract signals around methylated base --> Signal Feature Module
+def _get_central_signals(signals_list, rawsignal_num=360):
+    signal_lens = [len(x) for x in signals_list]
+
+    if sum(signal_lens) < rawsignal_num:
+        real_signals = np.concatenate(signals_list)
+        cent_signals = np.append(
+            real_signals, np.array([0] * (rawsignal_num - len(real_signals)))
+        )
+    else:
+        mid_loc = int((len(signals_list) - 1) / 2)
+        mid_base_len = len(signals_list[mid_loc])
+
+        if mid_base_len >= rawsignal_num:
+            allcentsignals = signals_list[mid_loc]
+            cent_signals = [allcentsignals[x] for x in sorted(
+                random.sample(range(len(allcentsignals)), rawsignal_num))]
+        else:
+            left_len = (rawsignal_num - mid_base_len) // 2
+            right_len = rawsignal_num - left_len
+
+            left_signals = np.concatenate(signals_list[:mid_loc])
+            right_signals = np.concatenate(signals_list[mid_loc:])
+
+            if left_len > len(left_signals):
+                right_len = right_len + left_len - len(left_signals)
+                left_len = len(left_signals)
+            elif right_len > len(right_signals):
+                left_len = left_len + right_len - len(right_signals)
+                right_len = len(right_signals)
+
+            assert (right_len + left_len == rawsignal_num)
+            if left_len == 0:
+                cent_signals = right_signals[:right_len]
+            else:
+                cent_signals = np.append(
+                    left_signals[-left_len:], right_signals[:right_len])
+
+    return cent_signals
+
+
 #Raw signal --> Normalization --> alignment --> methylated site --> features
 def _extract_features(fast5s, corrected_group, basecall_subgroup, 
     normalize_method, motif_seqs, methyloc, chrom2len, kmer_len, raw_signals_len,
@@ -136,6 +177,7 @@ def _extract_features(fast5s, corrected_group, basecall_subgroup,
                         loc_in_read - num_bases):(loc_in_read + num_bases + 1)]
                     k_signals = signal_list[(
                         loc_in_read - num_bases):(loc_in_read + num_bases + 1)]
+
 
                     signal_lens = [len(x) for x in k_signals]
                     signal_means = [np.mean(x) for x in k_signals]
