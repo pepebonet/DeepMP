@@ -3,6 +3,7 @@
 import re
 import os
 import h5py
+import pickle
 import fnmatch
 import numpy as np
 import tensorflow as tf
@@ -253,3 +254,8 @@ def _write_list_to_file(file, data):
     with open(file, 'w') as f:
         for listitem in data:
             f.write('%s\n' % listitem)
+
+
+def load_obj(path):
+    with open(path, 'rb') as f:
+        return pickle.load(f)

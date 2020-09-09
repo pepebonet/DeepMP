@@ -11,6 +11,7 @@ from .call_modifications import *
 import deepmp.error_extraction as ee
 import deepmp.single_read_errors as sre
 import deepmp.sequence_extraction as se
+import deepmp.combined_extraction as ce
 
 
 
@@ -405,6 +406,95 @@ def sequence_feature_extraction(**kwargs):
         args.positions, args.normalize_method, args.mod_loc, args.kmer_len, \
         args.cent_signals_len, args.methyl_label, args.write_path, \
         args.f5_batch_num, args.recursive
+    )
+
+
+# ------------------------------------------------------------------------------
+# COMBINED FEATURE EXTRACTION
+# ------------------------------------------------------------------------------
+
+@cli.command(short_help='Extraction of sequence features')
+@click.option(
+    '-fr', '--fast5-reads', required=True,
+    help='fast5 reads to extract sequence features'
+)
+@click.option(
+    '-re', '--read-errors', required=True,
+    help='path to read errors'
+)
+@click.option(
+    '-rp', '--reference-path', required=True,
+    help='Reference genome to be used. .fa file'
+)
+@click.option(
+    '-cg', '--corrected-group', default='RawGenomeCorrected_000',
+    help='the corrected_group of fast5 files after tombo re-squiggle. '
+    'default RawGenomeCorrected_000'
+)
+@click.option(
+    '-bs', '--basecall-subgroup', default='BaseCalled_template',
+    help='Corrected subgroup of fast5 files. default BaseCalled_template'
+)
+@click.option(
+    '-nm', '--normalize-method', type=click.Choice(['mad', 'zscore']),
+    default='mad', help='the way for normalizing signals in read level. '
+    'mad or zscore, default mad'
+)
+@click.option(
+    '--methyl-label', '-ml', type=click.Choice(['1', '0']),
+    default='1', help='the label of the interested modified '
+    'bases, 0 or 1, default 1'
+)
+@click.option(
+    '--is-dna', '-id', default='yes', help='whether the fast5 files from '
+    'DNA sample or RNA. default true, t, yes, 1. set this option to '
+    'no/false/0 if the fast5 files are from RNA sample.'
+)
+@click.option(
+    '-kl', '--kmer_len', default=17, help='len of kmer. default 17'
+)
+@click.option(
+    '-m', '--motifs', default='G', help='motif seq to be extracted, default:G.'
+)
+@click.option(
+    '-cpu', '--cpus', default=1, help='number of processes to be used, default 1'
+)
+@click.option(
+    '--f5-batch-num', '-bn', default=100,
+    help='number of files to be processed by each process one time, default 100'
+)
+@click.option(
+    '--mod-loc', '-mol', default=0,
+    help='0-based location of the targeted base in the motif, default 0'
+)
+@click.option(
+    '--positions', '-p', default=None,
+    help='Tap delimited file with a list of positions. default None'
+)
+@click.option(
+    '--cent-signals-len', '-csl', default=360,
+    help='the number of signals to be used in deepsignal, '
+    'default 360'
+)
+@click.option(
+    '--recursive', '-r', is_flag=True, help='Find reads recursively in subfolders'
+)
+@click.option(
+    '--dict-names', '-dn', default='', help='Dict to parse read names'
+)
+@click.option(
+    '-o', '--write_path', required=True, help='file path to save the features'
+)
+def combine_extraction(**kwargs):
+    """Perform sequence feature extraction"""
+
+    args = Namespace(**kwargs)
+    ce.combine_extraction(
+        args.fast5_reads, args.read_errors, args.reference_path, args.corrected_group, \
+        args.basecall_subgroup, args.is_dna, args.motifs, args.cpus, \
+        args.positions, args.normalize_method, args.mod_loc, args.kmer_len, \
+        args.cent_signals_len, args.methyl_label, args.write_path, \
+        args.f5_batch_num, args.recursive, args.dict_names
     )
 
 
