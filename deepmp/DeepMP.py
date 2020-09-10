@@ -211,7 +211,7 @@ def train_nns(**kwargs):
 @cli.command(short_help='Merge features and preprocess data for NNs')
 @click.option(
     '-ft', '--feature_type', required=True,
-    type=click.Choice(['seq', 'err', 'both']),
+    type=click.Choice(['seq', 'err', 'both', 'combined']),
     help='which features is the input corresponding to? To the sequence, '
     'to the errors or to both of them. If choice and files do not correlate '
     'errors will rise throughout the script'
@@ -229,17 +229,31 @@ def train_nns(**kwargs):
     '-su', '--sequence-untreated', default='', help='extracted sequence features'
 )
 @click.option(
+    '-ct', '--combined-treated', default='', help='extracted combined features'
+)
+@click.option(
+    '-cu', '--combined-untreated', default='', help='extracted combined features'
+)
+@click.option(
     '-nef', '--num-err-feat', default=20, help='# Error features to select'
+)
+@click.option(
+    '-stsv', '--save-tsv', is_flag=True, help='Whether to store tsv. Default = False'
 )
 @click.option(
     '-o', '--output', default='', help='Output file'
 )
 def merge_and_preprocess(feature_type, error_treated, error_untreated,
-    sequence_treated, sequence_untreated, num_err_feat, output):
+    sequence_treated, sequence_untreated, combined_treated, 
+    combined_untreated, num_err_feat, output, save_tsv):
     if feature_type == 'both':
         do_seq_err_preprocess(
             sequence_treated, sequence_untreated, error_treated,
             error_untreated, output, num_err_feat
+        )
+    elif feature_type == 'combined':
+        do_combined_preprocess(
+            combined_treated, combined_untreated, output, save_tsv
         )
     else:
         do_single_preprocess(

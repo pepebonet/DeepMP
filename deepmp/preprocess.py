@@ -156,3 +156,75 @@ def do_single_preprocess(feature_type, sequence_treated, sequence_untreated,
         data = get_training_test_val(pd.concat([treat, untreat]))
         for el in data:
             preprocess_sequence(el[0], output, el[1])
+
+
+def preprocess_combined(df, output, file):
+    kmer = df['kmer'].apply(kmer2code)
+    base_mean = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_means'].values]
+    base_std = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_stds'].values]
+    base_median = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_median'].values]
+    base_skew = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_skew'].values]
+    base_kurt = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_kurt'].values]
+    base_diff = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_diff'].values]
+    base_signal_len = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['signal_lens'].values]
+    cent_signals = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['cent_signals'].values]
+    base_qual = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['qual'].values]
+    base_mis = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['mis'].values]
+    base_ins = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['ins'].values]
+    base_del = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['del'].values]
+    label = df['methyl_label']
+
+    file_name = os.path.join(output, '{}_combined.h5'.format(file))
+
+    with h5py.File(file_name, 'a') as hf:
+        hf.create_dataset("kmer",  data=np.stack(kmer))
+        hf.create_dataset("signal_means",  data=np.stack(base_mean))
+        hf.create_dataset("signal_stds",  data=np.stack(base_std))
+        hf.create_dataset("signal_median",  data=np.stack(base_median))
+        hf.create_dataset("signal_skew",  data=np.stack(base_skew))
+        hf.create_dataset("signal_kurt",  data=np.stack(base_kurt))
+        hf.create_dataset("signal_diff",  data=np.stack(base_diff))
+        hf.create_dataset("signal_lens",  data=np.stack(base_signal_len))
+        hf.create_dataset("signal_central",  data=np.stack(cent_signals))
+        hf.create_dataset('qual',  data=np.stack(base_qual))
+        hf.create_dataset('mis',  data=np.stack(base_mis))
+        hf.create_dataset('ins',  data=np.stack(base_ins))
+        hf.create_dataset('del',  data=np.stack(base_del))
+        hf.create_dataset('methyl_label',  data=label)
+
+    return None
+
+
+def save_tsv(df, output, file):
+    file_name = os.path.join(output, '{}.tsv'.format(file))
+    df.to_csv(file_name, sep='\t', index=None)
+
+
+def do_combined_preprocess(treated, untreated, output, tsv_flag):
+
+    treat, untreat = get_data(treated, untreated,
+        names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 
+            'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_median',
+            'signal_skew', 'signal_kurt', 'signal_diff', 'signal_lens', 
+            'cent_signals', 'qual', 'mis', 'ins', 'del', 'methyl_label', 'flag'])
+    
+    data = get_training_test_val(pd.concat([treat, untreat]))
+
+    if tsv_flag:
+        for el in data:
+            save_tsv(el[0], output, el[1])
+    for el in data:
+        preprocess_combined(el[0], output, el[1])
+        
