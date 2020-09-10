@@ -170,7 +170,7 @@ def _write_featurestr_to_file(write_fp, featurestr_q):
 def _features_to_str(features):
     chrom, pos, alignstrand, loc_in_ref, readname, strand, k_mer, signal_means, \
         signal_stds, signal_median, signal_skew, signal_kurt, signal_diff, \
-        signal_lens, qual, mis, ins, dele, methy_label, flag = features
+        signal_lens, cent_signals, qual, mis, ins, dele, methy_label, flag = features
     means_text = ','.join([str(x) for x in np.around(signal_means, decimals=6)])
     stds_text = ','.join([str(x) for x in np.around(signal_stds, decimals=6)])
     median_text = ','.join([str(x) for x in np.around(signal_median, decimals=6)])
@@ -178,6 +178,7 @@ def _features_to_str(features):
     kurt_text = ','.join([str(x) for x in np.around(signal_kurt, decimals=6)])
     diff_text = ','.join([str(x) for x in np.around(signal_diff, decimals=6)])
     signal_len_text = ','.join([str(x) for x in signal_lens])
+    cent_signals_text = ','.join([str(x) for x in cent_signals])
     qual_text = ','.join([str(x) for x in qual])
     mis_text = ','.join([str(x) for x in mis])
     ins_text = ','.join([str(x) for x in ins])
@@ -185,8 +186,8 @@ def _features_to_str(features):
 
     return "\t".join([chrom, str(pos), alignstrand, str(loc_in_ref), readname, \
         strand, k_mer, means_text, stds_text, median_text, skew_text, \
-        kurt_text, diff_text, signal_len_text, qual_text, mis_text, ins_text, \
-            dele_text, str(methy_label), str(flag)])
+        kurt_text, diff_text, signal_len_text, cent_signals_text, qual_text, \
+        mis_text, ins_text, dele_text, str(methy_label), str(flag)])
 
 
 def _read_position_file(position_file):
@@ -202,6 +203,47 @@ def _fill_files_queue(fast5s_q, fast5_files, batch_size):
     for i in np.arange(0, len(fast5_files), batch_size):
         fast5s_q.put(fast5_files[i:(i+batch_size)])
     return
+
+
+#Extract signals around methylated base --> Signal Feature Module
+def _get_central_signals(signals_list, rawsignal_num=360):
+    signal_lens = [len(x) for x in signals_list]
+
+    if sum(signal_lens) < rawsignal_num:
+        real_signals = np.concatenate(signals_list)
+        cent_signals = np.append(
+            real_signals, np.array([0] * (rawsignal_num - len(real_signals)))
+        )
+    else:
+        mid_loc = int((len(signals_list) - 1) / 2)
+        mid_base_len = len(signals_list[mid_loc])
+
+        if mid_base_len >= rawsignal_num:
+            allcentsignals = signals_list[mid_loc]
+            cent_signals = [allcentsignals[x] for x in sorted(
+                random.sample(range(len(allcentsignals)), rawsignal_num))]
+        else:
+            left_len = (rawsignal_num - mid_base_len) // 2
+            right_len = rawsignal_num - left_len
+
+            left_signals = np.concatenate(signals_list[:mid_loc])
+            right_signals = np.concatenate(signals_list[mid_loc:])
+
+            if left_len > len(left_signals):
+                right_len = right_len + left_len - len(left_signals)
+                left_len = len(left_signals)
+            elif right_len > len(right_signals):
+                left_len = left_len + right_len - len(right_signals)
+                right_len = len(right_signals)
+
+            assert (right_len + left_len == rawsignal_num)
+            if left_len == 0:
+                cent_signals = right_signals[:right_len]
+            else:
+                cent_signals = np.append(
+                    left_signals[-left_len:], right_signals[:right_len])
+
+    return cent_signals
 
 
 def _normalize_signals(signals, normalize_method='mad'):
@@ -289,6 +331,10 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                     signal_skew = [skew(x) for x in k_signals]
                     signal_kurtosis = [kurtosis(x) for x in k_signals]
 
+                    cent_signals = _get_central_signals(
+                        k_signals, raw_signals_len
+                    )
+
                     pos_err = [item[0] - 1 for item in error_features]
                     comb_err = error_features[np.argwhere(np.asarray(pos_err) == pos)[0][0]]
                     try: 
@@ -310,7 +356,7 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                         (chrom, pos, alignstrand, loc_in_ref, readname, strand,
                         k_mer, signal_means, signal_stds, signal_median,  
                         signal_skew, signal_kurtosis, signal_diff, signal_lens, 
-                        qual, mis, ins, dele, methy_label, flag)
+                        cent_signals, qual, mis, ins, dele, methy_label, flag)
                     )
         except Exception:
             error += 1
