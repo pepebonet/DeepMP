@@ -229,10 +229,8 @@ def train_nns(**kwargs):
     '-su', '--sequence-untreated', default='', help='extracted sequence features'
 )
 @click.option(
-    '-ct', '--combined-treated', default='', help='extracted combined features'
-)
-@click.option(
-    '-cu', '--combined-untreated', default='', help='extracted combined features'
+    '-cf', '--combined-features', default='', 
+    help='extracted single read combined features'
 )
 @click.option(
     '-nef', '--num-err-feat', default=20, help='# Error features to select'
@@ -241,11 +239,15 @@ def train_nns(**kwargs):
     '-stsv', '--save-tsv', is_flag=True, help='Whether to store tsv. Default = False'
 )
 @click.option(
+    '-me', '--memory-efficient', is_flag=True, 
+    help='moderate improvement to handle large feature files'
+)
+@click.option(
     '-o', '--output', default='', help='Output file'
 )
 def merge_and_preprocess(feature_type, error_treated, error_untreated,
-    sequence_treated, sequence_untreated, combined_treated, 
-    combined_untreated, num_err_feat, output, save_tsv):
+    sequence_treated, sequence_untreated, combined_features, 
+    num_err_feat, output, save_tsv, memory_efficient):
     if feature_type == 'both':
         do_seq_err_preprocess(
             sequence_treated, sequence_untreated, error_treated,
@@ -253,7 +255,8 @@ def merge_and_preprocess(feature_type, error_treated, error_untreated,
         )
     elif feature_type == 'combined':
         do_combined_preprocess(
-            combined_treated, combined_untreated, output, save_tsv
+            combined_features, output, save_tsv, 
+            memory_efficient
         )
     else:
         do_single_preprocess(
