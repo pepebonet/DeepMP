@@ -243,11 +243,14 @@ def train_nns(**kwargs):
     help='moderate improvement to handle large feature files'
 )
 @click.option(
+    '-cpu', '--cpus', default=1, help='number of processes to be used, default 1'
+)
+@click.option(
     '-o', '--output', default='', help='Output file'
 )
 def merge_and_preprocess(feature_type, error_treated, error_untreated,
     sequence_treated, sequence_untreated, combined_features, 
-    num_err_feat, output, save_tsv, memory_efficient):
+    num_err_feat, output, save_tsv, memory_efficient, cpus):
     if feature_type == 'both':
         do_seq_err_preprocess(
             sequence_treated, sequence_untreated, error_treated,
@@ -256,7 +259,7 @@ def merge_and_preprocess(feature_type, error_treated, error_untreated,
     elif feature_type == 'combined':
         do_combined_preprocess(
             combined_features, output, save_tsv, 
-            memory_efficient
+            memory_efficient, cpus
         )
     else:
         do_single_preprocess(
