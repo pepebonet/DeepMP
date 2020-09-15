@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import os
 import h5py
-import check
 import click
 import functools
 import subprocess
@@ -12,8 +11,6 @@ from multiprocessing import Pool
 from deepmp.utils import kmer2code
 from collections import OrderedDict
 from sklearn.model_selection import train_test_split
-import hdf5
-import msg
 from tqdm import tqdm
 
 
@@ -23,26 +20,39 @@ names_all=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
             'cent_signals', 'qual', 'mis', 'ins', 'del', 'methyl_label', 'flag']
 
 
+def check_shapes(data1, data2):
+    for key in data1.keys():
+        if data1[key].shape[1:] != data2[key].shape[1:]:
+            raise ValueError("Different shapes for dataset: %s. " % key)
+
+
+def check_keys(data1, data2):
+    if data1.keys() != data2.keys():
+        raise ValueError("Files have different datasets.")
+
+
+def get_size(data):
+
+    sizes = [d.shape[0] for d in data.values()]  # shape[0] = #entries
+
+    if max(sizes) != min(sizes):
+        raise ValueError("Each dataset within a file must have the "
+                  "same number of entries!")
+
+    return sizes[0]
+
+
 def merge_data(data_list):
-
-    """Merge dictionaries with data.
-
-    Keyword arguments:
-    data_list -- the dictionary with data dictionaries
-    """
 
     data = None
 
     for f in data_list:
-        size = check.get_size(data_list[f])
+        size = get_size(data_list[f])
         if not data:
-            print("\nThe following datasets were found in %s:\n" % f)
-            msg.list_dataset(data_list[f])
             data = data_list[f]
         else:
-            print("\nAdding %(n)d entries from %(f)s" % {"n": size, "f": f})
-            check.check_keys(data, data_list[f])
-            check.check_shapes(data, data_list[f])
+            check_keys(data, data_list[f])
+            check_shapes(data, data_list[f])
             for key in data_list[f]:
                 data[key] = np.append(data[key], data_list[f][key], axis=0)
 
@@ -245,58 +255,8 @@ def preprocess_combined(df, output, label_file, file):
         hf.create_dataset('ins',  data=np.stack(base_ins), chunks=True, maxshape=(None,None))
         hf.create_dataset('dele',  data=np.stack(base_del), chunks=True, maxshape=(None,None))
         hf.create_dataset('methyl_label',  data=label, chunks=True, maxshape=(None,))
-    # else:
-    # with h5py.File(file_name, 'a') as hf:
-    #     hf["kmer"].resize((hf["kmer"].shape[0] + kmer.shape[0]), axis=0)
-    #     hf["kmer"][-kmer.shape[0]:] = np.stack(kmer)
-    #     hf["signal_means"].resize((hf["signal_means"].shape[0] + np.stack(base_mean).shape[0]), axis=0)
-    #     hf["signal_means"][-np.stack(base_mean).shape[0]:] = np.stack(base_mean)
-    #     hf["signal_stds"].resize((hf["signal_stds"].shape[0] + np.stack(base_std).shape[0]), axis=0)
-    #     hf["signal_stds"][-np.stack(base_std).shape[0]:] = np.stack(base_std)
-    #     hf["signal_median"].resize((hf["signal_median"].shape[0] + np.stack(base_median).shape[0]), axis=0)
-    #     hf["signal_median"][-np.stack(base_median).shape[0]:] = np.stack(base_median)
-    #     hf["signal_skew"].resize((hf["signal_skew"].shape[0] + np.stack(base_skew).shape[0]), axis=0)
-    #     hf["signal_skew"][-np.stack(base_skew).shape[0]:] = np.stack(base_skew)
-    #     hf["signal_kurt"].resize((hf["signal_kurt"].shape[0] + np.stack(base_kurt).shape[0]), axis=0)
-    #     hf["signal_kurt"][-np.stack(base_kurt).shape[0]:] = np.stack(base_kurt)
-    #     hf["signal_diff"].resize((hf["signal_diff"].shape[0] + np.stack(base_diff).shape[0]), axis=0)
-    #     hf["signal_diff"][-np.stack(base_diff).shape[0]:] = np.stack(base_diff)
-    #     hf["signal_lens"].resize((hf["signal_lens"].shape[0] + np.stack(base_signal_len).shape[0]), axis=0)
-    #     hf["signal_lens"][-np.stack(base_signal_len).shape[0]:] = np.stack(base_signal_len)
-    #     hf["signal_central"].resize((hf["signal_central"].shape[0] + np.stack(cent_signals).shape[0]), axis=0)
-    #     hf["signal_central"][-np.stack(cent_signals).shape[0]:] = np.stack(cent_signals)
-    #     hf["qual"].resize((hf["qual"].shape[0] + np.stack(base_qual).shape[0]), axis=0)
-    #     hf["qual"][-np.stack(base_qual).shape[0]:] = np.stack(base_qual)
-    #     hf["mis"].resize((hf["mis"].shape[0] + np.stack(base_mis).shape[0]), axis=0)
-    #     hf["mis"][-np.stack(base_mis).shape[0]:] = np.stack(base_mis)
-    #     hf["ins"].resize((hf["ins"].shape[0] + np.stack(base_ins).shape[0]), axis=0)
-    #     hf["ins"][-np.stack(base_ins).shape[0]:] = np.stack(base_ins)
-    #     hf["dele"].resize((hf["dele"].shape[0] + np.stack(base_del).shape[0]), axis=0)
-    #     hf["dele"][-np.stack(base_del).shape[0]:] = np.stack(base_del)
-    #     hf["methyl_label"].resize((hf["methyl_label"].shape[0] + label.shape[0]), axis=0)
-    #     hf["methyl_label"][-label.shape[0]:] = np.stack(label)
     
     return None
-
-
-# def initialize_h5(file_name):
-#     with h5py.File(file_name, 'a') as hf:
-#         # import pdb;pdb.set_trace()
-#         hf.create_dataset("kmer", (0,0), chunks=True, maxshape=(None,None))
-#         hf.create_dataset("signal_means", (0,0), chunks=True, maxshape=(None,None))
-#         hf.create_dataset("signal_stds", (0,0), chunks=True, maxshape=(None,None))
-#         hf.create_dataset("signal_median", (0,0), chunks=True, maxshape=(None,None))
-#         hf.create_dataset("signal_skew", (0,0), chunks=True, maxshape=(None,None))
-#         hf.create_dataset("signal_kurt", (0,0), chunks=True, maxshape=(None,None))
-#         hf.create_dataset("signal_diff", (0,0), chunks=True, maxshape=(None,None))
-#         hf.create_dataset("signal_lens", (0,0), chunks=True, maxshape=(None,None))
-#         hf.create_dataset("signal_central", (0,0), chunks=True, maxshape=(None,None))
-#         hf.create_dataset('qual', (0,0), chunks=True, maxshape=(None,None))
-#         hf.create_dataset('mis', (0,0), chunks=True, maxshape=(None,None))
-#         hf.create_dataset('ins', (0,0), chunks=True, maxshape=(None,None))
-#         hf.create_dataset('dele', (0,0), chunks=True, maxshape=(None,None))
-#         hf.create_dataset('methyl_label', (0,), chunks=True, maxshape=(None,))
-
 
 
 def save_tsv(df, output, file, mode='w'):
@@ -317,9 +277,30 @@ def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps):
                 mode = 'w'
             else:
                 mode = 'a'
-            save_tsv(el[0], output, el[1], mode)
+            save_tsv(el[0], output, el[1], 'a')
     for el in data:
         preprocess_combined(el[0], tmps, el[1], file)
+
+
+def load(filename):
+    f = h5py.File(filename, 'r')
+    data = {}
+
+    for key in f:
+        data[key] = f[key][...]
+    f.close()
+
+    return data
+
+
+def save(filename, data):
+    f = h5py.File(filename, 'w')
+
+    for key in data:
+        f.create_dataset(key, data[key].shape, dtype=data[key].dtype,
+                         compression='gzip')[...] = data[key]
+
+    f.close()
 
 
 def get_set(folder, output, label):
@@ -327,43 +308,44 @@ def get_set(folder, output, label):
     data = OrderedDict()
 
     for f in filelist:
-        data[f] = hdf5.load(f)
+        data[f] = load(f)
 
     out_file = os.path.join(output, '{}_combined.h5'.format(label))
-    hdf5.save(output, merge_data(data))
+    save(out_file, merge_data(data))
 
 
 def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus):
 
     if mem_efficient:
-        tmp_folder = os.path.join(os.path.dirname(features), 'tmp1/')
+        tmp_folder = os.path.join(os.path.dirname(features), 'tmp/')
         tmp_train = os.path.join(os.path.dirname(features), 'train/')
         tmp_test = os.path.join(os.path.dirname(features), 'test/')
         tmp_val = os.path.join(os.path.dirname(features), 'val/')
 
         print('Splitting original file...')
-        # os.mkdir(tmp_folder); os.mkdir(tmp_train); os.mkdir(tmp_test); os.mkdir(tmp_val)
+        os.mkdir(tmp_folder); os.mkdir(tmp_train); os.mkdir(tmp_test); os.mkdir(tmp_val)
         cmd = 'split -l {} {} {}'.format(20000, features, tmp_folder) 
-        # subprocess.call(cmd, shell=True)
+        subprocess.call(cmd, shell=True)
         
         print('Extracting features to h5 and tsv files...')
-        # counter = 0
-        # f = functools.partial(split_sets_files, tmp_folder=tmp_folder, \
-        #         counter=counter, tsv_flag=tsv_flag, output=output, \
-        #             tmps=os.path.dirname(features))
-        # with Pool(cpus) as p:
-        #     for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
-        #         counter += 1
+        counter = 0
+        f = functools.partial(split_sets_files, tmp_folder=tmp_folder, \
+                counter=counter, tsv_flag=tsv_flag, output=output, \
+                    tmps=os.path.dirname(features))
+        with Pool(cpus) as p:
+            for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
+                counter += 1
         
         print('Concatenating features into h5s...')
-        get_set(tmp_train, output, 'train')
         get_set(tmp_test, output, 'test')
-        get_set(tmp_val, otuput, 'val')
+        get_set(tmp_val, output, 'val')
+        get_set(tmp_train, output, 'train')
+        
         import pdb;pdb.set_trace()
 
         print('Removing tmp folders and done')
         subprocess.call('rm -r {}'.format(tmp_folder), shell=True)
-        subprocess.call('rm -r {}'.format(tmp_trian), shell=True)
+        subprocess.call('rm -r {}'.format(tmp_train), shell=True)
         subprocess.call('rm -r {}'.format(tmp_test), shell=True)
         subprocess.call('rm -r {}'.format(tmp_val), shell=True)
 
