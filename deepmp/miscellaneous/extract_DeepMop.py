@@ -15,15 +15,14 @@ from sklearn.metrics import precision_recall_fscore_support
 
 
 def get_test_df(test_file):
-    test = pd.read_csv(test_file, sep='\t', nrows=11000,
+    test = pd.read_csv(test_file, sep='\t',
         names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 
-        'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_lens', 
-        'cent_signals', 'methyl_label'])
-    test['pos'] = test.pos.astype(int)
+        'read_strand', 'kmer', 'methyl_label'])
+    #Pos in strand = pos in ref. Should be the correct choice for position
+    test['id'] = test['readname'] + '_' + test['pos_in_strand'].astype(str) \
+        + '_' + test['chrom'] + '_' + test['strand']
 
-    return  test.drop(['strand', 'pos_in_strand', 'readname', 
-        'read_strand', 'kmer', 'signal_means', 'signal_stds', 
-        'signal_lens', 'cent_signals'], axis=1).drop_duplicates()
+    return test
 
 
 def get_label(treatment):
@@ -53,24 +52,36 @@ def do_read_analysis(reads, label, test):
 
 
 def get_reads_info(fast5, index, label, test=None):
-    ind = pd.read_csv(index, sep=' ', header=None).values[:, [3,4]]
+    ind = pd.read_csv(index, sep=' ', header=None)
+
+    if test is not None: 
+        merged_reads = pd.merge(ind, test, right_on='readname', left_on=4, how='inner')
+        if merged_reads.shape[0] == 0:
+            return [], [], pd.DataFrame()
 
     true = [] ; pred = []; df_test = pd.DataFrame()
     with h5py.File(fast5, 'r') as hf:
-        for el in ind: 
-            data = hf['pred/{}/predetail'.format(el[0])][:]
+        for el in merged_reads.values: 
+
+            data = hf['pred/{}/predetail'.format(el[3])][:]
 
             refseq = ''.join([x[0].astype(str) for x in data])
             generator = slice_chunks(refseq, 2)
             chunks = np.asarray(list(generator))
 
             df = pd.DataFrame(data[np.argwhere(chunks == 'CG')].flatten())
-            
+            df['readname'] = el[4] 
+            df['chrom'] = el[0] 
+            df['strand'] = el[1]       
+            df['id'] = df['readname'] + '_' + df['refbasei'].astype(str) + '_' + \
+                df['chrom'] + '_' + df['strand']
+
             if test is not None: 
                 test_label = test[test['methyl_label'] == label]
-                merged = pd.merge(df, test_label, how='inner', 
-                    left_on='refbasei', right_on='pos')
+                merged = pd.merge(df, test_label, how='inner', on='id')
+
                 if not merged.empty:
+                    # import pdb;pdb.set_trace()
                     pred.append(merged['mod_pred'].values)
                     true.append(merged['methyl_label'].values)
                     df_test = pd.concat([df_test, merged])
@@ -84,6 +95,8 @@ def get_reads_info(fast5, index, label, test=None):
                     true.append(np.zeros(len(df['mod_pred'].values)))
     
     return true, pred, df_test
+
+    
 
 
 def slice_chunks(l, n):
@@ -224,22 +237,29 @@ def main(detect_folder, file_id, label, output, test_file, cpus):
     untreat_true = []; untreat_pred = []
     test_all = pd.DataFrame()
     treatments = os.listdir(detect_folder)
+
     for treat in treatments:
+
         label = get_label(treat)
         detect_subfolder = os.path.join(detect_folder, treat, file_id)
         detect_reads = os.listdir(detect_subfolder)
+
         for el in detect_reads: 
             if os.path.isdir(os.path.join(detect_subfolder, el)):
+
                 read_folder = os.path.join(detect_subfolder, el)
                 reads = os.listdir(read_folder)
                 fast5_index = get_list(reads, read_folder)
-
 
                 f = functools.partial(do_read_analysis, label=label, test=test)
 
                 with Pool(cpus) as p:
                     for i, rval in enumerate(p.imap_unordered(f, fast5_index)):
                         print('Completed: ' +  str(round(i/ len(fast5_index), 3)) + ' %')
+                        
+                        if rval[2].shape[0] == 0:
+                            continue
+
                         test_all = pd.concat([test_all, rval[2]])
                         if label == 1:
                             treat_true.append(np.concatenate(rval[0]))
