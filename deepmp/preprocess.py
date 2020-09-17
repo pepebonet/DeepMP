@@ -33,7 +33,7 @@ def check_keys(data1, data2):
 
 def get_size(data):
 
-    sizes = [d.shape[0] for d in data.values()]  # shape[0] = #entries
+    sizes = [d.shape[0] for d in data.values()]
 
     if max(sizes) != min(sizes):
         raise ValueError("Each dataset within a file must have the "
@@ -340,8 +340,6 @@ def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus):
         get_set(tmp_test, output, 'test')
         get_set(tmp_val, output, 'val')
         get_set(tmp_train, output, 'train')
-        
-        import pdb;pdb.set_trace()
 
         print('Removing tmp folders and done')
         subprocess.call('rm -r {}'.format(tmp_folder), shell=True)

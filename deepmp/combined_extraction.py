@@ -360,7 +360,6 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                     )
         except Exception:
             error += 1
-            # print(error)
             continue
 
     return features_list, error
@@ -450,11 +449,6 @@ def combine_extraction(fast5_dir, read_errors, ref, cor_g, base_g, dna, motifs,
         dict_names = ut.load_obj(dict_names)  
         dict_names = {v: k for k, v in dict_names.items()}
 
-    # features_list, error_num = _extract_features(
-    #     fast5s_files, read_errors, cor_g, base_g, norm_me, 
-    #     motif_seqs, methyloc,chrom2len, kmer_len, raw_sig_len, 
-    #     methy_lab, positions, dict_names
-    # )
     featurestr_q = mp.Queue()
     errornum_q = mp.Queue()
 
