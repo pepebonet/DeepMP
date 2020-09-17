@@ -37,7 +37,6 @@ def pred_site(df, pred_label, meth_label, threshold=0.2):
 
 
 def do_per_position_analysis(df, output):
-    df['id'] = df['chrom'] + '_' + df['pos'].astype(str)
     meth_label = []; pred_label = []; cov = []; new_df = pd.DataFrame()
     pred_label_cov = []
     for i, j in df.groupby('id'):
@@ -143,15 +142,6 @@ def get_reads_info(index, test, base_folder):
     with h5py.File(fast5, 'r') as hf:
 
         data = hf['pred/{}/predetail'.format(index.values[0][3])][:]
-
-        refseq = ''.join([x[0].astype(str) for x in data])
-        
-        #TODO change the refseq. Is wrong and we are missing information 
-        #I would make sure the sequence is the correct and assert merged dimension
-        generator = slice_chunks(refseq, 2)
-        chunks = np.asarray(list(generator))
-
-        # df = pd.DataFrame(data[np.argwhere(chunks == 'CG')].flatten())
         df = pd.DataFrame(data)
         df = df[df['refbase'] != b'-']
 
@@ -161,11 +151,6 @@ def get_reads_info(index, test, base_folder):
             df['chrom'] + '_' + df['strand']
 
         merged = pd.merge(df, test, how='inner', on='id')
-
-        try:
-            assert merged.shape[0] == test.shape[0]
-        except:
-            print(test.shape[0] - merged.shape[0])
 
         pred.append(merged['mod_pred'].values)
         true.append(merged['methyl_label'].values)
@@ -182,7 +167,6 @@ def do_read_analysis(el, test, ind, detect_subfolder):
         return get_reads_info(sub_ind, sub_test, detect_subfolder)
     else:
         print('No index available! ')
-        # return [], [], pd.DataFrame()
 
 
 @click.command(short_help='Convert DeepMod output into accuracy scores.')
@@ -226,29 +210,28 @@ def main(detect_folder, file_id, output, test_file, cpus):
         readnames = list(set(test_label.readname.to_list()))
 
 
-        # for el in tqdm(readnames):
-        #     rval = do_read_analysis(el, test, ind, detect_subfolder)
+        for el in tqdm(readnames):
+            rval = do_read_analysis(el, test, ind, detect_subfolder)
 
-        f = functools.partial(
-            do_read_analysis, test=test, ind=ind, 
-            detect_subfolder=detect_subfolder
-        )
+        # f = functools.partial(
+        #     do_read_analysis, test=test, ind=ind, 
+        #     detect_subfolder=detect_subfolder
+        # )
 
-        with Pool(cpus) as p:
-            for i, rval in enumerate(p.imap_unordered(f, readnames)):
-                if i % 100 == 0:
-                    print('Completed: ' +  str(round(i/ len(readnames), 3) * 100) + ' %')
-                
-                if rval is not None:   
-                    test_all = pd.concat([test_all, rval[2]])
-                    if label == 1:
-                        treat_true.append(np.concatenate(rval[0]))
-                        treat_pred.append(np.concatenate(rval[1]))
-                    else:
-                        untreat_true.append(np.concatenate(rval[0]))
-                        untreat_pred.append(np.concatenate(rval[1]))
+        # with Pool(cpus) as p:
+        #     for i, rval in enumerate(p.imap_unordered(f, readnames)):
+        #         if i % 100 == 0:
+        #             print('Completed: ' +  str(round(i/ len(readnames), 3) * 100) + ' %')
+            
+            if rval is not None:   
+                test_all = pd.concat([test_all, rval[2]])
+                if label == 1:
+                    treat_true.append(np.concatenate(rval[0]))
+                    treat_pred.append(np.concatenate(rval[1]))
+                else:
+                    untreat_true.append(np.concatenate(rval[0]))
+                    untreat_pred.append(np.concatenate(rval[1]))
     
-
     get_plots_and_accuracies(
         treat_true, treat_pred, untreat_true, untreat_pred,output, test_all
     )
