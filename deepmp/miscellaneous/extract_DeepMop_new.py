@@ -130,11 +130,6 @@ def get_label(treatment):
         return 1 
 
 
-def slice_chunks(l, n):
-    for i in range(0, len(l) - n + 1):
-        yield l[i:i + n]
-
-
 def get_reads_info(index, test, base_folder):
     fast5 = os.path.join(base_folder, index.values[0][5])
     true = [] ; pred = []; df_test = pd.DataFrame()
@@ -145,18 +140,14 @@ def get_reads_info(index, test, base_folder):
         df = pd.DataFrame(data)
         df = df[df['refbase'] != b'-']
 
-        df['chrom'] = index.values[0][0]
-        df['strand'] = index.values[0][1]       
         df['id'] = df['refbasei'].astype(str) + '_' + \
-            df['chrom'] + '_' + df['strand']
-
+            index.values[0][0] + '_' + index.values[0][1] 
         merged = pd.merge(df, test, how='inner', on='id')
 
-        pred.append(merged['mod_pred'].values)
-        true.append(merged['methyl_label'].values)
-        df_test = pd.concat([df_test, merged])
+        pred = merged['mod_pred'].values
+        true = merged['methyl_label'].values
 
-        return true, pred, df_test
+        return true, pred, merged
 
 
 def do_read_analysis(el, test, ind, detect_subfolder):
@@ -209,31 +200,20 @@ def main(detect_folder, file_id, output, test_file, cpus):
         test_label = test[test['methyl_label'] == label]
         readnames = list(set(test_label.readname.to_list()))
 
-
         for el in tqdm(readnames):
             rval = do_read_analysis(el, test, ind, detect_subfolder)
 
-        # f = functools.partial(
-        #     do_read_analysis, test=test, ind=ind, 
-        #     detect_subfolder=detect_subfolder
-        # )
-
-        # with Pool(cpus) as p:
-        #     for i, rval in enumerate(p.imap_unordered(f, readnames)):
-        #         if i % 100 == 0:
-        #             print('Completed: ' +  str(round(i/ len(readnames), 3) * 100) + ' %')
-            
             if rval is not None:   
                 test_all = pd.concat([test_all, rval[2]])
                 if label == 1:
-                    treat_true.append(np.concatenate(rval[0]))
-                    treat_pred.append(np.concatenate(rval[1]))
+                    treat_true.append(rval[0])
+                    treat_pred.append(rval[1])
                 else:
-                    untreat_true.append(np.concatenate(rval[0]))
-                    untreat_pred.append(np.concatenate(rval[1]))
+                    untreat_true.append(rval[0])
+                    untreat_pred.append(rval[1])
     
     get_plots_and_accuracies(
-        treat_true, treat_pred, untreat_true, untreat_pred,output, test_all
+        treat_true, treat_pred, untreat_true, untreat_pred, output, test_all
     )
 
 
