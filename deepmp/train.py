@@ -62,7 +62,7 @@ def load_jm_data(file):
         base_del = hf['dele'][:]
         label = hf['methyl_label'][:]
 
-    return bases, signal_means, signal_stds, signal_medians, signal_range,
+    return bases, signal_means, signal_stds, signal_medians, signal_range,\
             signal_lens, base_qual, base_mis, base_ins, base_del, label
 
 def load_error_data_kmer(file):
@@ -110,18 +110,18 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
                                     tf.reshape(signal_means, [-1, kmer, 1]),
                                     tf.reshape(signal_stds, [-1, kmer, 1]),
                                     tf.reshape(signal_median, [-1, kmer, 1]),
-                                    tf.reshape(signal_skew, [-1, kmer, 1]),
-                                    tf.reshape(signal_kurt, [-1, kmer, 1]),
-                                    tf.reshape(signal_diff, [-1, kmer, 1])],
+                                    #tf.reshape(signal_skew, [-1, kmer, 1]),
+                                    #tf.reshape(signal_kurt, [-1, kmer, 1]),
+                                    tf.reshape(signal_diff, [-1, kmer, 1]),
                                     tf.reshape(signal_lens, [-1, kmer, 1])],
                                     axis=2)
-    input_val = tf.concat([val_bases, 
+    input_val = tf.concat([val_bases,
                                     tf.reshape(v2, [-1, kmer, 1]),
                                     tf.reshape(v3, [-1, kmer, 1]),
                                     tf.reshape(v4, [-1, kmer, 1]),
-                                    tf.reshape(v5, [-1, kmer, 1]),
-                                    tf.reshape(v6, [-1, kmer, 1]),
-                                    tf.reshape(v7, [-1, kmer, 1])],
+                                    #tf.reshape(v5, [-1, kmer, 1]),
+                                    #tf.reshape(v6, [-1, kmer, 1]),
+                                    tf.reshape(v7, [-1, kmer, 1]),
                                     tf.reshape(v8, [-1, kmer, 1])],
                                     axis=2)
 
@@ -178,7 +178,7 @@ def train_errors_kmer(train_file, val_file, log_dir, model_dir, feat,
     embedding_size = 5
     embedded_bases = tf.one_hot(bases_train, embedding_size)
     val_bases = tf.one_hot(bases_val, embedding_size)
-    
+
     size_feat = int(X_train.shape[1] / 5)
 
     input_train = tf.concat([embedded_bases, tf.reshape(X_train, [-1, 5, size_feat])], axis=2)
@@ -237,7 +237,7 @@ def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
 def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs):
 
     ## preprocess data
-    bases, signal_means, signal_stds, signal_medians, signal_range,
+    bases, signal_means, signal_stds, signal_medians, signal_range, \
             signal_lens, base_qual, base_mis, base_ins, base_del, label = load_jm_data(train_file)
     v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, vy = load_jm_data(val_file)
 
@@ -252,7 +252,7 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs)
                                     tf.reshape(signal_means, [-1, kmer, 1]),
                                     tf.reshape(signal_stds, [-1, kmer, 1]),
                                     tf.reshape(signal_medians, [-1, kmer, 1]),
-                                    tf.reshape(signal_range, [-1, kmer, 1])],
+                                    tf.reshape(signal_range, [-1, kmer, 1]),
                                     tf.reshape(signal_lens, [-1, kmer, 1])],
                                     axis=2)
     input_val_seq = tf.concat([val_bases, tf.reshape(v2, [-1, kmer, 1]),

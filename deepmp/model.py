@@ -30,7 +30,8 @@ def get_brnn_model(base_num, embedding_size, rnn_cell = "lstm"):
 
 def get_sequence_model(base_num, embedding_size):
 
-    depth = embedding_size + 7
+    #depth = embedding_size + 7
+    depth = embedding_size + 5
     model = Sequential()
     model.add(tf.keras.layers.InputLayer(input_shape=(base_num,depth)))
     model.add(tf.keras.layers.Conv1D(256, 3, activation='relu'))
