@@ -57,25 +57,6 @@ def get_error_model(feat):
     # model.add(tf.keras.layers.MaxPooling1D(2))
     model.add(tf.keras.layers.Conv1D(128, 3, padding='same', activation='relu'))
     model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
-    model.add(tf.keras.layers.GlobalAveragePooling1D(name='err_pooling_layer'))
-    model.add(tf.keras.layers.Dropout(0.2))
-    model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))
-
-    model.compile(
-        optimizer='adam', loss='binary_crossentropy', metrics=['acc']
-    )
-    print(model.summary())
-    return model
-
-
-def get_cnn_model_kmer(feat):
-
-    model = tf.keras.Sequential()
-    model.add(tf.keras.layers.Conv1D(128, 3, padding='same', input_shape=(5, feat), activation='relu'))
-    model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
-    # model.add(tf.keras.layers.MaxPooling1D(2))
-    model.add(tf.keras.layers.Conv1D(128, 3, padding='same', activation='relu'))
-    model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
     model.add(tf.keras.layers.GlobalAveragePooling1D())
     model.add(tf.keras.layers.Dropout(0.2))
     model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))
