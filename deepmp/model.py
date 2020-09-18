@@ -28,9 +28,9 @@ def get_brnn_model(base_num, embedding_size, rnn_cell = "lstm"):
 
     return model
 
-def get_conv1d_model(base_num, embedding_size):
+def get_sequence_model(base_num, embedding_size):
 
-    depth = embedding_size + 3
+    depth = embedding_size + 5
     model = Sequential()
     model.add(tf.keras.layers.InputLayer(input_shape=(base_num,depth)))
     model.add(tf.keras.layers.Conv1D(256, 3, activation='relu'))
@@ -48,7 +48,7 @@ def get_conv1d_model(base_num, embedding_size):
     return model
 
 
-def get_cnn_model(feat):
+def get_error_model(feat):
 
     model = tf.keras.Sequential()
     model.add(tf.keras.layers.Conv1D(128, 3, input_shape=(feat, 1), activation='relu'))
@@ -56,7 +56,7 @@ def get_cnn_model(feat):
     model.add(tf.keras.layers.MaxPooling1D(2))
     model.add(tf.keras.layers.Conv1D(128, 3, activation='relu'))
     model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
-    model.add(tf.keras.layers.GlobalAveragePooling1D(name='err_pooling_layer'))
+    model.add(tf.keras.layers.GlobalAveragePooling1D())
     model.add(tf.keras.layers.Dropout(0.2))
     model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))
 
@@ -67,11 +67,11 @@ def get_cnn_model(feat):
     return model
 
 
-def joint_model(base_num, embedding_size, feat):
+def joint_model(base_num, embedding_size):
 
-    model1 = get_conv1d_model(base_num, embedding_size)
+    model1 = get_sequence_model(base_num, embedding_size)
     output1 = model1.get_layer("seq_pooling_layer").output
-    model2 = get_cnn_model(feat)
+    model2 = get_single_err_model(base_num)
     output2 = model2.get_layer("err_pooling_layer").output
 
     x = concatenate([output1, output2],axis=-1)
