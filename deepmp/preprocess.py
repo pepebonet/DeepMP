@@ -79,7 +79,7 @@ def get_merge_data(errors, sequence):
     except:
         errors['pos'] = errors['pos'].astype('int64')
         return pd.merge(sequence, errors, on='pos', how='inner')
-    
+
 
 def get_training_test_val(df):
     train, test = train_test_split(df, test_size=0.05, random_state=0)
@@ -89,7 +89,7 @@ def get_training_test_val(df):
 
 def preprocess_sequence(df, output, file):
 
-    df = df.dropna()
+    #df = df.dropna()
     kmer = df['kmer'].apply(kmer2code)
     base_mean = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['signal_means'].values]
@@ -124,13 +124,17 @@ def preprocess_sequence(df, output, file):
 
 
 def preprocess_error(df, feat, output, file):
-
-    X = df[df.columns[:-1]].values
+    import pdb;pdb.set_trace()
+    # X = df[df.columns[:-1]].values
+    # Y = df[df.columns[-1]].values
+    kmer = df['#Kmer'].apply(kmer2code)
+    X = df[df.columns[5:-1]].values
     Y = df[df.columns[-1]].values
 
     file_name = os.path.join(output, '{}_err.h5'.format(file))
 
     with h5py.File(file_name, 'a') as hf:
+        hf.create_dataset("kmer",  data=np.stack(kmer))
         hf.create_dataset("err_X", data=X.reshape(X.shape[0], feat, 1))
         hf.create_dataset("err_Y", data=Y)
 
@@ -171,27 +175,27 @@ def preprocess_both(data, err_feat, output, file):
     return None
 
 
-def do_seq_err_preprocess(sequence_treated, sequence_untreated, 
+def do_seq_err_preprocess(sequence_treated, sequence_untreated,
     error_treated, error_untreated, output, num_err_feat):
-    seq_treat, seq_untreat = get_data(sequence_treated, sequence_untreated, 
-            names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 
-            'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_lens', 
+    seq_treat, seq_untreat = get_data(sequence_treated, sequence_untreated,
+            names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
+            'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_lens',
             'cent_signals', 'methyl_label'])
     err_treat, err_untreat = get_data(error_treated, error_untreated)
-    
+
     treat = get_merge_data(err_treat, seq_treat)
     untreat = get_merge_data(err_untreat, seq_untreat)
 
     data = get_training_test_val(pd.concat([treat, untreat]))
-    
+
     for el in data:
         preprocess_both(el[0], num_err_feat, output, el[1])
 
 
-def do_single_preprocess(feature_type, sequence_treated, sequence_untreated, 
+def do_single_preprocess(feature_type, sequence_treated, sequence_untreated,
     error_treated, error_untreated, output, num_err_feat):
     if feature_type == 'err':
-        treat, untreat = get_data(error_treated, error_untreated, nopos=True)
+        treat, untreat = get_data(error_treated, error_untreated, nopos=False)
         data = get_training_test_val(pd.concat([treat, untreat]))
         for el in data:
             preprocess_error(el[0], num_err_feat, output, el[1])
@@ -355,5 +359,37 @@ def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus):
             for el in data:
                 save_tsv(el[0], output, el[1])
         for el in data:
-            preprocess_combined(el[0], output, el[1])
-        
+            preprocess_sequence(el[0], output, el[1])
+
+
+def preprocess_err_read(err_treated, err_untreated, output):
+
+    treat, untreat = get_data(err_treated, err_untreated,
+        names=['read_name', 'pos', 'chr', 'k_mer', 'qual', 'mis', 'ins', 'del', 'methyl_label'])
+    data = get_training_test_val(pd.concat([treat, untreat]))
+
+    for el in data:
+        df = el[0]
+        file = el[1]
+        kmer = df['k_mer'].apply(kmer2code)
+        base_qual = [tf.strings.to_number(i.split(','), tf.float32) \
+            for i in df['qual'].values]
+        base_mis = [tf.strings.to_number(i.split(','), tf.float32) \
+            for i in df['mis'].values]
+        base_ins = [tf.strings.to_number(i.split(','), tf.float32) \
+            for i in df['ins'].values]
+        base_del = [tf.strings.to_number(i.split(','), tf.float32) \
+            for i in df['del'].values]
+        label = df['methyl_label']
+
+        file_name = os.path.join(output, '{}_err_read.h5'.format(file))
+
+        with h5py.File(file_name, 'a') as hf:
+            hf.create_dataset("kmer",  data=np.stack(kmer))
+            hf.create_dataset('qual',  data=np.stack(base_qual))
+            hf.create_dataset('mis',  data=np.stack(base_mis))
+            hf.create_dataset('ins',  data=np.stack(base_ins))
+            hf.create_dataset('del',  data=np.stack(base_del))
+            hf.create_dataset('methyl_label',  data=label)
+
+    return None

@@ -63,7 +63,7 @@ def cli(debug):
     help='directory to trained sequence model'
 )
 @click.option(
-    '-cl', '--columns', default=None, 
+    '-cl', '--columns', default=None,
     help='columns containing the features'
 )
 @click.option(
@@ -197,8 +197,7 @@ def train_nns(**kwargs):
 
     elif args.model == 'joint':
         train_jm( args.train_file, args.val_file,
-                                    args.log_dir, args.model_dir,
-                                    args.features_errors, args.batch_size,
+                                    args.log_dir, args.model_dir, args.batch_size,
                                     args.kmer_sequence, args.epochs
                                     )
 
@@ -284,7 +283,7 @@ def merge_and_preprocess(feature_type, error_treated, error_untreated,
     '-m', '--motif', default='CG', help='motif of interest'
 )
 @click.option(
-    '-me', '--memory_efficient', default=False, 
+    '-me', '--memory_efficient', default=False,
     help='If input features file is too large activate to demand less memory'
 )
 @click.option(
@@ -295,7 +294,7 @@ def error_extraction(**kwargs):
 
     args = Namespace(**kwargs)
     ee.process_error_features(
-        args.error_features, args.label, args.motif, args.output, 
+        args.error_features, args.label, args.motif, args.output,
         args.memory_efficient
     )
 
