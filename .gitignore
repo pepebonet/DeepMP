@@ -5,6 +5,8 @@ data/*
 deepmp/logs/*
 logs/*
 models/*
+test/*
+outputs/*
 
 # Pycharm files
 .idea

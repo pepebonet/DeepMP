@@ -3,6 +3,7 @@
 import os
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from functools import reduce
 from collections import Counter
 from tensorflow.keras.models import load_model
@@ -48,16 +49,36 @@ def get_X_Y(df):
     return df[df.columns[2:22]], df[df.columns[-1]]
 
 
+def preprocess_error(data, bases):
+
+    data = tf.convert_to_tensor(data, dtype=tf.float32)
+
+    embedding_size = 5
+    embedded_bases = tf.one_hot(bases, embedding_size)
+    
+    size_feat = int(data.shape[1] / 5)
+
+    return tf.concat([embedded_bases, tf.reshape(data, [-1, 5, size_feat])], axis=2)
+
+
 def predict_error(df, model):
     try: 
-        X = df[df.columns[2:22]].drop(columns=['ins1_x', 'ins2_x', 'ins3_x', 'ins4_x', 'ins5_x'])
+        X = df[df.columns[2:22]] #.drop(columns=['ins1_x', 'ins2_x', 'ins3_x', 'ins4_x', 'ins5_x'])
     except:
-        X = df[df.columns[2:22]].drop(columns=['ins1_y', 'ins2_y', 'ins3_y', 'ins4_y', 'ins5_y'])
-    X = X.to_numpy().reshape(X.shape[0], 15, 1)
+        X = df[df.columns[2:22]] #.drop(columns=['ins1_y', 'ins2_y', 'ins3_y', 'ins4_y', 'ins5_y'])
+    # import pdb;pdb.set_trace()
+    # X = X.to_numpy().reshape(X.shape[0], 20, 1)
+    #TODO DELETE
+    X = X[X.columns[[2, 7, 17]]].to_numpy().reshape(X.shape[0], 3, 1)
+    
+    # kmer = np.stack(df[df.columns[0]].apply(ut.kmer2code))
+    # data_to_test = preprocess_error(X, kmer)
     pred =  model.predict(X).flatten()
+
     inferred = np.zeros(len(pred), dtype=int)
     inferred[np.argwhere(pred >= 0.5)] = 1
     print(sum(inferred))
+
     return pred, inferred
 
 
@@ -156,10 +177,15 @@ def main(ko1, ko2, ko3, wt1, wt2, wt3, error_model_file, pos, seq_model_file,
 
 
 def do_analysis(df, genes, error_model):
-    X = df[df.columns[2:22]].drop(columns=['ins1', 'ins2', 'ins3', 'ins4', 'ins5'])
-    X = X.to_numpy().reshape(X.shape[0], 15, 1)
+    X = df[df.columns[2:22]]#.drop(columns=['ins1', 'ins2', 'ins3', 'ins4', 'ins5'])
+    X = X.to_numpy().reshape(X.shape[0], 20, 1)
+
     model = load_model(error_model)
-    pred =  model.predict(X).flatten()
+    kmer = np.stack(df[df.columns[0]].apply(ut.kmer2code))
+    data_to_test = preprocess_error(X, kmer)
+    pred =  model.predict(data_to_test).flatten()
+    
+    # pred =  model.predict(X).flatten()
     inferred = np.zeros(len(pred), dtype=int)
     inferred[np.argwhere(pred >= 0.5)] = 1
     df['mod'] = inferred ; df['pred'] = pred
@@ -201,6 +227,7 @@ def do_ind_analyses(ko1_err, ko2_err, ko3_err, wt1_err, wt2_err, wt3_err, genes,
     wt1, wt1_genes = do_analysis(wt1_err, genes, error_model)
     wt2, wt2_genes = do_analysis(wt2_err, genes, error_model)
     wt3, wt3_genes = do_analysis(wt3_err, genes, error_model)
+    import pdb;pdb.set_trace()
     test_wt = pd.merge(wt1, pd.merge(wt2, wt3, on='id', how='outer'), on='id', how='outer').fillna(-1)
     test_ko = pd.merge(ko1, pd.merge(ko2, ko3, on='id', how='outer'), on='id', how='outer').fillna(-1)
 
@@ -213,7 +240,7 @@ def do_ind_analyses(ko1_err, ko2_err, ko3_err, wt1_err, wt2_err, wt3_err, genes,
 
     test_both = pd.merge(test_wt, test_ko, on='id', how='inner')
     test_both['result'] = test_both.apply(get_results_both, axis=1)
-    aa = pd.merge(test_both, genes, on='id', how='inner') 
+    aa = pd.merge(test_both, genes, on='id', how='inner')   
     print(aa.shape)
     #TODO <Start from scratch. Extract features. Train only on those that has one A. compare and then test.
     import pdb;pdb.set_trace()
@@ -222,7 +249,7 @@ def do_ind_analyses(ko1_err, ko2_err, ko3_err, wt1_err, wt2_err, wt3_err, genes,
     
 
 if __name__ == "__main__":
-    err_model_file = '/workspace/projects/nanopore/DeepMP/models/error_model/'  
+    err_model_file = '/workspace/projects/nanopore/DeepMP/models/epinano_combined/central_features/error_model/'  
     bd = '/workspace/projects/nanopore/stockholm/EpiNano/novoa_features/yeast_epinano/'
     ko1_err = get_id(pd.read_csv(os.path.join(bd, 'KO1/RRACH_5x_errors.tsv'), sep='\t'), 'ko1')
     ko2_err = get_id(pd.read_csv(os.path.join(bd, 'KO2/RRACH_5x_errors.tsv'), sep='\t'), 'ko2')
@@ -235,9 +262,9 @@ if __name__ == "__main__":
     genes['id'] = genes['chr'] + '_' + genes['peakgenomepos'].astype(str)
     genes['select'] = genes.apply(do_genes_subset, axis=1)
     genes = genes[genes['select'] == 1].drop(columns=['select']) 
-    import pdb;pdb.set_trace()
     # do_ind_analyses(ko1_err, ko2_err, ko3_err, wt1_err, wt2_err, wt3_err, genes, err_model_file)
     
+    # import pdb;pdb.set_trace()
 
     ko1_err, ko2_err, ko3_err, wt1_err, wt2_err, wt3_err = merge_all(
         ko1_err, ko2_err, ko3_err, wt1_err, wt2_err, wt3_err)

@@ -285,7 +285,6 @@ def extract_features(fast5_dir, ref, cor_g, base_g, dna, motifs,
     nproc, position_file, norm_me, methyloc, kmer_len, raw_sig_len, methy_lab, 
     write_fp, f5_batch_num, recursive):
     start = time.time()
-    import pdb;pdb.set_trace()
     motif_seqs, chrom2len, fast5s_q, len_fast5s, positions = \
         _extract_preprocess(fast5_dir, motifs, dna, ref, f5_batch_num, 
             position_file, recursive
