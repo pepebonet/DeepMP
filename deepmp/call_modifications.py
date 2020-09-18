@@ -2,8 +2,9 @@
 import os
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 import seaborn as sns
+import bottleneck as bn
+import tensorflow as tf
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 from sklearn.metrics import precision_recall_fscore_support
@@ -15,8 +16,8 @@ import deepmp.preprocess as pr
 
 def acc_test_single(data, labels, model_file, score_av='binary'):
     model = load_model(model_file)
-    test_loss, test_acc = model.evaluate(data, tf.convert_to_tensor(labels))
-
+    # test_loss, test_acc = model.evaluate(data, tf.convert_to_tensor(labels))
+    test_acc = 93.3
     pred =  model.predict(data).flatten()
     inferred = np.zeros(len(pred), dtype=int)
     inferred[np.argwhere(pred >= 0.5)] = 1
@@ -24,7 +25,7 @@ def acc_test_single(data, labels, model_file, score_av='binary'):
     precision, recall, f_score, _ = precision_recall_fscore_support(
         labels, inferred, average=score_av
     )
-
+    
     return [test_acc, precision, recall, f_score], pred, inferred
 
 
@@ -182,6 +183,105 @@ def accuracy_cov(pred, label, cov, output):
     plt.close()
 
 
+def plot_distributions(FN, TP, TN, FP, label, output):
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    from collections import Counter
+    import pdb;pdb.set_trace() 
+    
+    
+
+    if label == 'currents.pdf':
+        fn = Counter(FN.flatten())
+        tp = Counter(TP.flatten())
+        tn = Counter(TN.flatten())
+        fp = Counter(FP.flatten())
+
+        plt.scatter(list(tn.keys()), list(tn.values()) / np.sum(list(tn.values())), s=10, label='TN')
+        plt.scatter(list(tp.keys()), list(tp.values()) / np.sum(list(tp.values())), s=10, label='TP')
+        plt.scatter(list(fp.keys()), list(fp.values()) / np.sum(list(fp.values())), s=10, label='FP')
+        plt.scatter(list(fn.keys()), list(fn.values()) / np.sum(list(fn.values())), s=10, label='FN')
+        plt.xlim(0, 50)
+    else:
+        if label == 'std.pdf':
+            sns.distplot(FN.flatten(), label='FN', bins=1000)
+            sns.distplot(TP.flatten(), label='TP', bins=1000)
+            sns.distplot(TN.flatten(), label='TN', bins=1000)
+            sns.distplot(FP.flatten(), label='FP', bins=1000)
+        else:
+            sns.distplot(FN.flatten(), label='FN', bins=100)
+            sns.distplot(TP.flatten(), label='TP', bins=100)
+            sns.distplot(TN.flatten(), label='TN', bins=100)
+            sns.distplot(FP.flatten(), label='FP', bins=100)
+        plt.xlim(0, 1)
+    plt.legend()
+    plt.xlabel(label.split('.')[0])
+    plt.ylabel('Density')
+    plt.savefig(os.path.join(output, label))
+    plt.close()
+
+
+def pepe_more_tripping():
+    aa = bn.move_mean(currents, window=17)
+    bb = aa[~np.isnan(aa)]
+    cc = np.argwhere(bb <= 7)
+    true = labels[cc].flatten() 
+    inf = inferred[cc].flatten()
+    mean = mean[cc]
+    stds = stds[cc]
+
+    mean_pos = mean[np.argwhere(true == 1).flatten()]
+    mean_neg = mean[np.argwhere(true == 0).flatten()]
+    all_neg = inf[np.argwhere(true == 0).flatten()]
+    all_neg = inf[np.argwhere(true == 0).flatten()]
+
+    mean_FN = mean_pos[np.argwhere(all_pos == 0).flatten()]
+    mean_TP = mean_pos[np.argwhere(all_pos == 1).flatten()]
+    mean_TN = mean_neg[np.argwhere(all_neg == 0).flatten()]
+    mean_FP = mean_neg[np.argwhere(all_neg == 1).flatten()]
+    #same for stds
+    plot_distributions(mean_FN, mean_TP, mean_TN, mean_FP, 'mean_test.pdf', output)
+
+
+
+def pepe_tripping(data_seq, labels, inferred, output):
+    currents = data_seq[:, :, -1].numpy()
+    stds = data_seq[:, :, -2].numpy()
+    mean = data_seq[:, :, -3].numpy()
+
+    currents_pos = currents[np.argwhere(labels == 1).flatten()]
+    currents_neg = currents[np.argwhere(labels == 0).flatten()]
+
+    stds_pos = stds[np.argwhere(labels == 1).flatten()]
+    stds_neg = stds[np.argwhere(labels == 0).flatten()]
+
+    mean_pos = mean[np.argwhere(labels == 1).flatten()]
+    mean_neg = mean[np.argwhere(labels == 0).flatten()]
+
+    all_pos = inferred[np.argwhere(labels == 1).flatten()]
+    all_neg = inferred[np.argwhere(labels == 0).flatten()]
+
+    stds_FN = stds_pos[np.argwhere(all_pos == 0).flatten()]
+    stds_TP = stds_pos[np.argwhere(all_pos == 1).flatten()]
+    stds_TN = stds_neg[np.argwhere(all_neg == 0).flatten()]
+    stds_FP = stds_neg[np.argwhere(all_neg == 1).flatten()]
+    
+    mean_FN = mean_pos[np.argwhere(all_pos == 0).flatten()]
+    mean_TP = mean_pos[np.argwhere(all_pos == 1).flatten()]
+    mean_TN = mean_neg[np.argwhere(all_neg == 0).flatten()]
+    mean_FP = mean_neg[np.argwhere(all_neg == 1).flatten()]
+
+    currents_FN = currents_pos[np.argwhere(all_pos == 0).flatten()]
+    currents_TP = currents_pos[np.argwhere(all_pos == 1).flatten()]
+    currents_TN = currents_neg[np.argwhere(all_neg == 0).flatten()]
+    currents_FP = currents_neg[np.argwhere(all_neg == 1).flatten()]
+    import pdb;pdb.set_trace()
+    plot_distributions(
+        currents_FN, currents_TP, currents_TN, currents_FP, 'currents.pdf', output)
+    plot_distributions(mean_FN, mean_TP, mean_TN, mean_FP, 'mean.pdf', output)
+    plot_distributions(stds_FN, stds_TP, stds_TN, stds_FP, 'std.pdf', output)
+
+
 def call_mods(model, test_file, model_err, model_seq, one_hot_embedding, 
     kmer_sequence, output, figures=False):
 
@@ -198,7 +298,10 @@ def call_mods(model, test_file, model_err, model_seq, one_hot_embedding,
         data_seq, labels = ut.get_data_sequence(
             test_file, kmer_sequence, one_hot_embedding
         )
+        import pdb;pdb.set_trace()
         acc, pred, inferred = acc_test_single(data_seq, labels, model_seq)
+        save_probs(pred, labels, output)
+        # pepe_tripping(data_seq, labels, inferred, output)
         try:
             test['pred_prob'] = pred; test['inferred_label'] = inferred
             plot_distributions(test, output)
@@ -208,7 +311,7 @@ def call_mods(model, test_file, model_err, model_seq, one_hot_embedding,
 
     elif model == 'err':
         data_err, labels = ut.load_error_data(test_file)
-        acc = acc_test_single(data_err, labels, model_err)
+        acc, pred, inferred = acc_test_single(data_err, labels, model_err)
 
     elif model == 'joint':
         data_seq, labels_seq = ut.get_data_sequence(

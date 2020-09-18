@@ -63,13 +63,17 @@ def preprocess_sequence(df, output, file):
 
 
 def preprocess_error(df, feat, output, file):
-
-    X = df[df.columns[:-1]].values
+    import pdb;pdb.set_trace()
+    # X = df[df.columns[:-1]].values
+    # Y = df[df.columns[-1]].values
+    kmer = df['#Kmer'].apply(kmer2code)
+    X = df[df.columns[5:-1]].values
     Y = df[df.columns[-1]].values
 
     file_name = os.path.join(output, '{}_err.h5'.format(file))
 
     with h5py.File(file_name, 'a') as hf:
+        hf.create_dataset("kmer",  data=np.stack(kmer))
         hf.create_dataset("err_X", data=X.reshape(X.shape[0], feat, 1))
         hf.create_dataset("err_Y", data=Y)
 
@@ -130,7 +134,7 @@ def do_seq_err_preprocess(sequence_treated, sequence_untreated,
 def do_single_preprocess(feature_type, sequence_treated, sequence_untreated,
     error_treated, error_untreated, output, num_err_feat):
     if feature_type == 'err':
-        treat, untreat = get_data(error_treated, error_untreated, nopos=True)
+        treat, untreat = get_data(error_treated, error_untreated, nopos=False)
         data = get_training_test_val(pd.concat([treat, untreat]))
         for el in data:
             preprocess_error(el[0], num_err_feat, output, el[1])

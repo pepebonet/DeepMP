@@ -177,13 +177,14 @@ def _extract_features(fast5s, corrected_group, basecall_subgroup,
 
                     signal_means = [np.mean(x) for x in k_signals]
                     signal_stds = [np.std(x) for x in k_signals]
+                    signal_median = [np.median(x) for x in k_signals]
 
                     cent_signals = _get_central_signals(
                         k_signals, raw_signals_len
                     )
                     features_list.append(
                         (chrom, pos, alignstrand, loc_in_ref, readname, strand,
-                        k_mer, signal_means, signal_stds, signal_lens, 
+                        k_mer, signal_means, signal_stds, signal_median, 
                         cent_signals, methy_label)
                     )
 
