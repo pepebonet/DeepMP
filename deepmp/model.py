@@ -30,7 +30,7 @@ def get_brnn_model(base_num, embedding_size, rnn_cell = "lstm"):
 
 def get_conv1d_model(base_num, embedding_size):
 
-    depth = embedding_size + 1
+    depth = embedding_size + 7
     model = Sequential()
     model.add(tf.keras.layers.InputLayer(input_shape=(base_num,depth)))
     model.add(tf.keras.layers.Conv1D(256, 5, activation='relu'))
@@ -52,10 +52,10 @@ def get_cnn_model(feat):
 
     model = tf.keras.Sequential()
     model.add(tf.keras.layers.Conv1D(128, 3, padding='same', input_shape=(feat, 1), activation='relu'))
-    model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
+    model.add(tf.keras.layers.LocallyConnected1D(256, 2, activation='relu'))
     # model.add(tf.keras.layers.MaxPooling1D(2))
-    model.add(tf.keras.layers.Conv1D(128, 3, padding='same', activation='relu'))
-    model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
+    model.add(tf.keras.layers.Conv1D(128, 2, padding='same', activation='relu'))
+    model.add(tf.keras.layers.LocallyConnected1D(256, 2, activation='relu'))
     model.add(tf.keras.layers.GlobalAveragePooling1D(name='err_pooling_layer'))
     model.add(tf.keras.layers.Dropout(0.2))
     model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))

@@ -77,22 +77,22 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
 
     ## prepare inputs for NNs
     input_train = tf.concat([embedded_bases,
-                                    # tf.reshape(signal_means, [-1, kmer, 1]),
-                                    # tf.reshape(signal_stds, [-1, kmer, 1]),
-                                    # tf.reshape(signal_median, [-1, kmer, 1]),
-                                    # tf.reshape(signal_skew, [-1, kmer, 1]),
-                                    # tf.reshape(signal_kurt, [-1, kmer, 1]),
+                                    tf.reshape(signal_means, [-1, kmer, 1]),
+                                    tf.reshape(signal_stds, [-1, kmer, 1]),
+                                    tf.reshape(signal_median, [-1, kmer, 1]),
+                                    tf.reshape(signal_skew, [-1, kmer, 1]),
+                                    tf.reshape(signal_kurt, [-1, kmer, 1]),
                                     tf.reshape(signal_diff, [-1, kmer, 1])],
-                                    # tf.reshape(signal_lens, [-1, kmer, 1])],
+                                    tf.reshape(signal_lens, [-1, kmer, 1])],
                                     axis=2)
     input_val = tf.concat([val_bases, 
-                                    # tf.reshape(v2, [-1, kmer, 1]),
-                                    # tf.reshape(v3, [-1, kmer, 1]),
-                                    # tf.reshape(v4, [-1, kmer, 1]),
-                                    # tf.reshape(v5, [-1, kmer, 1]),
-                                    # tf.reshape(v6, [-1, kmer, 1]),
+                                    tf.reshape(v2, [-1, kmer, 1]),
+                                    tf.reshape(v3, [-1, kmer, 1]),
+                                    tf.reshape(v4, [-1, kmer, 1]),
+                                    tf.reshape(v5, [-1, kmer, 1]),
+                                    tf.reshape(v6, [-1, kmer, 1]),
                                     tf.reshape(v7, [-1, kmer, 1])],
-                                    # tf.reshape(v8, [-1, kmer, 1])],
+                                    tf.reshape(v8, [-1, kmer, 1])],
                                     axis=2)
 
     ## train model
@@ -121,12 +121,6 @@ def train_errors(train_file, val_file, log_dir, model_dir, feat,
     X_train, Y_train= load_error_data(train_file)
     X_val, Y_val = load_error_data(val_file)
 
-    import pdb;pdb.set_trace()
-    #TODO DELETE
-    # X_train = X_train[:, 15:20] 
-    # X_val = X_val[:, 15:20]
-    # feat = 5
-    
     model = get_cnn_model(feat)
 
     log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_errors")
@@ -147,11 +141,6 @@ def train_errors_kmer(train_file, val_file, log_dir, model_dir, feat,
     epochs, batch_size):
     X_train, Y_train, bases_train = load_error_data_kmer(train_file)
     X_val, Y_val, bases_val = load_error_data_kmer(val_file)
-
-    #TODO DELETE
-    # import pdb;pdb.set_trace()
-    # X_train = X_train[:, 10:15] 
-    # X_val = X_val[:, 10:15]
 
     X_train = tf.convert_to_tensor(X_train, dtype=tf.float32)
     X_val = tf.convert_to_tensor(X_val, dtype=tf.float32)
