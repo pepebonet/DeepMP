@@ -16,8 +16,8 @@ import deepmp.preprocess as pr
 
 def acc_test_single(data, labels, model_file, score_av='binary'):
     model = load_model(model_file)
-    # test_loss, test_acc = model.evaluate(data, tf.convert_to_tensor(labels))
-    test_acc = 93.3
+    test_loss, test_acc = model.evaluate(data, tf.convert_to_tensor(labels))
+
     pred =  model.predict(data).flatten()
     inferred = np.zeros(len(pred), dtype=int)
     inferred[np.argwhere(pred >= 0.5)] = 1
