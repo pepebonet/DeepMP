@@ -6,11 +6,17 @@ import pandas as pd
 from collections import Counter
 
 
-def error_features_kmer(df, meth_label):
+def error_features_kmer(df, meth_label, data_type):
     df['cent_base'] = df['#Kmer'].apply(lambda x: x[2])
     df['label'] = np.int(meth_label)
-    return df[df['cent_base'] == 'A'].drop(columns=['cent_base'])
+    if data_type == 'epinano':
+        return df[df['cent_base'] == 'A'].drop(columns=['cent_base'])
     
+    else:
+        df['base+1'] = df['#Kmer'].apply(lambda x: x[3])
+        return df[(df['cent_base'] == 'C') & (df['base+1'] == 'G')].drop(
+            columns=['cent_base', 'base+1'])
+
 
 def error_features_single(df, meth_label):
     data = df[(df['relative_pos'] == 0) & (df['Ref_base'] == 'A')]
@@ -43,6 +49,10 @@ def save_output_errors(df, input, output, methyl_label):
     'bases, this is for training. 0 or 1, default 1'
 )
 @click.option(
+    '--data_type', '-dt', type=click.Choice(['ecoli', 'epinano']), 
+    default='epinano', help='type of input data'
+)
+@click.option(
     '--feature_option', '-fo', type=click.Choice(['kmer', 'single']), 
     default='kmer'
 )
@@ -50,7 +60,7 @@ def save_output_errors(df, input, output, methyl_label):
     '-o', '--output', default='', 
     help='Output file extension'
 )
-def main(inputs, methyl_label, feature_option, output):
+def main(inputs, methyl_label, data_type, feature_option, output):
     data = pd.DataFrame()
 
     for path in inputs:
@@ -63,7 +73,7 @@ def main(inputs, methyl_label, feature_option, output):
     if feature_option == 'single':
         errors = error_features_single(data.copy(), int(methyl_label))
     else:
-        errors = error_features_kmer(data.copy(), int(methyl_label))
+        errors = error_features_kmer(data.copy(), int(methyl_label), data_type)
 
     save_output_errors(errors, input, output, methyl_label)
 

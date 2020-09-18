@@ -19,22 +19,19 @@ def get_labels_svm(df):
 
 def arrange_and_save_h5(X_train, Y_train, X_val, 
     Y_val, X_test, Y_test, output):
-
     X_train = X_train[X_train.columns[5:]].drop(
-        columns=['ins1', 'ins2', 'ins3', 'ins4', 'ins5']
+        columns=['ins1', 'ins2', 'ins3', 'ins4', 'ins5', 'label']
     ).values
     X_test = X_test[X_test.columns[5:]].drop(
-        columns=['ins1', 'ins2', 'ins3', 'ins4', 'ins5']
+        columns=['ins1', 'ins2', 'ins3', 'ins4', 'ins5', 'label']
     ).values
     X_val = X_val[X_val.columns[5:]].drop(
-        columns=['ins1', 'ins2', 'ins3', 'ins4', 'ins5']
+        columns=['ins1', 'ins2', 'ins3', 'ins4', 'ins5', 'label']
     ).values
-
+    
     save_output(X_train, Y_train, output, X_train.shape[1], 'train')
     save_output(X_test, Y_test, output, X_test.shape[1], 'test')
     save_output(X_val, Y_val, output, X_val.shape[1], 'val')
-
-
 
 
 def get_training_test_data(df, output):
@@ -68,7 +65,6 @@ def save_output(X, Y, output, feat, file):
 
 
 def save_dataframes(feat, labels, output, file):
-    # import pdb;pdb.set_trace()
     feat['label'] = labels
     mod = feat[feat['label'] == 1].drop(
         columns=['label', 'ins1', 'ins2', 'ins3', 'ins4', 'ins5'])
