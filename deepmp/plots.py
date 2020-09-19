@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
 
@@ -16,3 +17,34 @@ def plot_ROC (y_test, probas, fig_out, kn='Linear'):
     plt.title('Joint model. Epinano data')
     plt.legend(loc="lower right")
     plt.savefig(fig_out)
+
+
+def plot_distributions(df, output):
+    fig, ax = plt.subplots(figsize=(5, 5))
+
+    sns.kdeplot(df['pred_prob'], shade=True)
+    fig.tight_layout()
+    ax.set_xlim(0,1)
+    plt.savefig(os.path.join(output, 'distributions.png'))
+    plt.close()
+
+
+def accuracy_cov(pred, label, cov, output):
+    df_dict = {'predictions': pred, 'methyl_label': label, 'Coverage': cov}
+    df = pd.DataFrame(df_dict)
+    cov = []; acc = []
+
+    for i, j in df.groupby('Coverage'):
+        cov.append(i)
+        acc.append(get_accuracy_pos(
+            j['methyl_label'].tolist(), j['predictions'].tolist())
+        )
+    
+    fig, ax = plt.subplots(figsize=(5, 5))
+
+    sns.barplot(cov, acc)
+    ax.set_ylim(0.92,1)
+    fig.tight_layout()
+    
+    plt.savefig(os.path.join(output, 'acc_vs_cov.png'))
+    plt.close()
