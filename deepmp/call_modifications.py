@@ -146,7 +146,7 @@ def preprocess_error(data, bases):
 
 
 def call_mods(model, test_file, model_err, model_seq, one_hot_embedding, 
-    kmer_sequence, output, figures=False):
+    kmer_sequence, output, figures=True):
 
     if model == 'seq':
 
@@ -179,22 +179,14 @@ def call_mods(model, test_file, model_err, model_seq, one_hot_embedding,
         ut.save_probs(pred, labels, output)
 
     elif model == 'joint':
-
-        data_seq, labels_seq = ut.get_data_sequence(
-            test_file, kmer_sequence, one_hot_embedding
-        )
-        data_err, labels_err = ut.load_error_data(test_file)
- 
-        acc, probs = acc_test_joint(data_seq, labels_seq, model_seq, data_err, 
-            labels_err, model_err)
-        
-        labels = labels_seq
-        ut.save_probs(probs, labels, output)
+        data_seq, data_err, labels = ut.get_data_jm(test_file, kmer_sequence)
+        acc, pred, inferred = acc_test_single([data_seq, data_err], labels, model_seq)
+        ut.save_probs(pred, labels, output)
         
     ut.save_output(acc, output, 'accuracy_measurements.txt')
     
     
     if figures:
         out_fig = os.path.join(output, 'ROC_curve.png')
-        pl.plot_ROC(labels, probs, out_fig)
+        pl.plot_ROC(labels, pred, out_fig)
 
