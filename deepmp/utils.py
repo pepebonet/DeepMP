@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
+
+import re
 import os
+import h5py
+import pickle
 import fnmatch
+import numpy as np
+import tensorflow as tf
+
 
 basepairs = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N',
              'W': 'W', 'S': 'S', 'M': 'K', 'K': 'M', 'R': 'Y',
@@ -30,6 +37,9 @@ iupac_alphabets_rna = {'A': ['A'], 'C': ['C'], 'G': ['G'], 'U': ['U'],
                        'H': ['A', 'C', 'U'], 'V': ['A', 'C', 'G'],
                        'N': ['A', 'C', 'G', 'U']}
 
+# ------------------------------------------------------------------------------
+# DeepMP
+# ------------------------------------------------------------------------------
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
@@ -37,13 +47,13 @@ def str2bool(v):
 
 def _convert_motif_seq(ori_seq, is_dna=True):
     outbases = []
-    
+
     for bbase in ori_seq:
         if is_dna:
             outbases.append(iupac_alphabets[bbase])
         else:
             outbases.append(iupac_alphabets_rna[bbase])
-    
+
     def recursive_permute(bases_list):
         if len(bases_list) == 1:
             return bases_list[0]
@@ -117,3 +127,139 @@ def get_refloc_of_methysite_in_motif(seqstr, motifset, methyloc_in_motif=0):
         if seqstr[i:i + motiflen] in motifset:
             sites.append(i+methyloc_in_motif)
     return sites
+
+
+def kmer2code(kmer_bytes):
+    return [base2code_dna[x] for x in kmer_bytes]
+
+
+def slice_chunks(l, n):
+    for i in range(0, len(l) - n):
+        yield l[i:i + n]
+
+
+# ------------------------------------------------------------------------------
+# TRAIN AND CALL MODIFICATIONS
+# ------------------------------------------------------------------------------
+
+def get_data_sequence(file, kmer, one_hot=False):
+    embedding_flag = ""
+
+    ## preprocess data
+    bases, signal_means, signal_stds, signal_median, signal_lens, label = load_seq_data(file)
+
+    ## embed bases
+    if one_hot:
+        embedding_size = 5
+        embedding_flag += "_one-hot_embedded"
+        embedded_bases = tf.one_hot(bases, embedding_size)
+
+    else:
+        vocab_size = 1024
+        embedding_size = 128
+        weight_table = tf.compat.v1.get_variable(
+                                "embedding",
+                                shape = [vocab_size, embedding_size],
+                                dtype=tf.float32,
+                                initializer = tf.compat.v1.truncated_normal_initializer(
+                                stddev = np.sqrt(2. / vocab_size)
+                                ))
+        embedded_bases = tf.nn.embedding_lookup(weight_table, bases)
+
+    ## prepare inputs for NNs
+    return tf.concat([embedded_bases,
+                                    tf.reshape(signal_means, [-1, kmer, 1]),
+                                    tf.reshape(signal_stds, [-1, kmer, 1]),
+                                    tf.reshape(signal_median, [-1, kmer, 1]),
+                                    # tf.reshape(signal_skew, [-1, kmer, 1]),
+                                    # tf.reshape(signal_kurt, [-1, kmer, 1]),
+                                    # tf.reshape(signal_diff, [-1, kmer, 1]),
+                                    tf.reshape(signal_lens, [-1, kmer, 1])],
+                                    axis=2), label
+
+
+def load_seq_data(file):
+
+    with h5py.File(file, 'r') as hf:
+        bases = hf['kmer'][:]
+        signal_means = hf['signal_means'][:]
+        signal_stds = hf['signal_stds'][:]
+        signal_median = hf['signal_median'][:]
+        signal_skew = hf['signal_skew'][:]
+        signal_kurt = hf['signal_kurt'][:]
+        signal_diff = hf['signal_diff'][:]
+        signal_lens = hf['signal_lens'][:]
+        label = hf['label'][:]
+
+    return bases, signal_means, signal_stds, signal_median, signal_skew, \
+        signal_kurt, signal_diff, signal_lens, label
+    # return bases, signal_means, signal_stds, signal_median, signal_lens, label
+
+
+def load_error_data(file):
+
+    with h5py.File(file, 'r') as hf:
+        bases = hf['kmer'][:]
+        X = hf['err_X'][:]
+        Y = hf['err_Y'][:]
+
+    return X, Y, bases
+
+
+def select_columns(df, columns):
+    cols = []
+    for c in columns.split(','):
+        if re.search (r'-',c):
+            c1,c2 = c.split('-')
+            cols +=  list (range(int(c1), int(c2)+1))
+        elif re.search(r':',c):
+            c1,c2 = c.split(':')
+            cols += list (range(int(c1), int(c2)+1))
+        else:
+            cols.append(int(c))
+        
+    return df[df.columns[cols]]
+
+
+# ------------------------------------------------------------------------------
+# SVM
+# ------------------------------------------------------------------------------
+
+def arrange_columns(cols_in):
+    cols = []
+    for c in cols_in.split(','):
+        if re.search (r'-',c):
+            c1,c2 = c.split('-')
+            cols +=  list (range(int(c1) - 1, int(c2)))
+        elif re.search(r':',c):
+            c1,c2 = c.split(':')
+            cols += list (range(int(c1) - 1, int(c2)))
+        else:
+            cols.append(int(c) - 1)
+
+    return list(set(cols))
+
+
+# ------------------------------------------------------------------------------
+# OUTPUT FUNCTIONS
+# ------------------------------------------------------------------------------
+
+def _write_to_file(file, content, attach=False):
+    if attach and os.path.exists(file):
+        open_flag = 'a'
+    else:
+        open_flag = 'w'
+
+    with open(file, open_flag) as f:
+        f.write(str(content))
+
+
+def _write_list_to_file(file, data):
+    with open(file, 'w') as f:
+        for listitem in data:
+            f.write('%s\n' % listitem)
+
+
+def load_obj(path):
+    with open(path, 'rb') as f:
+        return pickle.load(f)

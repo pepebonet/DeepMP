@@ -2,9 +2,8 @@
 import os
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import bottleneck as bn
 import tensorflow as tf
+import seaborn as sns
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 from sklearn.metrics import precision_recall_fscore_support
@@ -14,19 +13,14 @@ import deepmp.plots as pl
 import deepmp.preprocess as pr
 
 
-def acc_test_single(data, labels, model_file, score_av='binary'):
+def acc_test_single(data, model_file, score_av='binary'):
     model = load_model(model_file)
-    test_loss, test_acc = model.evaluate(data, tf.convert_to_tensor(labels))
 
     pred =  model.predict(data).flatten()
     inferred = np.zeros(len(pred), dtype=int)
     inferred[np.argwhere(pred >= 0.5)] = 1
 
-    precision, recall, f_score, _ = precision_recall_fscore_support(
-        labels, inferred, average=score_av
-    )
-    
-    return [test_acc, precision, recall, f_score], pred, inferred
+    return data, pred, inferred
 
 
 def get_accuracy_joint(inferred, err_pred, seq_pred, labels, score_av='binary'):
@@ -183,22 +177,8 @@ def accuracy_cov(pred, label, cov, output):
     plt.close()
 
 
-def preprocess_error(data, bases):
-    #TODO DELETE
-    # data = data[:, 10:15] 
-
-    data = tf.convert_to_tensor(data, dtype=tf.float32)
-
-    embedding_size = 5
-    embedded_bases = tf.one_hot(bases, embedding_size)
-    
-    size_feat = int(data.shape[1] / 5)
-
-    return tf.concat([embedded_bases, tf.reshape(data, [-1, 5, size_feat])], axis=2)
-
-
-def call_mods(model, test_file, model_err, model_seq, one_hot_embedding, 
-    kmer_sequence, output, figures=False):
+def call_user_mods(model, test_file, model_err, model_seq, one_hot_embedding, 
+    kmer_sequence, columns, output, figures=False):
 
     if model == 'seq':
 
@@ -209,13 +189,11 @@ def call_mods(model, test_file, model_err, model_seq, one_hot_embedding,
                 'cent_signals', 'methyl_label']) 
             pr.preprocess_sequence(test, os.path.dirname(test_file), 'test')
             test_file = os.path.join(os.path.dirname(test_file), 'test_seq.h5')
-        import pdb;pdb.set_trace()
+
         data_seq, labels = ut.get_data_sequence(
             test_file, kmer_sequence, one_hot_embedding
         )
-        import pdb;pdb.set_trace()
-        acc, pred, inferred = acc_test_single(data_seq, labels, model_seq)
-        save_probs(pred, labels, output)
+        data, pred, inferred = acc_test_single(data_seq, labels, model_seq)
         try:
             test['pred_prob'] = pred; test['inferred_label'] = inferred
             plot_distributions(test, output)
@@ -224,13 +202,15 @@ def call_mods(model, test_file, model_err, model_seq, one_hot_embedding,
             print('No position analysis performed. Only per-read accuracy run')
 
     elif model == 'err':
-        data_err, labels, bases = ut.load_error_data(test_file)
-        data_err = preprocess_error(data_err, bases)
-        #TODO DELETE
-        # data_err = data_err[:, 15:20] 
-        import pdb;pdb.set_trace()
-        acc, pred, inferred = acc_test_single(data_err, labels, model_err)
-        save_probs(pred, labels, output)
+        if test_file.rsplit('.', 1)[-1] == 'tsv':
+            data_err = pd.read_csv(test_file, sep='\t')
+            data_err = ut.select_columns(data_err, columns)
+            data_err = data_err.to_numpy().reshape(data_err.shape[0], data_err.shape[1], 1)
+        else:
+            #TODO <JB> labels cannot be here. An additional script for that. Here only the call of the modifications
+            data_err, _ = ut.load_error_data(test_file)
+        acc = acc_test_single(data_err, model_err)
+
     elif model == 'joint':
         data_seq, labels_seq = ut.get_data_sequence(
             test_file, kmer_sequence, one_hot_embedding
