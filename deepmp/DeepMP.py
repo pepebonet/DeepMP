@@ -158,7 +158,7 @@ def call_modifications(**kwargs):
     help='kmer length for sequence training'
 )
 @click.option(
-    '-ep', '--epochs', default=50,
+    '-ep', '--epochs', default=20,
     help='Number of epochs for training'
 )
 @click.option(
