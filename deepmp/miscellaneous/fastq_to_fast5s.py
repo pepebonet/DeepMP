@@ -40,9 +40,13 @@ def load_txt(path):
 def fastq_to_fast5(i, fastqs, fast5s_path):
     fastq = fastqs[i: i + 4]
     fast5 = get_fast5(fastq[0].split('  ', 1)[-1])
-    fast5_file = os.path.join(fast5s_path, fast5)
-    if os.path.isfile(fast5_file):
-        get_fast5_structure(fast5_file, fastq)
+    
+    for el in [x[0] for x in os.walk(fast5s_path)][1:]: 
+        fast5_file = os.path.join(el, fast5)
+        
+        if os.path.isfile(fast5_file):
+            get_fast5_structure(fast5_file, fastq)
+            break
 
 
 @click.command(short_help='Script to add fastqs to the fast5s')
