@@ -47,6 +47,11 @@ untreated
 
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/single_read_error/whole_set/single_error_features/untreated/template/single_read_errors.tsv`
 
+#### combined feature
+
+`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/extract_outputs/combined_features/train_test_val_split/`
+
+
 ## Human data
 ### Simpson's
 

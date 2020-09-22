@@ -2,10 +2,7 @@
 import os
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import bottleneck as bn
 import tensorflow as tf
-import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 from sklearn.metrics import precision_recall_fscore_support
 
@@ -73,20 +70,6 @@ def acc_test_joint(data_seq, labels_seq, model_seq,
     return get_accuracy_joint(inferred, err_pred, seq_pred, labels)
 
 
-def save_output(acc, output, label):
-    col_names = ['Accuracy', 'Precision', 'Recall', 'F-score']
-    df = pd.DataFrame([acc], columns=col_names)
-    df.to_csv(os.path.join(output, label), index=False, sep='\t')
-
-
-def save_probs(probs, labels, output):
-    out_probs = os.path.join(output, 'test_pred_prob.txt')
-    probs_to_save = pd.DataFrame(columns=['labels', 'probs'])
-    probs_to_save['labels'] = labels
-    probs_to_save['probs'] = probs
-    probs_to_save.to_csv(out_probs, sep='\t', index=None)
-
-
 def pred_site(df, pred_label, meth_label):
     comb_pred = df.pred_prob.min() + df.pred_prob.max()
     if comb_pred >= 1:
@@ -140,53 +123,18 @@ def do_per_position_analysis(df, output):
         meth_label, pred_label, average='binary'
     )
 
-    accuracy_cov(pred_label, meth_label, cov, output)
+    pl.accuracy_cov(pred_label, meth_label, cov, output)
     # TODO generalize for test with no label 
     # TODO improve calling of a methylation
     # TODO Add to the joint analysis 
     # TODO delete all unnecessary functions
     accuracy = get_accuracy_pos(meth_label, pred_label)
-    save_output(
+    ut.save_output(
         [accuracy, precision, recall, f_score], output, 'position_accuracy.txt'
     )
 
 
-#TODO send to plots once done
-def plot_distributions(df, output):
-    fig, ax = plt.subplots(figsize=(5, 5))
-
-    sns.kdeplot(df['pred_prob'], shade=True)
-    fig.tight_layout()
-    ax.set_xlim(0,1)
-    plt.savefig(os.path.join(output, 'distributions.png'))
-    plt.close()
-
-
-def accuracy_cov(pred, label, cov, output):
-    df_dict = {'predictions': pred, 'methyl_label': label, 'Coverage': cov}
-    df = pd.DataFrame(df_dict)
-    cov = []; acc = []
-
-    for i, j in df.groupby('Coverage'):
-        cov.append(i)
-        acc.append(get_accuracy_pos(
-            j['methyl_label'].tolist(), j['predictions'].tolist())
-        )
-    
-    fig, ax = plt.subplots(figsize=(5, 5))
-
-    sns.barplot(cov, acc)
-    ax.set_ylim(0.92,1)
-    fig.tight_layout()
-    
-    plt.savefig(os.path.join(output, 'acc_vs_cov.png'))
-    plt.close()
-
-
 def preprocess_error(data, bases):
-    #TODO DELETE
-    # data = data[:, 10:15] 
-
     data = tf.convert_to_tensor(data, dtype=tf.float32)
 
     embedding_size = 5
@@ -209,29 +157,29 @@ def call_mods(model, test_file, model_err, model_seq, one_hot_embedding,
                 'cent_signals', 'methyl_label']) 
             pr.preprocess_sequence(test, os.path.dirname(test_file), 'test')
             test_file = os.path.join(os.path.dirname(test_file), 'test_seq.h5')
-        import pdb;pdb.set_trace()
+
         data_seq, labels = ut.get_data_sequence(
             test_file, kmer_sequence, one_hot_embedding
         )
-        import pdb;pdb.set_trace()
+
         acc, pred, inferred = acc_test_single(data_seq, labels, model_seq)
-        save_probs(pred, labels, output)
+        ut.save_probs(pred, labels, output)
         try:
             test['pred_prob'] = pred; test['inferred_label'] = inferred
-            plot_distributions(test, output)
+            pl.plot_distributions(test, output)
             do_per_position_analysis(test, output)
         except: 
             print('No position analysis performed. Only per-read accuracy run')
 
     elif model == 'err':
+
         data_err, labels, bases = ut.load_error_data(test_file)
         data_err = preprocess_error(data_err, bases)
-        #TODO DELETE
-        # data_err = data_err[:, 15:20] 
-        import pdb;pdb.set_trace()
         acc, pred, inferred = acc_test_single(data_err, labels, model_err)
-        save_probs(pred, labels, output)
+        ut.save_probs(pred, labels, output)
+
     elif model == 'joint':
+
         data_seq, labels_seq = ut.get_data_sequence(
             test_file, kmer_sequence, one_hot_embedding
         )
@@ -241,9 +189,9 @@ def call_mods(model, test_file, model_err, model_seq, one_hot_embedding,
             labels_err, model_err)
         
         labels = labels_seq
-        save_probs(probs, labels, output)
+        ut.save_probs(probs, labels, output)
         
-    save_output(acc, output, 'accuracy_measurements.txt')
+    ut.save_output(acc, output, 'accuracy_measurements.txt')
     
     
     if figures:

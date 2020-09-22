@@ -6,6 +6,7 @@ import h5py
 import pickle
 import fnmatch
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 
 
@@ -142,40 +143,71 @@ def slice_chunks(l, n):
 # TRAIN AND CALL MODIFICATIONS
 # ------------------------------------------------------------------------------
 
-def get_data_sequence(file, kmer, one_hot=False):
-    embedding_flag = ""
-
+def get_data_sequence(file, kmer):
     ## preprocess data
-    bases, signal_means, signal_stds, signal_median, signal_lens, label = load_seq_data(file)
+    bases, signal_means, signal_stds, signal_median, \
+        signal_diff, signal_lens, label = load_seq_data(file)
 
     ## embed bases
-    if one_hot:
-        embedding_size = 5
-        embedding_flag += "_one-hot_embedded"
-        embedded_bases = tf.one_hot(bases, embedding_size)
-
-    else:
-        vocab_size = 1024
-        embedding_size = 128
-        weight_table = tf.compat.v1.get_variable(
-                                "embedding",
-                                shape = [vocab_size, embedding_size],
-                                dtype=tf.float32,
-                                initializer = tf.compat.v1.truncated_normal_initializer(
-                                stddev = np.sqrt(2. / vocab_size)
-                                ))
-        embedded_bases = tf.nn.embedding_lookup(weight_table, bases)
+    embedding_size = 5
+    embedded_bases = tf.one_hot(bases, embedding_size)
 
     ## prepare inputs for NNs
-    return tf.concat([embedded_bases,
-                                    tf.reshape(signal_means, [-1, kmer, 1]),
-                                    tf.reshape(signal_stds, [-1, kmer, 1]),
-                                    tf.reshape(signal_median, [-1, kmer, 1]),
-                                    # tf.reshape(signal_skew, [-1, kmer, 1]),
-                                    # tf.reshape(signal_kurt, [-1, kmer, 1]),
-                                    # tf.reshape(signal_diff, [-1, kmer, 1]),
-                                    tf.reshape(signal_lens, [-1, kmer, 1])],
-                                    axis=2), label
+    data = concat_tensors_seq(embedded_bases, signal_means, signal_stds, signal_median,
+        signal_diff, signal_lens, kmer)
+
+    return data, label
+
+
+def get_data_errors(file, kmer):
+    ## preprocess data
+    bases, base_qual, base_mis, base_ins, base_del, label = load_err_read(file)
+
+    ## embed bases
+    embedding_size = 5
+    embedded_bases = tf.one_hot(bases, embedding_size)
+
+    ## prepare inputs for NNs
+    data = concat_tensors_err(embedded_bases, base_qual, base_mis, base_ins, base_del, kmer)
+
+    return data, label
+
+
+def get_data_jm(file, kmer):
+    ## preprocess data
+    bases, signal_means, signal_stds, signal_medians, signal_range, \
+        signal_lens, base_qual, base_mis, base_ins, base_del, label = load_jm_data(file)
+
+    ## embed bases
+    embedding_size = 5
+    embedded_bases = tf.one_hot(bases, embedding_size)
+
+    ## prepare inputs for NNs
+    data_sequence = concat_tensors_seq(embedded_bases, signal_means, signal_stds,
+                                        signal_medians, signal_range, signal_lens, kmer)
+    data_errors = concat_tensors_err(embedded_bases, base_qual, base_mis, base_ins, base_del, kmer)
+
+    return data_sequence, data_errors, label
+
+
+def concat_tensors_seq(bases, signal_means, signal_stds, signal_medians,
+                        signal_range, signal_lens, kmer):
+    return tf.concat([bases,
+                                tf.reshape(signal_means, [-1, kmer, 1]),
+                                tf.reshape(signal_stds, [-1, kmer, 1]),
+                                tf.reshape(signal_medians, [-1, kmer, 1]),
+                                tf.reshape(signal_range, [-1, kmer, 1]),
+                                tf.reshape(signal_lens, [-1, kmer, 1])],
+                                axis=2)
+
+
+def concat_tensors_err(bases, base_qual, base_mis, base_ins, base_del, kmer):
+    return tf.concat([bases,
+                                tf.reshape(base_qual, [-1, kmer, 1]),
+                                tf.reshape(base_mis, [-1, kmer, 1]),
+                                tf.reshape(base_ins, [-1, kmer, 1]),
+                                tf.reshape(base_del, [-1, kmer, 1])],
+                                axis=2)
 
 
 def load_seq_data(file):
@@ -185,18 +217,55 @@ def load_seq_data(file):
         signal_means = hf['signal_means'][:]
         signal_stds = hf['signal_stds'][:]
         signal_median = hf['signal_median'][:]
-        signal_skew = hf['signal_skew'][:]
-        signal_kurt = hf['signal_kurt'][:]
         signal_diff = hf['signal_diff'][:]
         signal_lens = hf['signal_lens'][:]
         label = hf['label'][:]
 
-    return bases, signal_means, signal_stds, signal_median, signal_skew, \
-        signal_kurt, signal_diff, signal_lens, label
-    # return bases, signal_means, signal_stds, signal_median, signal_lens, label
+    return bases, signal_means, signal_stds, signal_median, \
+        signal_diff, signal_lens, label
+
+
+def load_jm_data(file):
+
+    with h5py.File(file, 'r') as hf:
+        bases = hf['kmer'][:]
+        signal_means = hf['signal_means'][:]
+        signal_stds = hf['signal_stds'][:]
+        signal_medians = hf['signal_median'][:]
+        signal_range = hf['signal_diff'][:]
+        signal_lens = hf['signal_lens'][:]
+        base_qual = hf['qual'][:]
+        base_mis = hf['mis'][:]
+        base_ins = hf['ins'][:]
+        base_del = hf['dele'][:]
+        label = hf['methyl_label'][:]
+
+    return bases, signal_means, signal_stds, signal_medians, signal_range, \
+        signal_lens, base_qual, base_mis, base_ins, base_del, label
 
 
 def load_error_data(file):
+
+    with h5py.File(file, 'r') as hf:
+        X = hf['err_X'][:]
+        Y = hf['err_Y'][:]
+
+    return X, Y
+
+def load_err_read(file):
+
+    with h5py.File(file, 'r') as hf:
+        bases = hf['kmer'][:]
+        base_qual = hf['qual'][:]
+        base_mis = hf['mis'][:]
+        base_ins = hf['ins'][:]
+        base_del = hf['dele'][:]
+        label = hf['methyl_label'][:]
+
+    return bases, base_qual, base_mis, base_ins, base_del, label
+
+
+def load_error_data_kmer(file):
 
     with h5py.File(file, 'r') as hf:
         bases = hf['kmer'][:]
@@ -217,7 +286,7 @@ def select_columns(df, columns):
             cols += list (range(int(c1), int(c2)+1))
         else:
             cols.append(int(c))
-        
+
     return df[df.columns[cols]]
 
 
@@ -263,3 +332,17 @@ def _write_list_to_file(file, data):
 def load_obj(path):
     with open(path, 'rb') as f:
         return pickle.load(f)
+
+
+def save_output(acc, output, label):
+    col_names = ['Accuracy', 'Precision', 'Recall', 'F-score']
+    df = pd.DataFrame([acc], columns=col_names)
+    df.to_csv(os.path.join(output, label), index=False, sep='\t')
+
+
+def save_probs(probs, labels, output):
+    out_probs = os.path.join(output, 'test_pred_prob.txt')
+    probs_to_save = pd.DataFrame(columns=['labels', 'probs'])
+    probs_to_save['labels'] = labels
+    probs_to_save['probs'] = probs
+    probs_to_save.to_csv(out_probs, sep='\t', index=None)
