@@ -242,6 +242,13 @@ def train_nns(**kwargs):
     help='moderate improvement to handle large feature files'
 )
 @click.option(
+    '-st', '--split_type', required=True,
+    type=click.Choice(['pos', 'read']),
+    help='Type of train-test-val split to select. Positions or read'
+    'pos option creates and independent test set with positions never seen'
+    'read option creates and independent test set with reads never seen '
+)
+@click.option(
     '-cpu', '--cpus', default=1, help='number of processes to be used, default 1'
 )
 @click.option(
@@ -249,7 +256,7 @@ def train_nns(**kwargs):
 )
 def merge_and_preprocess(feature_type, error_treated, error_untreated,
     sequence_treated, sequence_untreated, combined_features, 
-    num_err_feat, output, save_tsv, memory_efficient, cpus):
+    num_err_feat, output, save_tsv, memory_efficient, cpus, split_type):
     if feature_type == 'both':
         do_seq_err_preprocess(
             sequence_treated, sequence_untreated, error_treated,
@@ -258,7 +265,7 @@ def merge_and_preprocess(feature_type, error_treated, error_untreated,
     elif feature_type == 'combined':
         do_combined_preprocess(
             combined_features, output, save_tsv, 
-            memory_efficient, cpus
+            memory_efficient, cpus, split_type
         )
     else:
         do_single_preprocess(

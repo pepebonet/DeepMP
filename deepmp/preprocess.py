@@ -87,6 +87,13 @@ def get_training_test_val(df):
     return [(train, 'train'), (test, 'test'), (val, 'val')]
 
 
+def get_training_test_val_pos(df):
+    test = df[(df['pos_in_strand'] >= 1000000) & (df['pos_in_strand'] <= 2000000)]
+    df_red = pd.concat([df[df['pos_in_strand'] < 1000000], df[df['pos_in_strand'] > 2000000]])
+    train, val = train_test_split(df_red, test_size=0.05, random_state=0)
+    return [(train, 'train'), (test, 'test'), (val, 'val')]
+
+
 def preprocess_sequence(df, output, file):
 
     #df = df.dropna()
@@ -271,10 +278,14 @@ def save_tsv(df, output, file, mode='w'):
         df.to_csv(file_name, sep='\t', index=None, mode=mode)
 
 
-def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps):
+def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps, split_type):
     df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
-            
-    data = get_training_test_val(df)
+    
+    if split_type == 'read':
+        data = get_training_test_val(df)
+    else:
+        data = get_training_test_val_pos(df)
+    
     if tsv_flag:
         for el in data:
             if counter == 0:
@@ -318,7 +329,7 @@ def get_set(folder, output, label):
     save(out_file, merge_data(data))
 
 
-def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus):
+def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus, split_type):
 
     if mem_efficient:
         tmp_folder = os.path.join(os.path.dirname(features), 'tmp/')
@@ -333,9 +344,10 @@ def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus):
         
         print('Extracting features to h5 and tsv files...')
         counter = 0
+
         f = functools.partial(split_sets_files, tmp_folder=tmp_folder, \
                 counter=counter, tsv_flag=tsv_flag, output=output, \
-                    tmps=os.path.dirname(features))
+                    tmps=os.path.dirname(features), split_type=split_type)
         with Pool(cpus) as p:
             for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
                 counter += 1
