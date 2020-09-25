@@ -143,18 +143,26 @@ def slice_chunks(l, n):
 # TRAIN AND CALL MODIFICATIONS
 # ------------------------------------------------------------------------------
 
-def get_data_sequence(file, kmer):
+def get_data_sequence(file, kmer, err_features = False):
     ## preprocess data
-    bases, signal_means, signal_stds, signal_median, \
-        signal_diff, signal_lens, label = load_seq_data(file)
+    if err_features:
+        bases, signal_means, signal_stds, signal_medians, signal_range, \
+            signal_lens, base_qual, base_mis, base_ins, base_del, label =load_jm_data(file)
+    else:
+        bases, signal_means, signal_stds, signal_medians, \
+            signal_range, signal_lens, label = load_seq_data(file)
 
     ## embed bases
     embedding_size = 5
     embedded_bases = tf.one_hot(bases, embedding_size)
 
     ## prepare inputs for NNs
-    data = concat_tensors_seq(embedded_bases, signal_means, signal_stds, signal_median,
-        signal_diff, signal_lens, kmer)
+    if err_features:
+        data = concat_tensors_seq_all(embedded_bases, signal_means, signal_stds, signal_medians,
+            signal_range, signal_lens, base_qual, base_mis, base_ins, base_del, kmer)
+    else:
+        data = concat_tensors_seq(embedded_bases, signal_means, signal_stds, signal_medians,
+            signal_range, signal_lens, kmer)
 
     return data, label
 
@@ -200,6 +208,19 @@ def concat_tensors_seq(bases, signal_means, signal_stds, signal_medians,
                                 tf.reshape(signal_lens, [-1, kmer, 1])],
                                 axis=2)
 
+def concat_tensors_seq_all(bases, signal_means, signal_stds, signal_medians,
+                        signal_range, signal_lens, base_qual, base_mis, base_ins, base_del, kmer):
+    return tf.concat([bases,
+                                tf.reshape(signal_means, [-1, kmer, 1]),
+                                tf.reshape(signal_stds, [-1, kmer, 1]),
+                                tf.reshape(signal_medians, [-1, kmer, 1]),
+                                tf.reshape(signal_range, [-1, kmer, 1]),
+                                tf.reshape(signal_lens, [-1, kmer, 1]),
+                                tf.reshape(base_qual, [-1, kmer, 1]),
+                                tf.reshape(base_mis, [-1, kmer, 1]),
+                                tf.reshape(base_ins, [-1, kmer, 1]),
+                                tf.reshape(base_del, [-1, kmer, 1])],
+                                axis=2)
 
 def concat_tensors_err(bases, base_qual, base_mis, base_ins, base_del, kmer):
     return tf.concat([bases,
@@ -216,13 +237,13 @@ def load_seq_data(file):
         bases = hf['kmer'][:]
         signal_means = hf['signal_means'][:]
         signal_stds = hf['signal_stds'][:]
-        signal_median = hf['signal_median'][:]
-        signal_diff = hf['signal_diff'][:]
+        signal_medians = hf['signal_median'][:]
+        signal_range = hf['signal_diff'][:]
         signal_lens = hf['signal_lens'][:]
         label = hf['label'][:]
 
-    return bases, signal_means, signal_stds, signal_median, \
-        signal_diff, signal_lens, label
+    return bases, signal_means, signal_stds, signal_medians, \
+        signal_range, signal_lens, label
 
 
 def load_jm_data(file):

@@ -44,7 +44,7 @@ Sequence and error features need to be combined so that the validation, test and
 ### Call modifications
 
 ```
-    DeepMP call-modifications -model seq -tf path/to/test/data -one_hot -ms model/directory -o output/
+    DeepMP call-modifications -m seq -tf path/to/test/data -md model/directory -o output/
 ```
 
 ### Train models
@@ -54,15 +54,15 @@ Preprocessing is needed before training. Use `--model_type` flag to specify mode
 ```
 Train sequence model from binary files.
 ```
-    DeepMP train-nns -model seq -tf path/to/train/data -vf path/to/validation/data -rnn lstm -md save/model/to/directory -ld save/log/to/directory
+    DeepMP train-nns -m seq -tf path/to/train/data -vf path/to/validation/data -md save/model/to/directory -ld save/log/to/directory
 ```
 Train errors model from binary files.
 ```
-    DeepMP train-nns -model err -tf path/to/train/data -vf path/to/validation/data -md save/model/to/directory -ld save/log/to/directory
+    DeepMP train-nns -m err -tf path/to/train/data -vf path/to/validation/data -md save/model/to/directory -ld save/log/to/directory
 ```
 Train joint model from binary files.
 ```
-    DeepMP train-nns -model joint -tf path/to/train/data -vf path/to/validation/data -md save/model/to/directory -ld save/log/to/directory
+    DeepMP train-nns -m joint -tf path/to/train/data -vf path/to/validation/data -md save/model/to/directory -ld save/log/to/directory
 ```
 ### Plotting Arguments
 ### Other Arguments

@@ -6,10 +6,10 @@ import tensorflow as tf
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.layers import *
 
-#TODO delete in future
-def get_brnn_model(base_num, embedding_size, rnn_cell = "lstm"):
 
-    depth = embedding_size + 3
+def get_brnn_model(base_num, embedding_size, features = 5, rnn_cell = "lstm"):
+
+    depth = embedding_size + features
     input = Input(shape=(base_num, depth))
 
     if rnn_cell == "gru":
@@ -29,9 +29,9 @@ def get_brnn_model(base_num, embedding_size, rnn_cell = "lstm"):
 
     return model
 
-def get_sequence_model(base_num, embedding_size):
+def get_sequence_model(base_num, embedding_size, features = 5):
 
-    depth = embedding_size + 5
+    depth = embedding_size + features
     model = Sequential()
     model.add(tf.keras.layers.InputLayer(input_shape=(base_num,depth)))
     model.add(tf.keras.layers.Conv1D(256, 3, activation='relu'))

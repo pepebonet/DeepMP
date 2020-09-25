@@ -7,3 +7,5 @@ click
 matplotlib
 seaborn
 tqdm
+functools
+subprocess

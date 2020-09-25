@@ -22,7 +22,7 @@ def acc_test_single(data, labels, model_file, score_av='binary'):
     precision, recall, f_score, _ = precision_recall_fscore_support(
         labels, inferred, average=score_av
     )
-    
+
     return [test_acc, precision, recall, f_score], pred, inferred
 
 
@@ -35,17 +35,17 @@ def get_accuracy_joint(inferred, err_pred, seq_pred, labels, score_av='binary'):
         elif err_pred[i] < 0.5 and seq_pred[i] < 0.5:
             inferred[i] = 0
             probs[i] = min(seq_pred[i], err_pred[i])
-        else: 
+        else:
             val = (err_pred[i] + seq_pred[i]) / 2
             if val > 0.5:
                 inferred[i] = 1
                 probs[i] = max(seq_pred[i], err_pred[i])
-            else: 
+            else:
                 inferred[i] = 0
                 probs[i] = min(seq_pred[i], err_pred[i])
 
     test_acc = round(1 - np.argwhere(labels != inferred).shape[0] / len(labels), 5)
-    
+
     precision, recall, f_score, _ = precision_recall_fscore_support(
         labels, inferred, average=score_av
     )
@@ -53,7 +53,7 @@ def get_accuracy_joint(inferred, err_pred, seq_pred, labels, score_av='binary'):
     return [test_acc, precision, recall, f_score], probs
 
 
-def acc_test_joint(data_seq, labels_seq, model_seq, 
+def acc_test_joint(data_seq, labels_seq, model_seq,
     data_err, labels_err, model_err):
 
     assert labels_err.all() == labels_seq.all()
@@ -64,7 +64,7 @@ def acc_test_joint(data_seq, labels_seq, model_seq,
 
     seq_pred = model_seq.predict(data_seq).flatten()
     err_pred = model_err.predict(data_err).flatten()
-    
+
     inferred = np.zeros(len(seq_pred))
 
     return get_accuracy_joint(inferred, err_pred, seq_pred, labels)
@@ -74,7 +74,7 @@ def pred_site(df, pred_label, meth_label):
     comb_pred = df.pred_prob.min() + df.pred_prob.max()
     if comb_pred >= 1:
         pred_label.append(1)
-    else: 
+    else:
         pred_label.append(0)
     meth_label.append(df.methyl_label.unique()[0])
 
@@ -85,7 +85,7 @@ def pred_site_deepmod(df, pred_label, meth_label, threshold=0.3):
     inferred = df['inferred_label'].values
     if np.sum(inferred) / len(inferred) >= threshold:
         pred_label.append(1)
-    else: 
+    else:
         pred_label.append(0)
     meth_label.append(df.methyl_label.unique()[0])
 
@@ -100,7 +100,7 @@ def get_accuracy_pos(meth_label, pred_label):
     pred_neg = np.asarray(pred_label)[neg]
 
     accuracy = (sum(pred_pos) + len(pred_neg) - sum(pred_neg)) / \
-        (len(pred_pos) + len(pred_neg)) 
+        (len(pred_pos) + len(pred_neg))
     return accuracy[0]
 
 
@@ -118,15 +118,15 @@ def do_per_position_analysis(df, output):
             if len(j) > 0:
                 pred_label, meth_label = pred_site(j, pred_label, meth_label)
                 cov.append(len(j))
-            
+
     precision, recall, f_score, _ = precision_recall_fscore_support(
         meth_label, pred_label, average='binary'
     )
 
     pl.accuracy_cov(pred_label, meth_label, cov, output)
-    # TODO generalize for test with no label 
+    # TODO generalize for test with no label
     # TODO improve calling of a methylation
-    # TODO Add to the joint analysis 
+    # TODO Add to the joint analysis
     # TODO delete all unnecessary functions
     accuracy = get_accuracy_pos(meth_label, pred_label)
     ut.save_output(
@@ -139,62 +139,50 @@ def preprocess_error(data, bases):
 
     embedding_size = 5
     embedded_bases = tf.one_hot(bases, embedding_size)
-    
+
     size_feat = int(data.shape[1] / 5)
 
     return tf.concat([embedded_bases, tf.reshape(data, [-1, 5, size_feat])], axis=2)
 
 
-def call_mods(model, test_file, model_err, model_seq, one_hot_embedding, 
-    kmer_sequence, output, figures=False):
+def call_mods(model_type, test_file, trained_model, kmer, output, figures=False):
 
-    if model == 'seq':
+    if model_type == 'seq':
 
         if test_file.rsplit('.')[-1] == 'tsv':
             test = pd.read_csv(test_file, sep='\t', nrows=1100000,
-                names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 
-                'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_lens', 
-                'cent_signals', 'methyl_label']) 
+                names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
+                'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_lens',
+                'cent_signals', 'methyl_label'])
             pr.preprocess_sequence(test, os.path.dirname(test_file), 'test')
             test_file = os.path.join(os.path.dirname(test_file), 'test_seq.h5')
 
-        data_seq, labels = ut.get_data_sequence(
-            test_file, kmer_sequence, one_hot_embedding
-        )
-
-        acc, pred, inferred = acc_test_single(data_seq, labels, model_seq)
+        data_seq, labels = ut.get_data_sequence(test_file, kmer)
+        acc, pred, inferred = acc_test_single(data_seq, labels, trained_model)
         ut.save_probs(pred, labels, output)
+        
         try:
             test['pred_prob'] = pred; test['inferred_label'] = inferred
             pl.plot_distributions(test, output)
             do_per_position_analysis(test, output)
-        except: 
+        except:
             print('No position analysis performed. Only per-read accuracy run')
 
-    elif model == 'err':
+    elif model_type == 'err':
 
-        data_err, labels, bases = ut.load_error_data(test_file)
-        data_err = preprocess_error(data_err, bases)
-        acc, pred, inferred = acc_test_single(data_err, labels, model_err)
+        data_err, labels = ut.get_data_errors(test_file, kmer)
+        acc, pred, inferred = acc_test_single(data_err, labels, trained_model)
         ut.save_probs(pred, labels, output)
 
-    elif model == 'joint':
+    elif model_type == 'joint':
 
-        data_seq, labels_seq = ut.get_data_sequence(
-            test_file, kmer_sequence, one_hot_embedding
-        )
-        data_err, labels_err = ut.load_error_data(test_file)
- 
-        acc, probs = acc_test_joint(data_seq, labels_seq, model_seq, data_err, 
-            labels_err, model_err)
-        
-        labels = labels_seq
-        ut.save_probs(probs, labels, output)
-        
+        data_seq, data_err, labels = ut.get_data_jm(test_file, kmer)
+        acc, pred, inferred = acc_test_single([data_seq, data_err], labels, trained_model)
+        ut.save_probs(pred, labels, output)
+
     ut.save_output(acc, output, 'accuracy_measurements.txt')
-    
-    
+
+
     if figures:
         out_fig = os.path.join(output, 'ROC_curve.png')
         pl.plot_ROC(labels, probs, out_fig)
-

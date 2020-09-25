@@ -12,7 +12,7 @@ from deepmp.model import *
 embedding_size = 5
 
 def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
-                                kmer, epochs, one_hot = False, rnn = None):
+                                kmer, epochs, rnn = None):
 
     input_train, label = ut.get_data_sequence(train_file, kmer)
     input_val, vy = ut.get_data_sequence(val_file, kmer)
@@ -25,14 +25,14 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
     else:
         model = get_sequence_model(kmer, embedding_size)
 
-        log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_conv1d")
+        log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_cnn")
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
                                             log_dir = log_dir, histogram_freq=1)
     model.fit(input_train, label, batch_size=batch_size, epochs=epochs,
                                                 callbacks = [tensorboard_callback],
                                                 validation_data = (input_val, vy))
-    model.save(model_dir + "seq_model_5_features")
+    model.save(model_dir + "seq_model")
 
     return None
 

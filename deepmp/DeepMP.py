@@ -86,29 +86,21 @@ def call_user_mods(**kwargs):
 #TODO <JB, MC> improve way to combine both methods
 @cli.command(short_help='Calling modifications')
 @click.option(
-    '-model', '--model', required=True,
+    '-m', '--model_type', required=True,
     type=click.Choice(['seq', 'err', 'joint']),
-    help='choose model to train'
+    help='choose model to test'
 )
 @click.option(
     '-tf', '--test_file', required=True,
     help='path to training set'
 )
 @click.option(
-    '-one_hot', '--one_hot_embedding', is_flag=True,
-    help='use one hot embedding'
-)
-@click.option(
-    '-ks', '--kmer_sequence', default=17,
+    '-k', '--kmer', default=17,
     help='kmer length for sequence training'
 )
 @click.option(
-    '-me', '--model_err', default='',
+    '-md', '--model_dir', default='',
     help='directory to trained error model'
-)
-@click.option(
-    '-ms', '--model_seq', default='',
-    help='directory to trained sequence model'
 )
 @click.option(
     '-o', '--output',
@@ -119,8 +111,8 @@ def call_modifications(**kwargs):
     args = Namespace(**kwargs)
 
     call_mods(
-        args.model, args.test_file, args.model_err, args.model_seq,
-        args.one_hot_embedding, args.kmer_sequence, args.output
+        args.model_type, args.test_file, args.model_dir,
+        args.kmer, args.output
     )
 
 
@@ -133,7 +125,7 @@ def call_modifications(**kwargs):
 #TODO <MC, PB> How to combine outputs properly --> Joint model
 @cli.command(short_help='Trainining neural networks')
 @click.option(
-    '-model', '--model', required=True,
+    '-m', '--model_type', required=True,
     type=click.Choice(['seq', 'err', 'joint']),
     help='choose model to train'
 )
@@ -146,19 +138,15 @@ def call_modifications(**kwargs):
     help='path to validation set'
 )
 @click.option(
-    '-one_hot', '--one_hot_embedding', is_flag=True,
-    help='use one hot embedding'
-)
-@click.option(
     '-rnn', '--rnn_type', default='',
     help='rnn type'
 )
 @click.option(
-    '-ks', '--kmer_sequence', default=17,
+    '-k', '--kmer', default=17,
     help='kmer length for sequence training'
 )
 @click.option(
-    '-ep', '--epochs', default=20,
+    '-ep', '--epochs', default=15,
     help='Number of epochs for training'
 )
 @click.option(
@@ -170,35 +158,32 @@ def call_modifications(**kwargs):
     help='training log directory'
 )
 @click.option(
-    '-fe', '--features_errors', default=15,
-    help='Number of error features to select'
-)
-@click.option(
     '-bs', '--batch_size', default=512,
     help='Batch size for training both models'
 )
+
 def train_nns(**kwargs):
     """Train Neural Networks"""
     args = Namespace(**kwargs)
 
-    if args.model == 'seq':
+    if args.model_type == 'seq':
         train_sequence(
                 args.train_file, args.val_file,
-                args.log_dir, args.model_dir, args.batch_size, args.kmer_sequence,
-                args.epochs, args.one_hot_embedding, args.rnn_type,
+                args.log_dir, args.model_dir, args.batch_size, args.kmer,
+                args.epochs, args.rnn_type,
                 )
 
-    elif args.model == 'err':
-        train_errors(
+    elif args.model_type == 'err':
+        train_single_error(
                 args.train_file, args.val_file,
-                args.log_dir, args.model_dir, args.features_errors,
+                args.log_dir, args.model_dir, args.kmer,
                 args.epochs, args.batch_size
                 )
 
-    elif args.model == 'joint':
+    elif args.model_type == 'joint':
         train_jm( args.train_file, args.val_file,
                                     args.log_dir, args.model_dir, args.batch_size,
-                                    args.kmer_sequence, args.epochs
+                                    args.kmer, args.epochs
                                     )
 
 
@@ -228,7 +213,7 @@ def train_nns(**kwargs):
     '-su', '--sequence-untreated', default='', help='extracted sequence features'
 )
 @click.option(
-    '-cf', '--combined-features', default='', 
+    '-cf', '--combined-features', default='',
     help='extracted single read combined features'
 )
 @click.option(
@@ -238,7 +223,7 @@ def train_nns(**kwargs):
     '-stsv', '--save-tsv', is_flag=True, help='Whether to store tsv. Default = False'
 )
 @click.option(
-    '-me', '--memory-efficient', is_flag=True, 
+    '-me', '--memory-efficient', is_flag=True,
     help='moderate improvement to handle large feature files'
 )
 @click.option(
@@ -248,7 +233,7 @@ def train_nns(**kwargs):
     '-o', '--output', default='', help='Output file'
 )
 def merge_and_preprocess(feature_type, error_treated, error_untreated,
-    sequence_treated, sequence_untreated, combined_features, 
+    sequence_treated, sequence_untreated, combined_features,
     num_err_feat, output, save_tsv, memory_efficient, cpus):
     if feature_type == 'both':
         do_seq_err_preprocess(
@@ -257,7 +242,7 @@ def merge_and_preprocess(feature_type, error_treated, error_untreated,
         )
     elif feature_type == 'combined':
         do_combined_preprocess(
-            combined_features, output, save_tsv, 
+            combined_features, output, save_tsv,
             memory_efficient, cpus
         )
     else:
@@ -314,7 +299,7 @@ def error_extraction(**kwargs):
     '-m', '--motif', default='CG', help='motif of interest'
 )
 @click.option(
-    '-rpf', '--reads_per_file', default=1500, 
+    '-rpf', '--reads_per_file', default=1500,
     help='number of reads per file for parallel computing'
 )
 @click.option(
@@ -341,7 +326,7 @@ def single_read_error_extraction(**kwargs):
     args = Namespace(**kwargs)
 
     sre.single_read_errors(
-        args.error_features, args.label, args.motif, args.output, 
+        args.error_features, args.label, args.motif, args.output,
         args.reads_per_file, args.cpus, args.mod_loc,
         args.kmer_len, args.is_dna
     )
