@@ -13,3 +13,4 @@ outputs/*
 
 # EGG info
 *.egg-info
+.DS_Store

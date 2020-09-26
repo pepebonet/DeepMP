@@ -145,7 +145,8 @@ def preprocess_error(data, bases):
     return tf.concat([embedded_bases, tf.reshape(data, [-1, 5, size_feat])], axis=2)
 
 
-def call_mods(model_type, test_file, trained_model, kmer, output, figures=False):
+def call_mods(model_type, test_file, trained_model, kmer, output,
+                                    figures=False, err_features = False):
 
     if model_type == 'seq':
 
@@ -157,10 +158,10 @@ def call_mods(model_type, test_file, trained_model, kmer, output, figures=False)
             pr.preprocess_sequence(test, os.path.dirname(test_file), 'test')
             test_file = os.path.join(os.path.dirname(test_file), 'test_seq.h5')
 
-        data_seq, labels = ut.get_data_sequence(test_file, kmer)
+        data_seq, labels = ut.get_data_sequence(test_file, kmer, err_features)
         acc, pred, inferred = acc_test_single(data_seq, labels, trained_model)
         ut.save_probs(pred, labels, output)
-        
+
         try:
             test['pred_prob'] = pred; test['inferred_label'] = inferred
             pl.plot_distributions(test, output)
