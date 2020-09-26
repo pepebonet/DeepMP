@@ -106,13 +106,17 @@ def call_user_mods(**kwargs):
     '-o', '--output',
     help='output path to save files'
 )
+@click.option(
+    '-ef', '--err_features' , is_flag=True,
+    help='use error features in sequence model'
+)
 def call_modifications(**kwargs):
     """Call modifications"""
     args = Namespace(**kwargs)
 
     call_mods(
         args.model_type, args.test_file, args.model_dir,
-        args.kmer, args.output
+        args.kmer, args.output, args.err_features
     )
 
 
@@ -161,6 +165,10 @@ def call_modifications(**kwargs):
     '-bs', '--batch_size', default=512,
     help='Batch size for training both models'
 )
+@click.option(
+    '-ef', '--err_features' , is_flag=True,
+    help='use error features in sequence model'
+)
 
 def train_nns(**kwargs):
     """Train Neural Networks"""
@@ -170,7 +178,7 @@ def train_nns(**kwargs):
         train_sequence(
                 args.train_file, args.val_file,
                 args.log_dir, args.model_dir, args.batch_size, args.kmer,
-                args.epochs, args.rnn_type,
+                args.epochs, args.err_features, args.rnn_type
                 )
 
     elif args.model_type == 'err':

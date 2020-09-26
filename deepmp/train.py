@@ -12,18 +12,21 @@ from deepmp.model import *
 embedding_size = 5
 
 def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
-                                kmer, epochs, rnn = None):
+                                kmer, epochs, err_features = False, rnn = None):
 
-    input_train, label = ut.get_data_sequence(train_file, kmer)
-    input_val, vy = ut.get_data_sequence(val_file, kmer)
+    input_train, label = ut.get_data_sequence(train_file, kmer, err_features)
+    input_val, vy = ut.get_data_sequence(val_file, kmer, err_features)
+
+    if err_features:
+        features = 9
 
     ## train model
     if rnn:
-        model = get_brnn_model(kmer, embedding_size, rnn_cell = rnn)
+        model = get_brnn_model(kmer, embedding_size, features, rnn_cell = rnn)
 
         log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq_lstm")
     else:
-        model = get_sequence_model(kmer, embedding_size)
+        model = get_sequence_model(kmer, embedding_size, features)
 
         log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq_cnn")
 
