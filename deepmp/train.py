@@ -19,6 +19,8 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
 
     if err_features:
         features = 9
+    else:
+        features = 5
 
     ## train model
     if rnn:
@@ -39,7 +41,7 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
     callback_list = [
                         tensorboard_callback,
                         tf.keras.callbacks.ModelCheckpoint(filepath= model_dir,
-                                                            monitor='val_acc',
+                                                            monitor='val_accuracy',
                                                             mode='max',
                                                             save_best_only=True)
                         ]
@@ -121,7 +123,7 @@ def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
     callback_list = [
                         tensorboard_callback,
                         tf.keras.callbacks.ModelCheckpoint(filepath= model_dir,
-                                                            monitor='val_acc',
+                                                            monitor='val_accuracy',
                                                             mode='max',
                                                             save_best_only=True)
                         ]
@@ -150,7 +152,7 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs)
     callback_list = [
                         tensorboard_callback,
                         tf.keras.callbacks.ModelCheckpoint(filepath= model_dir,
-                                                            monitor='val_acc',
+                                                            monitor='val_accuracy',
                                                             mode='max',
                                                             save_best_only=True)
                         ]
