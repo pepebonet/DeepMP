@@ -46,6 +46,21 @@ def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
 
 
+def recursive_permute(bases_list):
+    if len(bases_list) == 1:
+        return bases_list[0]
+    elif len(bases_list) == 2:
+        pseqs = []
+        for fbase in bases_list[0]:
+            for sbase in bases_list[1]:
+                pseqs.append(fbase + sbase)
+        return pseqs
+    else:
+        pseqs = recursive_permute(bases_list[1:])
+        pseq_list = [bases_list[0], pseqs]
+        return recursive_permute(pseq_list)
+
+
 def _convert_motif_seq(ori_seq, is_dna=True):
     outbases = []
 
@@ -55,21 +70,9 @@ def _convert_motif_seq(ori_seq, is_dna=True):
         else:
             outbases.append(iupac_alphabets_rna[bbase])
 
-    def recursive_permute(bases_list):
-        if len(bases_list) == 1:
-            return bases_list[0]
-        elif len(bases_list) == 2:
-            pseqs = []
-            for fbase in bases_list[0]:
-                for sbase in bases_list[1]:
-                    pseqs.append(fbase + sbase)
-            return pseqs
-        else:
-            pseqs = recursive_permute(bases_list[1:])
-            pseq_list = [bases_list[0], pseqs]
-            return recursive_permute(pseq_list)
+    final_outbases = recursive_permute(outbases)
 
-    return recursive_permute(outbases)
+    return final_outbases
 
 
 def get_motif_seqs(motifs, is_dna=True):

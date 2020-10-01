@@ -14,9 +14,9 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 
-names_all=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 
+names_all=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
             'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_median',
-            'signal_skew', 'signal_kurt', 'signal_diff', 'signal_lens', 
+            'signal_skew', 'signal_kurt', 'signal_diff', 'signal_lens',
             'cent_signals', 'qual', 'mis', 'ins', 'del', 'methyl_label', 'flag']
 
 
@@ -74,7 +74,7 @@ def get_data(treated, untreated, names='', nopos=False):
 
 
 def get_merge_data(errors, sequence):
-    try: 
+    try:
         return pd.merge(sequence, errors, on='pos', how='inner')
     except:
         errors['pos'] = errors['pos'].astype('int64')
@@ -118,7 +118,7 @@ def preprocess_sequence(df, output, file):
         hf.create_dataset("signal_kurt",  data=np.stack(base_kurt))
         hf.create_dataset("signal_diff",  data=np.stack(base_diff))
         hf.create_dataset("signal_lens",  data=np.stack(base_signal_len))
-        hf.create_dataset("label",  data=label)
+        hf.create_dataset("methyl_label",  data=label)
 
     return None
 
@@ -200,11 +200,11 @@ def do_single_preprocess(feature_type, sequence_treated, sequence_untreated,
         for el in data:
             preprocess_error(el[0], num_err_feat, output, el[1])
 
-    else: 
-        treat, untreat = get_data(sequence_treated, sequence_untreated, 
-            names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 
+    else:
+        treat, untreat = get_data(sequence_treated, sequence_untreated,
+            names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
             'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_median',
-            'signal_skew', 'signal_kurt', 'signal_diff',  
+            'signal_skew', 'signal_kurt', 'signal_diff',
             'signal_lens', 'methyl_label', 'flag'])
         data = get_training_test_val(pd.concat([treat, untreat]))
         for el in data:
@@ -212,7 +212,7 @@ def do_single_preprocess(feature_type, sequence_treated, sequence_untreated,
 
 
 def preprocess_combined(df, output, label_file, file):
-    
+
     kmer = df['kmer'].apply(kmer2code)
     base_mean = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['signal_means'].values]
@@ -259,7 +259,7 @@ def preprocess_combined(df, output, label_file, file):
         hf.create_dataset('ins',  data=np.stack(base_ins), chunks=True, maxshape=(None,None))
         hf.create_dataset('dele',  data=np.stack(base_del), chunks=True, maxshape=(None,None))
         hf.create_dataset('methyl_label',  data=label, chunks=True, maxshape=(None,))
-    
+
     return None
 
 
@@ -273,7 +273,7 @@ def save_tsv(df, output, file, mode='w'):
 
 def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps):
     df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
-            
+
     data = get_training_test_val(df)
     if tsv_flag:
         for el in data:
@@ -328,9 +328,9 @@ def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus):
 
         print('Splitting original file...')
         os.mkdir(tmp_folder); os.mkdir(tmp_train); os.mkdir(tmp_test); os.mkdir(tmp_val)
-        cmd = 'split -l {} {} {}'.format(20000, features, tmp_folder) 
+        cmd = 'split -l {} {} {}'.format(20000, features, tmp_folder)
         subprocess.call(cmd, shell=True)
-        
+
         print('Extracting features to h5 and tsv files...')
         counter = 0
         f = functools.partial(split_sets_files, tmp_folder=tmp_folder, \
@@ -339,7 +339,7 @@ def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus):
         with Pool(cpus) as p:
             for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
                 counter += 1
-        
+
         print('Concatenating features into h5s...')
         get_set(tmp_test, output, 'test')
         get_set(tmp_val, output, 'val')
@@ -351,7 +351,7 @@ def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus):
         subprocess.call('rm -r {}'.format(tmp_test), shell=True)
         subprocess.call('rm -r {}'.format(tmp_val), shell=True)
 
-    else: 
+    else:
         df = pd.read_csv(features, sep='\t', names=names_all)
         data = get_training_test_val(pd.concat([treat, untreat]))
 
