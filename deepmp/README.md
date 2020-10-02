@@ -115,6 +115,12 @@ sequence model with error features
 |---|---|---|---|
 |0.9931148290634155   |   0.9942634530038996   |   0.9918235816906541  |    0.9930420186788094 |
 
+read-based error model
+
+| Accuracy  |  Precision | Recall  |  F-score |
+|---|---|---|---|
+|0.984099268913269   |    0.9833408259599077   |   0.9845819400131712   |   0.9839609916185144 |
+
 joint model
 
 | Accuracy  |  Precision | Recall  |  F-score |
