@@ -82,24 +82,8 @@ Site-based data
 
 # Trained models
 ##### DeepMP on 10M ecoli
-17-mer:
 
-`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepmp/models/ecoli/latest_17mer_seq/sequence_model/`
-
-| Accuracy  |  Precision | Recall  |  F-score |
-|---|---|---|---|
-| 0.9340299963951111  |  0.9243327612129679 | 0.8985630651780053  |  0.9112657642146945 |
-
-
-17-mer without number of signal:
-
-`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepmp/models/ecoli/seq_model_2_features/`
-
-| Accuracy  |  Precision | Recall  |  F-score |
-|---|---|---|---|
-| 0.930446982383728  | 0.9116686886216159  |  0.9030062363554855 | 0.9073167871383186  |
-
-sequence model with 9 features
+sequence model with error features
 
 | Accuracy  |  Precision | Recall  |  F-score |
 |---|---|---|---|
@@ -112,9 +96,27 @@ joint model
 |0.9978880286216736   |   0.996842995921039   |    0.9989161474039531   |   0.9978784948900093
 
 ##### Deepsignal on 10M ecoli
+
 17-mer:
 
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepsignal/trained_model/ecoli_sites/`
-``
-``
-``
+
+##### DeepMP on 10M ecoli positions
+
+sequence model
+
+| Accuracy  |  Precision | Recall  |  F-score |
+|---|---|---|---|
+|0.9298456907272339   |   0.9165033796989729  |    0.9444389741753569  |    0.9302614989111034 |
+
+sequence model with error features
+
+| Accuracy  |  Precision | Recall  |  F-score |
+|---|---|---|---|
+|0.9931148290634155   |   0.9942634530038996   |   0.9918235816906541  |    0.9930420186788094 |
+
+joint model
+
+| Accuracy  |  Precision | Recall  |  F-score |
+|---|---|---|---|
+|0.9937736392021179  |    0.9937514786845623   |   0.9936752322555482  |    0.9937133540074811 |
