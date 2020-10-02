@@ -146,7 +146,7 @@ def preprocess_error(data, bases):
 
 
 def call_mods(model_type, test_file, trained_model, kmer, output,
-                                    figures=False, err_features = False):
+                                     err_features = False, figures=False):
 
     if model_type == 'seq':
 
