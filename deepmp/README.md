@@ -105,11 +105,15 @@ joint model
 
 sequence model
 
+`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepmp/models/positions_10M_shuffled/seq_model_no_err/`
+
 | Accuracy  |  Precision | Recall  |  F-score |
 |---|---|---|---|
 |0.9298456907272339   |   0.9165033796989729  |    0.9444389741753569  |    0.9302614989111034 |
 
 sequence model with error features
+
+`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepmp/models/positions_10M_shuffled/20201001-164742_seq_model/`
 
 | Accuracy  |  Precision | Recall  |  F-score |
 |---|---|---|---|
@@ -117,11 +121,15 @@ sequence model with error features
 
 read-based error model
 
+`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepmp/models/positions_10M_shuffled/20201002-102024_err_model/`
+
 | Accuracy  |  Precision | Recall  |  F-score |
 |---|---|---|---|
 |0.984099268913269   |    0.9833408259599077   |   0.9845819400131712   |   0.9839609916185144 |
 
 joint model
+
+`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepmp/models/positions_10M_shuffled/20201001-181525_jm_model/`
 
 | Accuracy  |  Precision | Recall  |  F-score |
 |---|---|---|---|
