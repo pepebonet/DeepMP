@@ -43,8 +43,28 @@ Sequence and error features need to be combined so that the validation, test and
 
 ### Call modifications
 
+for sequence model
+
 ```
     DeepMP call-modifications -m seq -tf path/to/test/data -md model/directory -o output/
+```
+
+for sequence model with both seq and error features
+
+```
+    DeepMP call-modifications -m seq -tf path/to/test/data -md model/directory -o output/ -ef
+```
+
+for single read error model
+
+```
+    DeepMP call-modifications -m err -tf path/to/test/data -md model/directory -o output/ 
+```
+
+for joint model
+
+```
+    DeepMP call-modifications -m jm -tf path/to/test/data -md model/directory -o output/ 
 ```
 
 ### Train models
