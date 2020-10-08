@@ -97,9 +97,13 @@ joint model
 
 ##### Deepsignal on 10M ecoli
 
-17-mer:
 
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepsignal/trained_model/ecoli_sites/`
+
+##### Deepsignal on 10M ecoli positions
+
+`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepsignal/sept_trained_model/`
+
 
 ##### DeepMP on 10M ecoli positions
 
