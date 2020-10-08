@@ -51,6 +51,11 @@ untreated
 
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/extract_outputs/combined_features/train_test_val_split/`
 
+#### combined feature 10M
+
+`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/extract_outputs/combined_features/train_test_val_split/10M_shuffled/`
+
+`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/ecoli/extract_outputs/combined_features/train_test_val_split/positions_10M_shuffled`
 
 ## Human data
 ### Simpson's
@@ -95,12 +100,8 @@ joint model
 |---|---|---|---|
 |0.9978880286216736   |   0.996842995921039   |    0.9989161474039531   |   0.9978784948900093
 
+
 ##### Deepsignal on 10M ecoli
-
-
-`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepsignal/trained_model/ecoli_sites/`
-
-##### Deepsignal on 10M ecoli positions
 
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepsignal/sept_trained_model/`
 
