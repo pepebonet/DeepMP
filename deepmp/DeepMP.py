@@ -110,13 +110,17 @@ def call_user_mods(**kwargs):
     '-ef', '--err_features' , is_flag=True,
     help='use error features in sequence model'
 )
+@click.option(
+    '-pos', '--position_test' , is_flag=True,
+    help='position analysis'
+)
 def call_modifications(**kwargs):
     """Call modifications"""
     args = Namespace(**kwargs)
 
     call_mods(
         args.model_type, args.test_file, args.model_dir,
-        args.kmer, args.output, args.err_features
+        args.kmer, args.output, args.err_features, args.position_test
     )
 
 

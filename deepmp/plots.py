@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
+import pandas as pd
 import seaborn as sns
+import os
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
+from deepmp.call_modifications import get_accuracy_pos
 
 def plot_ROC (y_test, probas, fig_out, kn='Linear'):
     fpr, tpr, thresholds = roc_curve(y_test, probas)
@@ -39,12 +42,12 @@ def accuracy_cov(pred, label, cov, output):
         acc.append(get_accuracy_pos(
             j['methyl_label'].tolist(), j['predictions'].tolist())
         )
-    
+
     fig, ax = plt.subplots(figsize=(5, 5))
 
     sns.barplot(cov, acc)
     ax.set_ylim(0.92,1)
     fig.tight_layout()
-    
+
     plt.savefig(os.path.join(output, 'acc_vs_cov.png'))
     plt.close()

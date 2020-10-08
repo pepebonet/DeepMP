@@ -104,8 +104,9 @@ def get_accuracy_pos(meth_label, pred_label):
     return accuracy[0]
 
 
-def do_per_position_analysis(df, output):
+def do_per_position_analysis(df, pred_vec ,output):
     df['id'] = df['chrom'] + '_' + df['pos'].astype(str)
+    df['pred_prob'] = pred_vec
     meth_label = []; pred_label = []; cov = []; new_df = pd.DataFrame()
     pred_label_cov = []
     for i, j in df.groupby('id'):
@@ -146,44 +147,45 @@ def preprocess_error(data, bases):
 
 
 def call_mods(model_type, test_file, trained_model, kmer, output,
-                                     err_features = False, figures=False):
+                    err_features = False, pos_based = False ,figures=False):
 
+    ## process text file input
+    if test_file.rsplit('.')[-1] == 'tsv':
+        print("processing tsv file, this might take a while...")
+        test = pd.read_csv(test_file, sep='\t', names=pr.names_all)
+        pr.preprocess_combined(test, os.path.dirname(test_file), 'all', 'test')
+        test_file =os.path.join(os.path.dirname(test_file), 'test_all.h5')
+
+    ## read-based calling
     if model_type == 'seq':
-
-        if test_file.rsplit('.')[-1] == 'tsv':
-            test = pd.read_csv(test_file, sep='\t', nrows=1100000,
-                names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
-                'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_lens',
-                'cent_signals', 'methyl_label'])
-            pr.preprocess_sequence(test, os.path.dirname(test_file), 'test')
-            test_file = os.path.join(os.path.dirname(test_file), 'test_seq.h5')
 
         data_seq, labels = ut.get_data_sequence(test_file, kmer, err_features)
         acc, pred, inferred = acc_test_single(data_seq, labels, trained_model)
-        ut.save_probs(pred, labels, output)
-
-        try:
-            test['pred_prob'] = pred; test['inferred_label'] = inferred
-            pl.plot_distributions(test, output)
-            do_per_position_analysis(test, output)
-        except:
-            print('No position analysis performed. Only per-read accuracy run')
 
     elif model_type == 'err':
 
         data_err, labels = ut.get_data_errors(test_file, kmer)
         acc, pred, inferred = acc_test_single(data_err, labels, trained_model)
-        ut.save_probs(pred, labels, output)
 
     elif model_type == 'joint':
 
         data_seq, data_err, labels = ut.get_data_jm(test_file, kmer)
         acc, pred, inferred = acc_test_single([data_seq, data_err], labels, trained_model)
-        ut.save_probs(pred, labels, output)
 
+    else:
+        print("unrecognized model type")
+        return None
+
+    ut.save_probs(pred, labels, output)
     ut.save_output(acc, output, 'accuracy_measurements.txt')
 
+    ## position-based calling
+    if pos_based:
+        #pl.plot_distributions(test, output)
+        do_per_position_analysis(test, pred, output)
 
-    if figures:
-        out_fig = os.path.join(output, 'ROC_curve.png')
-        pl.plot_ROC(labels, probs, out_fig)
+    #if figures:
+    #    out_fig = os.path.join(output, 'ROC_curve.png')
+    #    pl.plot_ROC(labels, probs, out_fig)
+
+    return None

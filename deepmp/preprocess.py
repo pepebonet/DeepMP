@@ -241,7 +241,8 @@ def preprocess_combined(df, output, label_file, file):
     label = df['methyl_label']
 
     file_name = os.path.join(
-        output, '{}'.format(label_file), '{}_{}.h5'.format(file, label_file)
+        #output, '{}'.format(label_file), '{}_{}.h5'.format(file, label_file)
+        output, '{}_{}.h5'.format(file, label_file)
     )
 
     with h5py.File(file_name, 'a') as hf:
