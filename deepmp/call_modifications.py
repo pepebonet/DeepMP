@@ -7,7 +7,7 @@ from tensorflow.keras.models import load_model
 from sklearn.metrics import precision_recall_fscore_support
 
 import deepmp.utils as ut
-import deepmp.plots as pl
+import deepmp.plots as pl #this script needs to debug
 import deepmp.preprocess as pr
 
 
@@ -69,14 +69,26 @@ def acc_test_joint(data_seq, labels_seq, model_seq,
 
     return get_accuracy_joint(inferred, err_pred, seq_pred, labels)
 
+# TODO remove predifined threshold
+def pred_site(df, pred_label, meth_label,
+                pred_type, threshold=0.3):
 
-def pred_site(df, pred_label, meth_label):
-    comb_pred = df.pred_prob.min() + df.pred_prob.max()
-    if comb_pred >= 1:
-        pred_label.append(1)
-    else:
-        pred_label.append(0)
-    meth_label.append(df.methyl_label.unique()[0])
+    ## min+max prediction
+    if pred_type == 'min_max':
+        comb_pred = df.pred_prob.min() + df.pred_prob.max()
+        if comb_pred >= 1:
+            pred_label.append(1)
+        else:
+            pred_label.append(0)
+        meth_label.append(df.methyl_label.unique()[0])
+    ## threshold prediction
+    elif pred_type =='threshold':
+        inferred = df['inferred_label'].values
+        if np.sum(inferred) / len(inferred) >= threshold:
+            pred_label.append(1)
+        else:
+            pred_label.append(0)
+        meth_label.append(df.methyl_label.unique()[0])
 
     return pred_label, meth_label
 
@@ -104,20 +116,21 @@ def get_accuracy_pos(meth_label, pred_label):
     return accuracy[0]
 
 
-def do_per_position_analysis(df, pred_vec ,output):
+def do_per_position_analysis(df, pred_vec ,inferred_vec ,output, pred_type):
     df['id'] = df['chrom'] + '_' + df['pos'].astype(str)
     df['pred_prob'] = pred_vec
+    df['inferred_label'] = inferred_vec
     meth_label = []; pred_label = []; cov = []; new_df = pd.DataFrame()
     pred_label_cov = []
     for i, j in df.groupby('id'):
         if len(j.methyl_label.unique()) > 1:
             for k, l in j.groupby('methyl_label'):
                 if len(l) > 0:
-                    pred_label, meth_label = pred_site(l, pred_label, meth_label)
+                    pred_label, meth_label = pred_site(l, pred_label, meth_label, pred_type)
                     cov.append(len(l))
         else:
             if len(j) > 0:
-                pred_label, meth_label = pred_site(j, pred_label, meth_label)
+                pred_label, meth_label = pred_site(j, pred_label, meth_label, pred_type)
                 cov.append(len(j))
 
     precision, recall, f_score, _ = precision_recall_fscore_support(
@@ -147,7 +160,8 @@ def preprocess_error(data, bases):
 
 
 def call_mods(model_type, test_file, trained_model, kmer, output,
-                    err_features = False, pos_based = False ,figures=False):
+                    err_features = False, pos_based = False ,
+                    pred_type = 'min_max', figures=False):
 
     ## process text file input
     if test_file.rsplit('.')[-1] == 'tsv':
@@ -180,9 +194,10 @@ def call_mods(model_type, test_file, trained_model, kmer, output,
     ut.save_output(acc, output, 'accuracy_measurements.txt')
 
     ## position-based calling
+    # TODO store position info in test file
     if pos_based:
         #pl.plot_distributions(test, output)
-        do_per_position_analysis(test, pred, output)
+        do_per_position_analysis(test, pred, inferred, output, pred_type)
 
     #if figures:
     #    out_fig = os.path.join(output, 'ROC_curve.png')

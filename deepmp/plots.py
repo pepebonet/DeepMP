@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+##### this script needs to debug, call functions with extra care ###########
 import pandas as pd
 import seaborn as sns
 import os

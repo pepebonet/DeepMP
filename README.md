@@ -43,29 +43,17 @@ Sequence and error features need to be combined so that the validation, test and
 
 ### Call modifications
 
-for sequence model
+Example
 
 ```
     DeepMP call-modifications -m seq -tf path/to/test/data -md model/directory -o output/
 ```
 
-for sequence model with both seq and error features
+- Specify model type with flag `-m`, choose from `seq, err, jm`(required).
+- Add `-ef` for sequence model with both seq and error features.
+- Add  `-pos` for test on positions.
+- Specify prediction type for test on positions with flag `-pt`,  choose from `min_max` and `threshold`, `min_max` by default.
 
-```
-    DeepMP call-modifications -m seq -tf path/to/test/data -md model/directory -o output/ -ef
-```
-
-for single read error model
-
-```
-    DeepMP call-modifications -m err -tf path/to/test/data -md model/directory -o output/ 
-```
-
-for joint model
-
-```
-    DeepMP call-modifications -m jm -tf path/to/test/data -md model/directory -o output/ 
-```
 
 ### Train models
 Preprocessing is needed before training. Use `--model_type` flag to specify model for data preparation, choose between `seq` and `err`.

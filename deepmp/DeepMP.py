@@ -114,13 +114,19 @@ def call_user_mods(**kwargs):
     '-pos', '--position_test' , is_flag=True,
     help='position analysis'
 )
+@click.option(
+    '-pt', '--prediction_type',
+    type=click.Choice(['min_max', 'threshold']),
+    help='choose prediction type for position-based test'
+)
 def call_modifications(**kwargs):
     """Call modifications"""
     args = Namespace(**kwargs)
 
     call_mods(
         args.model_type, args.test_file, args.model_dir,
-        args.kmer, args.output, args.err_features, args.position_test
+        args.kmer, args.output, args.err_features,
+        args.position_test, args.prediction_type
     )
 
 
