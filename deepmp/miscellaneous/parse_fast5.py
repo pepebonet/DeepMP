@@ -31,8 +31,7 @@ def rename_multiprocess(reads, pattern, replacement, cpus):
 def get_fastq(read, group, subgroup):
     try:
         with h5py.File(read, 'r+') as f:
-            return f['/Analyses/{}/{}/Fastq'.format(group, subgroup)]\
-                .value.decode()
+            return f['/Analyses/{}/{}/Fastq'.format(group, subgroup)][()].decode()
     except:
         return ''
 

@@ -83,7 +83,14 @@ def get_merge_data(errors, sequence):
 
 def get_training_test_val(df):
     train, test = train_test_split(df, test_size=0.05, random_state=0)
-    train, val = train_test_split(train, test_size=test.shape[0], random_state=0)
+    train, val = train_test_split(train, test_size=0.05, random_state=0)
+    return [(train, 'train'), (test, 'test'), (val, 'val')]
+
+
+def get_training_test_val_pos(df):
+    test = df[(df['pos_in_strand'] >= 1000000) & (df['pos_in_strand'] <= 2000000)]
+    df_red = pd.concat([df[df['pos_in_strand'] < 1000000], df[df['pos_in_strand'] > 2000000]])
+    train, val = train_test_split(df_red, test_size=0.05, random_state=0)
     return [(train, 'train'), (test, 'test'), (val, 'val')]
 
 
@@ -272,10 +279,19 @@ def save_tsv(df, output, file, mode='w'):
         df.to_csv(file_name, sep='\t', index=None, mode=mode)
 
 
-def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps):
+def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps, split_type):
     df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
+<<<<<<< HEAD
 
     data = get_training_test_val(df)
+=======
+    
+    if split_type == 'read':
+        data = get_training_test_val(df)
+    else:
+        data = get_training_test_val_pos(df)
+    
+>>>>>>> pepe_dev
     if tsv_flag:
         for el in data:
             if counter == 0:
@@ -285,6 +301,32 @@ def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps):
             save_tsv(el[0], output, el[1], 'a')
     for el in data:
         preprocess_combined(el[0], tmps, el[1], file)
+
+
+def split_sets_files_single(file, tmp_folder, counter, tsv_flag, output, tmps, split_type):
+    df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
+
+    new_labels = np.zeros(df.shape[0], int)
+    indices = [i for i, s in enumerate(df['readname'].tolist()) if '_treat.fast5' in s]
+    new_labels[indices] = 1
+    df['methyl_label'] = new_labels
+    
+    if split_type == 'read':
+        data = [(df, 'test')]
+    else:
+        test = df[(df['pos_in_strand'] >= 1000000) & (df['pos_in_strand'] <= 2000000)]
+        data = [(test, 'test')]
+    
+    if data[0][0].shape[0] != 0:
+        if tsv_flag:
+            for el in data:
+                if counter == 0:
+                    mode = 'w'
+                else:
+                    mode = 'a'
+                save_tsv(el[0], output, el[1], 'a')
+        for el in data:
+            preprocess_combined(el[0], tmps, el[1], file)
 
 
 def load(filename):
@@ -319,7 +361,7 @@ def get_set(folder, output, label):
     save(out_file, merge_data(data))
 
 
-def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus):
+def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus, split_type):
 
     if mem_efficient:
         tmp_folder = os.path.join(os.path.dirname(features), 'tmp/')
@@ -334,9 +376,10 @@ def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus):
 
         print('Extracting features to h5 and tsv files...')
         counter = 0
+
         f = functools.partial(split_sets_files, tmp_folder=tmp_folder, \
                 counter=counter, tsv_flag=tsv_flag, output=output, \
-                    tmps=os.path.dirname(features))
+                    tmps=os.path.dirname(features), split_type=split_type)
         with Pool(cpus) as p:
             for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
                 counter += 1
@@ -361,6 +404,36 @@ def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus):
                 save_tsv(el[0], output, el[1])
         for el in data:
             preprocess_sequence(el[0], output, el[1])
+
+
+def no_split_combined_preprocess(features, output, tsv_flag, cpus, split_type):
+
+    tmp_folder = os.path.join(os.path.dirname(features), 'tmp/')
+    tmp_test = os.path.join(os.path.dirname(features), 'test/')
+
+    print('Splitting original file...')
+    os.mkdir(tmp_folder); os.mkdir(tmp_test)
+    cmd = 'split -l {} {} {}'.format(20000, features, tmp_folder) 
+    subprocess.call(cmd, shell=True)
+    
+    print('Extracting features to h5 and tsv files...')
+    counter = 0
+
+    f = functools.partial(split_sets_files_single, tmp_folder=tmp_folder, \
+            counter=counter, tsv_flag=tsv_flag, output=output, \
+                tmps=os.path.dirname(features), split_type=split_type)
+    with Pool(cpus) as p:
+        for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
+            counter += 1
+    
+    print('Concatenating features into h5s...')
+    get_set(tmp_test, output, 'test')
+
+    print('Removing tmp folders and done')
+    subprocess.call('rm -r {}'.format(tmp_folder), shell=True)
+    subprocess.call('rm -r {}'.format(tmp_test), shell=True)
+
+
 
 
 def preprocess_err_read(err_treated, err_untreated, output):

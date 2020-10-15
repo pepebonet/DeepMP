@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import sys
 import h5py
 import click
 import functools
@@ -10,8 +11,11 @@ from tqdm import tqdm
 import multiprocessing as mp
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
-
 from sklearn.metrics import precision_recall_fscore_support
+
+sys.path.append('../')
+import deepmp.utils as ut
+
 
 
 def get_test_df(test_file):
@@ -19,6 +23,7 @@ def get_test_df(test_file):
         names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 
         'read_strand', 'kmer', 'methyl_label'])
     #Pos in strand = pos in ref. Should be the correct choice for position
+
     test['id'] = test['pos'].astype(str) \
         + '_' + test['chrom'] + '_' + test['strand']
 
@@ -112,6 +117,8 @@ def get_plots_and_accuracies(treat_true, treat_pred, untreat_true, untreat_pred,
         [accuracy, precision, recall, f_score], output, 'accuracy_all.txt'
     )
     print(precision, recall, f_score)
+    
+    ut.save_probs(pred, true, output)
 
     if not test_all.empty:
         do_per_position_analysis(test_all, output)
@@ -153,7 +160,7 @@ def get_reads_info(index, test, base_folder):
 def do_read_analysis(el, test, ind, detect_subfolder):
     sub_test = test[test['readname'] == el]
     sub_ind = ind[ind[4] == el]
-    
+
     if sub_ind.shape[0] > 0:
         return get_reads_info(sub_ind, sub_test, detect_subfolder)
     else:
@@ -167,7 +174,7 @@ def do_read_analysis(el, test, ind, detect_subfolder):
 )
 @click.option(
     '-fid', '--file_id', required=True, 
-    help='File ID for tombo detect. Default= User_unique_name'
+    help='File ID for tombo detect. Default= User_Uniq_name'
 )
 @click.option(
     '-tf', '--test_file', required=True, 

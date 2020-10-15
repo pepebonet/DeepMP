@@ -243,7 +243,10 @@ def load_seq_data(file):
         signal_medians = hf['signal_median'][:]
         signal_range = hf['signal_diff'][:]
         signal_lens = hf['signal_lens'][:]
-        label = hf['methyl_label'][:]
+        try:
+            label = hf['label'][:]
+        except:
+            label = hf['methyl_label'][:]
 
     return bases, signal_means, signal_stds, signal_medians, \
         signal_range, signal_lens, label

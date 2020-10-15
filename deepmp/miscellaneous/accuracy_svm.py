@@ -1,10 +1,14 @@
 import os
+import sys
 import click
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
 from sklearn.metrics import precision_recall_fscore_support
+
+sys.path.append('../')
+import deepmp.utils as ut
 
 def get_accuracy(svm):
     right_mod = svm[(svm['sample'] == 'mod') & (svm['prediction'] == 'mod')]
@@ -67,6 +71,36 @@ def plot_ROC_deepsignal(deepsignal, deepmp, fig_out, kn='Linear'):
     plt.savefig(fig_out)
 
 
+def plot_ROC_all(deepmp, deepsignal, deepmod, fig_out, kn='Linear'):
+
+    fpr_dmp, tpr_dmp, thresholds = roc_curve(
+        deepmp['labels'].values, deepmp['probs'].values
+    )
+    fpr_ds, tpr_ds, thresholds = roc_curve(
+        deepsignal[11].values, deepsignal['7_x'].values
+    )
+    fpr_dmo, tpr_dmo, thresholds = roc_curve(
+        deepmod['labels'].values, deepmod['probs'].values
+    )
+
+    roc_auc_dmp = auc(fpr_dmp, tpr_dmp)
+    roc_auc_ds = auc(fpr_ds, tpr_ds)
+    roc_auc_dmo = auc(fpr_dmo, tpr_dmo)
+
+    plt.plot (fpr_dmp, tpr_dmp, lw=2, label ='DeepMP: {}'.format(round(roc_auc_dmp, 3)))
+    plt.plot (fpr_ds, tpr_ds, label ='Deepsignal: {}'.format(round(roc_auc_ds, 3)))
+    plt.plot (fpr_dmo, tpr_dmo, lw=2, label ='DeepMod: {}'.format(round(roc_auc_dmo, 3)))
+
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.xlim([-0.05, 1.05])
+    plt.ylim([-0.05, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Ecoli data')
+    plt.legend(loc="lower right")
+    plt.savefig(fig_out)
+
+
 def save_output(acc, output):
     col_names = ['Precision', 'Recall', 'F-score']
     df = pd.DataFrame([acc], columns=col_names)
@@ -91,6 +125,14 @@ def save_output(acc, output):
     help='Output table from deepsignal'
 )
 @click.option(
+    '-dsp', '--deepsignal_probs', default='', 
+    help='Output table from deepsignal'
+)
+@click.option(
+    '-dmo', '--deepmod_output', default='',
+    help='output from deepmod'
+)
+@click.option(
     '-ot', '--original_test', default='', 
     help='original_test'
 )
@@ -98,8 +140,10 @@ def save_output(acc, output):
     '-o', '--output', default='', 
     help='Output file extension'
 )
-def main(svm_output, deepmp_output, deepsignal_output, original_test, output):
+def main(svm_output, deepmp_output, deepsignal_output, deepsignal_probs, deepmod_output, original_test, output):
     out_fig = os.path.join(output, 'AUC_comparison.pdf')
+    if deepmod_output:
+        deepmod = pd.read_csv(deepmod_output, sep='\t')
 
     if deepmp_output:
         deepmp = pd.read_csv(deepmp_output, sep='\t')
@@ -121,9 +165,15 @@ def main(svm_output, deepmp_output, deepsignal_output, original_test, output):
         precision, recall, f_score, _ = precision_recall_fscore_support(
             merge[11].values, merge['8_x'].values, average='binary'
         )
+        import pdb;pdb.set_trace()
+        # ut.save_probs(np.maximum(deepsignal[6].values, deepsignal[7].values), merge[11].values, output)
+        # import pdb;pdb.set_trace()
         plot_ROC_deepsignal(merge, deepmp, out_fig)
     
-    save_output([precision, recall, f_score], output)    
+    # save_output([precision, recall, f_score], output) 
+    if deepmod_output:
+        fig_out = os.path.join(output, 'comparison_all.pdf')
+        plot_ROC_all(deepmp, merge, deepmod, fig_out)   
 
 
 if __name__ == "__main__":
