@@ -8,6 +8,7 @@ import time
 import random
 import logging
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 import multiprocessing as mp
 from statsmodels import robust
@@ -191,12 +192,9 @@ def _features_to_str(features):
 
 
 def _read_position_file(position_file):
-    postions = set()
-    with open(position_file, 'r') as rf:
-        for line in rf:
-            words = line.strip().split("\t")
-            postions.add(key_sep.join(words[:3]))
-    return postions
+    pos_df = pd.read_csv(position_file, sep='\t')
+    pos_df['id'] = pos_df['chr'] + '||' + pos_df['start'].astype(str) + '||' + pos_df['strand']
+    return pos_df['id'].tolist()
 
 
 def _fill_files_queue(fast5s_q, fast5_files, batch_size):
@@ -280,10 +278,22 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                 corrected_group, basecall_subgroup
             )
 
+            #TODO CLEAN UP AND PUT IT IN THE PARSER FOR THE DIFFERENT OPTIONS OR ARMONIZE PRIOR TO EXTRACTION
             if dict_names:
-                error_read = os.path.join(
-                    errors, '{}.txt'.format(dict_names[readname.split('.')[0]])
-                )
+                try:
+                    error_read = os.path.join(
+                        errors, '{}.txt'.format(dict_names[readname.split('.')[0]])
+                    )
+                except: 
+                    try:
+                        error_read = os.path.join(
+                            errors, '{}.txt'.format(dict_names[readname])
+                        )
+                    except:
+                        error_read = os.path.join(
+                            errors, '{}.txt'.format(dict_names[readname.split('.')[0].rsplit('_', 1)[0]])
+                        )
+                
                 error_features = get_error_features(
                     error_read, kmer_len, motif_seqs, methyloc
                 )
@@ -314,9 +324,16 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                     else:
                         pos = loc_in_ref
 
-                    if (positions is not None) and (key_sep.join([chrom, \
-                        str(pos), alignstrand]) not in positions):
-                        continue
+                    # if (positions is not None) and (key_sep.join([chrom, \
+                    #     str(pos), alignstrand]) not in positions):
+                    #     continue
+                    if positions is not None: 
+                        aa = key_sep.join([chrom, str(pos), alignstrand])
+                        if aa in positions: 
+                            print('match')
+                        else: 
+                            continue
+
 
                     k_mer = genomeseq[(
                         loc_in_read - num_bases):(loc_in_read + num_bases + 1)]
@@ -351,7 +368,7 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                         flag = 0
                     else:
                         flag = 1
-
+                    print(flag)
                     features_list.append(
                         (chrom, pos, alignstrand, loc_in_ref, readname, strand,
                         k_mer, signal_means, signal_stds, signal_median,  
@@ -361,7 +378,7 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
         except Exception:
             error += 1
             continue
-
+        
     return features_list, error
 
 
@@ -428,7 +445,7 @@ def _extract_preprocess(fast5_dir, motifs, is_dna, reference_path,
     if position_file is not None:
         print("Reading position file...")
         positions = _read_position_file(position_file)
-
+    
     #Distribute reads into processes
     fast5s_q = mp.Queue()
     _fill_files_queue(fast5s_q, fast5_files, f5_batch_num)
@@ -439,6 +456,7 @@ def _extract_preprocess(fast5_dir, motifs, is_dna, reference_path,
 def combine_extraction(fast5_dir, read_errors, ref, cor_g, base_g, dna, motifs,
     nproc, position_file, norm_me, methyloc, kmer_len, raw_sig_len, methy_lab, 
     write_fp, f5_batch_num, recursive, dict_names):
+
     start = time.time()
     motif_seqs, chrom2len, fast5s_q, len_fast5s, positions = \
         _extract_preprocess(fast5_dir, motifs, dna, ref, f5_batch_num, 
