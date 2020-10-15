@@ -311,15 +311,16 @@ def split_sets_files_single(file, tmp_folder, counter, tsv_flag, output, tmps, s
         test = df[(df['pos_in_strand'] >= 1000000) & (df['pos_in_strand'] <= 2000000)]
         data = [(test, 'test')]
     
-    if tsv_flag:
+    if data[0][0].shape[0] != 0:
+        if tsv_flag:
+            for el in data:
+                if counter == 0:
+                    mode = 'w'
+                else:
+                    mode = 'a'
+                save_tsv(el[0], output, el[1], 'a')
         for el in data:
-            if counter == 0:
-                mode = 'w'
-            else:
-                mode = 'a'
-            save_tsv(el[0], output, el[1], 'a')
-    for el in data:
-        preprocess_combined(el[0], tmps, el[1], file)
+            preprocess_combined(el[0], tmps, el[1], file)
 
 
 def load(filename):
