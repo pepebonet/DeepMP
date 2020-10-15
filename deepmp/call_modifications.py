@@ -158,9 +158,7 @@ def call_mods(model, test_file, model_err, model_seq, one_hot_embedding,
             pr.preprocess_sequence(test, os.path.dirname(test_file), 'test')
             test_file = os.path.join(os.path.dirname(test_file), 'test_seq.h5')
 
-        data_seq, labels = ut.get_data_sequence(
-            test_file, kmer_sequence, one_hot_embedding
-        )
+        data_seq, labels = ut.get_data_sequence(test_file, kmer_sequence)
 
         acc, pred, inferred = acc_test_single(data_seq, labels, model_seq)
         ut.save_probs(pred, labels, output)
@@ -180,6 +178,7 @@ def call_mods(model, test_file, model_err, model_seq, one_hot_embedding,
 
     elif model == 'joint':
         data_seq, data_err, labels = ut.get_data_jm(test_file, kmer_sequence)
+        import pdb;pdb.set_trace()
         acc, pred, inferred = acc_test_single([data_seq, data_err], labels, model_seq)
         ut.save_probs(pred, labels, output)
         
