@@ -210,7 +210,7 @@ def train_nns(**kwargs):
 @cli.command(short_help='Merge features and preprocess data for NNs')
 @click.option(
     '-ft', '--feature_type', required=True,
-    type=click.Choice(['seq', 'err', 'both', 'combined']),
+    type=click.Choice(['seq', 'err', 'both', 'combined', 'combined_single']),
     help='which features is the input corresponding to? To the sequence, '
     'to the errors or to both of them. If choice and files do not correlate '
     'errors will rise throughout the script'
@@ -266,6 +266,10 @@ def merge_and_preprocess(feature_type, error_treated, error_untreated,
         do_combined_preprocess(
             combined_features, output, save_tsv, 
             memory_efficient, cpus, split_type
+        )
+    elif feature_type == 'combined_single':
+        no_split_combined_preprocess(
+            combined_features, output, save_tsv, cpus, split_type
         )
     else:
         do_single_preprocess(
