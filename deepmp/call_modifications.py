@@ -81,6 +81,7 @@ def pred_site(df, pred_label, meth_label,
         else:
             pred_label.append(0)
         meth_label.append(df.methyl_label.unique()[0])
+
     ## threshold prediction
     elif pred_type =='threshold':
         inferred = df['inferred_label'].values
@@ -167,8 +168,8 @@ def call_mods(model_type, test_file, trained_model, kmer, output,
     if test_file.rsplit('.')[-1] == 'tsv':
         print("processing tsv file, this might take a while...")
         test = pd.read_csv(test_file, sep='\t', names=pr.names_all)
-        pr.preprocess_combined(test, os.path.dirname(test_file), 'all', 'test')
-        test_file =os.path.join(os.path.dirname(test_file), 'test_all.h5')
+        ut.preprocess_combined(test, os.path.dirname(test_file), 'all', 'test')
+        test_file = os.path.join(os.path.dirname(test_file), 'test_all.h5')
 
     ## read-based calling
     if model_type == 'seq':
