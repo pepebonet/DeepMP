@@ -17,12 +17,14 @@ class SequenceCNN(Model):
         self.dropout = Dropout(0.2)
         self.dense = Dense(1, activation='sigmoid', use_bias=False)
 
-    def call(self, inputs):
+    def call(self, inputs, submodel=False):
         x = self.conv1(inputs)
         x = self.localconv1(x)
         x = self.conv2(x)
         x = self.localconv2(x)
         x = self.pool(x)
+        if submodel:
+            return x
         x = self.dropout(x)
         return self.dense(x)
 
@@ -40,16 +42,36 @@ class BCErrorCNN(Model):
         self.dropout = Dropout(0.2)
         self.dense2 = Dense(1, activation='sigmoid', use_bias=False)
 
-    def call(self, inputs):
+    def call(self, inputs, submodel = False):
         x = self.conv1(inputs)
         x = self.localconv1(x)
         x = self.maxpool(x)
         x = self.localconv2(x)
         x = self.avgpool(x)
+        if submodel:
+          return x
         x = self.dense1(x)
         x = self.dropout(x)
         return self.dense2(x)
 
+
+class JointNN(Model):
+
+    def __init__(self, **kwargs):
+        super(JointNN, self).__init__(**kwargs)
+        self.seqnn = SequenceCNN()
+        self.errnn = BCErrorCNN()
+        self.dense1 = Dense(512, activation='relu')
+        self.dropout = Dropout(0.2)
+        self.dense2 = Dense(1, activation='sigmoid', use_bias=False)
+
+    def call(self, inputs):
+        a = self.seqnn(inputs[0], submodel=True)
+        b = self.errnn(inputs[1], submodel=True)
+        x = concatenate([a, b], axis=-1)
+        x = self.dense1(x)
+        x = self.dropout(x)
+        return self.dense2(x)
 
 
 def get_brnn_model(base_num, embedding_size, features = 5, rnn_cell = "lstm"):

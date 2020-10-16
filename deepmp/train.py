@@ -121,7 +121,14 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs)
     input_val_seq, input_val_err, vy = ut.get_data_jm(val_file, kmer)
 
     ## train model
-    model = joint_model(kmer, embedding_size)
+    #model = joint_model(kmer, embedding_size)
+    model = JointNN()
+    model.compile(loss='binary_crossentropy',
+                   optimizer=tf.keras.optimizers.Adam(),
+                   metrics=['accuracy'])
+    input_shape = ([(None, kmer, 5), (None, kmer, 9)])
+    model.build(input_shape)
+    print(model.summary())
 
     log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm")
     model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm_model")
