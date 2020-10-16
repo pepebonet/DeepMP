@@ -4,8 +4,6 @@ import re
 import os
 import h5py
 import pickle
-import fnmatch
-import numpy as np
 import pandas as pd
 import tensorflow as tf
 

@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 
-import time
-import h5py
 import datetime
-import numpy as np
-import tensorflow as tf
-
 import deepmp.utils as ut
 from deepmp.model import *
 

@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 
-import os
 import shutil
 import functools
 import subprocess
 import numpy as np
-import os, gzip, bz2, re
-from itertools import islice
+import os, gzip, bz2
 from multiprocessing import Pool
 from collections import defaultdict
-from collections import OrderedDict
 
 from deepmp import utils as ut
 

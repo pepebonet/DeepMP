@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+
 import os
 import h5py
-import click
 import functools
 import subprocess
 import numpy as np
@@ -11,7 +11,6 @@ from multiprocessing import Pool
 from deepmp.utils import kmer2code
 from collections import OrderedDict
 from sklearn.model_selection import train_test_split
-from tqdm import tqdm
 
 
 names_all=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
+
 import os
-import click
 import numpy as np
 import pandas as pd
-from collections import Counter
 
 
 def get_data(error_features, label):

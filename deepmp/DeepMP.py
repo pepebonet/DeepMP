@@ -1,5 +1,6 @@
+#!/usr/bin/env python3
+
 import logging
-import argparse
 from argparse import Namespace
 
 import click
