@@ -281,17 +281,12 @@ def save_tsv(df, output, file, mode='w'):
 
 def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps, split_type):
     df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
-<<<<<<< HEAD
 
-    data = get_training_test_val(df)
-=======
-    
     if split_type == 'read':
         data = get_training_test_val(df)
     else:
         data = get_training_test_val_pos(df)
     
->>>>>>> pepe_dev
     if tsv_flag:
         for el in data:
             if counter == 0:
