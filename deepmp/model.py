@@ -5,6 +5,53 @@ from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.layers import *
 
 
+class SequenceCNN(Model):
+
+    def __init__(self, **kwargs):
+        super(SequenceCNN, self).__init__(**kwargs)
+        self.conv1 = Conv1D(256, 3, activation='relu')
+        self.localconv1 = LocallyConnected1D(256, 3, activation='relu')
+        self.conv2 = Conv1D(256, 3, activation='relu')
+        self.localconv2 = LocallyConnected1D(256, 3, activation='relu')
+        self.pool = GlobalAveragePooling1D(name='seq_pooling_layer')
+        self.dropout = Dropout(0.2)
+        self.dense = Dense(1, activation='sigmoid', use_bias=False)
+
+    def call(self, inputs):
+        x = self.conv1(inputs)
+        x = self.localconv1(x)
+        x = self.conv2(x)
+        x = self.localconv2(x)
+        x = self.pool(x)
+        x = self.dropout(x)
+        return self.dense(x)
+
+
+class BCErrorCNN(Model):
+
+    def __init__(self, **kwargs):
+        super(BCErrorCNN, self).__init__(**kwargs)
+        self.conv1 = Conv1D(128, 3, activation='relu')
+        self.localconv1 = LocallyConnected1D(128, 3, activation='relu')
+        self.maxpool = MaxPooling1D()
+        self.localconv2 = LocallyConnected1D(128, 3, activation='relu')
+        self.avgpool = GlobalAveragePooling1D(name='err_pooling_layer')
+        self.dense1 = Dense(100, activation='relu')
+        self.dropout = Dropout(0.2)
+        self.dense2 = Dense(1, activation='sigmoid', use_bias=False)
+
+    def call(self, inputs):
+        x = self.conv1(inputs)
+        x = self.localconv1(x)
+        x = self.maxpool(x)
+        x = self.localconv2(x)
+        x = self.avgpool(x)
+        x = self.dense1(x)
+        x = self.dropout(x)
+        return self.dense2(x)
+
+
+
 def get_brnn_model(base_num, embedding_size, features = 5, rnn_cell = "lstm"):
 
     depth = embedding_size + features
