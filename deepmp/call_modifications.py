@@ -14,7 +14,7 @@ import deepmp.preprocess as pr
 def acc_test_single(data, labels, model_file, score_av='binary'):
     model = load_model(model_file)
     test_loss, test_acc = model.evaluate(data, tf.convert_to_tensor(labels))
-
+    
     pred =  model.predict(data).flatten()
     inferred = np.zeros(len(pred), dtype=int)
     inferred[np.argwhere(pred >= 0.5)] = 1
@@ -183,7 +183,6 @@ def call_mods(model_type, test_file, trained_model, kmer, output,
         acc, pred, inferred = acc_test_single(data_err, labels, trained_model)
 
     elif model_type == 'joint':
-
         data_seq, data_err, labels = ut.get_data_jm(test_file, kmer)
         acc, pred, inferred = acc_test_single([data_seq, data_err], labels, trained_model)
 

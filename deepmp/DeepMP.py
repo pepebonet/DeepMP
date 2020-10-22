@@ -242,10 +242,6 @@ def train_nns(**kwargs):
     '-stsv', '--save-tsv', is_flag=True, help='Whether to store tsv. Default = False'
 )
 @click.option(
-    '-me', '--memory-efficient', is_flag=True,
-    help='moderate improvement to handle large feature files'
-)
-@click.option(
     '-st', '--split_type', required=True,
     type=click.Choice(['pos', 'read']),
     help='Type of train-test-val split to select. Positions or read'
@@ -260,12 +256,11 @@ def train_nns(**kwargs):
 )
 def merge_and_preprocess(feature_type, error_treated, error_untreated,
     sequence_treated, sequence_untreated, combined_features, 
-    num_err_feat, output, save_tsv, memory_efficient, cpus, split_type):
+    num_err_feat, output, save_tsv, cpus, split_type):
 
     if feature_type == 'combined':
         do_combined_preprocess(
-            combined_features, output, save_tsv, 
-            memory_efficient, cpus, split_type
+            combined_features, output, save_tsv, cpus, split_type
         )
     elif feature_type == 'combined_single':
         no_split_combined_preprocess(

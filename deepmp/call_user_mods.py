@@ -15,7 +15,7 @@ import deepmp.preprocess as pr
 
 def test_single_read(data, model_file, score_av='binary'):
     model = load_model(model_file)
-
+    
     pred =  model.predict(data).flatten()
     inferred = np.zeros(len(pred), dtype=int)
     inferred[np.argwhere(pred >= 0.5)] = 1
@@ -48,7 +48,7 @@ def pred_site(df, pred_label, meth_label,
     return pred_label, meth_label
 
 
-def do_per_position_analysis(df, pred_vec ,inferred_vec ,output, pred_type):
+def do_per_position_analysis(df, pred_vec, inferred_vec, output, pred_type):
     df['id'] = df['chrom'] + '_' + df['pos'].astype(str)
     df['pred_prob'] = pred_vec
     df['inferred_label'] = inferred_vec
@@ -57,18 +57,18 @@ def do_per_position_analysis(df, pred_vec ,inferred_vec ,output, pred_type):
 
     import pdb;pdb.set_trace()
     for i, j in df.groupby('id'):
-        pred_label, meth_label = pred_site(l, pred_label, meth_label, pred_type)
+        pred_label, meth_label = pred_site(j, pred_label, meth_label, pred_type)
         cov.append(len(j))
         import pdb;pdb.set_trace()
 
 
 def build_test_df(data):
     df = pd.DataFrame()
-    df['chrom'] = data_id[0].astype(str)
-    df['pos'] = data_id[2]
-    df['strand'] = data_id[3].astype(str)
-    df['pos_in_strand'] = data_id[4]
-    df['readname'] = data_id[1].astype(str)
+    df['chrom'] = data[0].astype(str)
+    df['pos'] = data[2]
+    df['strand'] = data[3].astype(str)
+    df['pos_in_strand'] = data[4]
+    df['readname'] = data[1].astype(str)
     
     return df
 
@@ -96,6 +96,7 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
 
     elif model_type == 'joint':
         data_seq, data_err, labels, data_id = ut.get_data_jm(test_file, kmer, get_id=True)
+        import pdb;pdb.set_trace()
         pred, inferred = test_single_read([data_seq, data_err], trained_model)
 
     else:
@@ -107,8 +108,9 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
     ## position-based calling
     # TODO store position info in test file
     if pos_based:
-        if data_id in locals():
+        if 'data_id' in locals():
             test = build_test_df(data_id)
+            #TODO DELETE
+            test['methyl_label'] = labels
 
-        import pdb;pdb.set_trace()
         do_per_position_analysis(test, pred, inferred, output, pred_type)

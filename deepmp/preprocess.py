@@ -114,10 +114,10 @@ def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps, split_ty
 def split_sets_files_single(file, tmp_folder, counter, tsv_flag, output, tmps, split_type):
     df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
 
-    new_labels = np.zeros(df.shape[0], int)
-    indices = [i for i, s in enumerate(df['readname'].tolist()) if '_treat.fast5' in s]
-    new_labels[indices] = 1
-    df['methyl_label'] = new_labels
+    # new_labels = np.zeros(df.shape[0], int)
+    # indices = [i for i, s in enumerate(df['readname'].tolist()) if '_treat.fast5' in s]
+    # new_labels[indices] = 1
+    # df['methyl_label'] = new_labels
 
     if split_type == 'read':
         data = [(df, 'test')]
@@ -137,7 +137,7 @@ def split_sets_files_single(file, tmp_folder, counter, tsv_flag, output, tmps, s
             ut.preprocess_combined(el[0], tmps, el[1], file)
 
 
-def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus, split_type):
+def do_combined_preprocess(features, output, tsv_flag, cpus, split_type):
 
     tmp_folder = os.path.join(os.path.dirname(features), 'tmp/')
     tmp_train = os.path.join(os.path.dirname(features), 'train/')
@@ -148,7 +148,7 @@ def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus, spli
     os.mkdir(tmp_folder); os.mkdir(tmp_train); os.mkdir(tmp_test); os.mkdir(tmp_val)
     cmd = 'split -l {} {} {}'.format(20000, features, tmp_folder)
     subprocess.call(cmd, shell=True)
-
+    
     print('Extracting features to h5 and tsv files...')
     counter = 0
 
@@ -160,12 +160,12 @@ def do_combined_preprocess(features, output, tsv_flag, mem_efficient, cpus, spli
             counter += 1
 
     print('Concatenating features into h5s...')
-    get_set(tmp_test, output, 'test')
-    get_set(tmp_val, output, 'val')
-    get_set(tmp_train, output, 'train')
+    mh5.get_set(tmp_test, output, 'test')
+    mh5.get_set(tmp_val, output, 'val')
+    mh5.get_set(tmp_train, output, 'train')
 
     print('Removing tmp folders and done')
-    subprocess.call('rm -r {}'.format(tmp_folder), shell=True)
+    # subprocess.call('rm -r {}'.format(tmp_folder), shell=True)
     subprocess.call('rm -r {}'.format(tmp_train), shell=True)
     subprocess.call('rm -r {}'.format(tmp_test), shell=True)
     subprocess.call('rm -r {}'.format(tmp_val), shell=True)

@@ -187,8 +187,8 @@ def get_data_errors(file, kmer):
 def get_data_jm(file, kmer, get_id=False):
     ## preprocess data
     bases, signal_means, signal_stds, signal_medians, signal_range, \
-        signal_lens, base_qual, base_mis, base_ins, base_del, label, \
-            chrom, readname, pos, strand, pos_in_strand = load_jm_data(file)
+        signal_lens, base_qual, base_mis, base_ins, base_del, label = load_jm_data(file)
+            # chrom, readname, pos, strand, pos_in_strand = load_jm_data(file)
 
     ## embed bases
     embedding_size = 5
@@ -270,15 +270,15 @@ def load_jm_data(file):
         base_ins = hf['ins'][:]
         base_del = hf['dele'][:]
         label = hf['methyl_label'][:]
-        chrom = hf['chrom'][:]
-        readname = hf['readname'][:]
-        pos = hf['pos'][:]
-        strand = hf['strand'][:]
-        pos_in_strand = hf['pos_in_strand'][:]
+        # chrom = hf['chrom'][:]
+        # readname = hf['readname'][:]
+        # pos = hf['pos'][:]
+        # strand = hf['strand'][:]
+        # pos_in_strand = hf['pos_in_strand'][:]
 
     return bases, signal_means, signal_stds, signal_medians, signal_range, \
         signal_lens, base_qual, base_mis, base_ins, base_del, label, \
-        chrom, readname, pos, strand, pos_in_strand
+        # chrom, readname, pos, strand, pos_in_strand
 
 
 def load_error_data(file):
@@ -429,6 +429,7 @@ def preprocess_combined(df, output, label_file, file):
 
     file_name = os.path.join(
         output, '{}'.format(label_file), '{}_{}.h5'.format(file, label_file)
+        # output, '{}_{}.h5'.format(file, label_file)
     )
 
     with h5py.File(file_name, 'a') as hf:
