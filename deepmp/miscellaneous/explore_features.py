@@ -110,15 +110,16 @@ def main(features, model_type, model, kmer, output):
             data_err, labels, pred, inferred
         )
 
-        to_plot = [(mean, 'mean.pdf'), (median, 'median.pdf'), \
-            (std, 'std.pdf'), (rang, 'rang.pdf'), (len_sig, 'len_sig.pdf'), \
-            (quality, 'quality.pdf')]
+        to_plot = [(mean, 'mean.pdf', (-3, 3)), (median, 'median.pdf', (-3, 3)), \
+            (std, 'std.pdf', (-3, 3)), (rang, 'rang.pdf', (-0.5, 3)), (len_sig, 'len_sig.pdf', (0, 50)), \
+            (quality, 'quality.pdf', (0, 20))]
         
         plot_err = [(mismatch, 'mismatch.pdf'), (deletion, \
                 'deletion.pdf'), (insertion, 'insertion.pdf')]
 
         for el in to_plot:
-            pl.feature_exploration_plots(el[0], kmer, output, el[1])
+            pl.feature_exploration_plots(el[0], kmer, output, el[1], el[2])
+            pl.do_PCA(el[0], kmer, output, el[1])
 
 
 

@@ -4,8 +4,11 @@ import pandas as pd
 import seaborn as sns
 import os
 import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
 from sklearn.metrics import roc_curve, auc
+from sklearn.preprocessing import StandardScaler
 from deepmp.call_modifications import get_accuracy_pos
+
 
 def plot_ROC (y_test, probas, fig_out, kn='Linear'):
     fpr, tpr, thresholds = roc_curve(y_test, probas)
@@ -52,3 +55,54 @@ def accuracy_cov(pred, label, cov, output):
 
     plt.savefig(os.path.join(output, 'acc_vs_cov.png'))
     plt.close()
+
+
+def feature_exploration_plots(feat, kmer, output, plot_label, xlim):
+
+    feat.reset_index(drop=True)
+
+    fig, ax = plt.subplots(figsize=(5, 5))
+    sns.displot(x=feat[8].tolist(), hue=feat['calls'].tolist(), data=feat, kind='kde')
+
+    fig.tight_layout()
+    plt.xlim(left=xlim[0], right=xlim[1])
+
+    plt.savefig(os.path.join(output, plot_label))
+    plt.close()
+
+
+def do_PCA(df, kmer, output, plot_label):
+    features = list(df.columns[0:17])
+    x = df.loc[:, features].values
+    y = df.loc[:,['calls']].values
+    x = StandardScaler().fit_transform(x)
+
+    pca = PCA(n_components=2)
+    principalComponents = pca.fit_transform(x)
+    principalDf = pd.DataFrame(data = principalComponents, 
+        columns = ['PC1', 'PC2'])
+
+    principalDF = pd.concat([principalDf, df[['calls']]], axis = 1)
+
+    fig_out = os.path.join(output, 'PCA_{}'.format(plot_label))
+    
+    plot_PCA(principalDF, fig_out)
+
+
+def plot_PCA(finalDf, fig_out):
+    fig = plt.figure(figsize = (8,8))
+    ax = fig.add_subplot(1,1,1) 
+    ax.set_xlabel('PC1', fontsize = 15)
+    ax.set_ylabel('PC2', fontsize = 15)
+    ax.set_title('PCA', fontsize = 20)
+    targets = ['FN', 'FP', 'TN', 'TP']
+    colors = ['red', 'green', 'blue', 'orange']
+    for target, color in zip(targets, colors):
+        indicesToKeep = finalDf['calls'] == target
+        ax.scatter(finalDf.loc[indicesToKeep, 'PC1']
+                , finalDf.loc[indicesToKeep, 'PC2']
+                , c = color
+                , s = 1)
+    ax.legend(targets)
+
+    plt.savefig(fig_out)
