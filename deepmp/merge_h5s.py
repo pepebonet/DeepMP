@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import h5py
+import random
 import numpy as np
 from collections import OrderedDict
 
@@ -62,6 +63,7 @@ def save(filename, data):
 
 def get_set(folder, output, label):
     filelist = [os.path.join(folder, el) for el in os.listdir(folder)]
+    random.shuffle(filelist)
     data = OrderedDict()
 
     for f in filelist:
