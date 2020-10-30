@@ -37,49 +37,50 @@ def cli(debug):
 # ------------------------------------------------------------------------------
 # CALL USER MODIFICATIONS
 # ------------------------------------------------------------------------------
-@cli.command(short_help='Calling modifications from users end')
+@cli.command(short_help='Calling modifications from user end')
 @click.option(
-    '-model', '--model', required=True,
+    '-m', '--model_type', required=True,
     type=click.Choice(['seq', 'err', 'joint']),
-    help='choose model to train'
+    help='choose model to test'
 )
 @click.option(
     '-tf', '--test_file', required=True,
     help='path to training set'
 )
 @click.option(
-    '-one_hot', '--one_hot_embedding', is_flag=True,
-    help='use one hot embedding'
-)
-@click.option(
-    '-ks', '--kmer_sequence', default=17,
+    '-k', '--kmer', default=17,
     help='kmer length for sequence training'
 )
 @click.option(
-    '-me', '--model_err', default='',
+    '-md', '--model_dir', default='',
     help='directory to trained error model'
-)
-@click.option(
-    '-ms', '--model_seq', default='',
-    help='directory to trained sequence model'
-)
-@click.option(
-    '-cl', '--columns', default=None,
-    help='columns containing the features'
 )
 @click.option(
     '-o', '--output',
     help='output path to save files'
 )
+@click.option(
+    '-ef', '--err_features' , is_flag=True,
+    help='use error features in sequence model'
+)
+@click.option(
+    '-pos', '--position_test' , is_flag=True,
+    help='position analysis'
+)
+@click.option(
+    '-pt', '--prediction_type',
+    type=click.Choice(['min_max', 'threshold']),
+    help='choose prediction type for position-based test'
+)
 def call_user_mods(**kwargs):
-    """Call user modifications"""
+    """Call modifications"""
     args = Namespace(**kwargs)
 
-    call_user_mods(
-        args.model, args.test_file, args.model_err, args.model_seq,
-        args.one_hot_embedding, args.kmer_sequence, args.columns, args.output
+    call_mods_user(
+        args.model_type, args.test_file, args.model_dir,
+        args.kmer, args.output, args.err_features,
+        args.position_test, args.prediction_type
     )
-
 # ------------------------------------------------------------------------------
 # CALL MODIFICATIONS
 # ------------------------------------------------------------------------------
@@ -242,10 +243,6 @@ def train_nns(**kwargs):
     '-stsv', '--save-tsv', is_flag=True, help='Whether to store tsv. Default = False'
 )
 @click.option(
-    '-me', '--memory-efficient', is_flag=True,
-    help='moderate improvement to handle large feature files'
-)
-@click.option(
     '-st', '--split_type', required=True,
     type=click.Choice(['pos', 'read']),
     help='Type of train-test-val split to select. Positions or read'
@@ -260,16 +257,11 @@ def train_nns(**kwargs):
 )
 def merge_and_preprocess(feature_type, error_treated, error_untreated,
     sequence_treated, sequence_untreated, combined_features, 
-    num_err_feat, output, save_tsv, memory_efficient, cpus, split_type):
-    if feature_type == 'both':
-        do_seq_err_preprocess(
-            sequence_treated, sequence_untreated, error_treated,
-            error_untreated, output, num_err_feat
-        )
-    elif feature_type == 'combined':
+    num_err_feat, output, save_tsv, cpus, split_type):
+
+    if feature_type == 'combined':
         do_combined_preprocess(
-            combined_features, output, save_tsv, 
-            memory_efficient, cpus, split_type
+            combined_features, output, save_tsv, cpus, split_type
         )
     elif feature_type == 'combined_single':
         no_split_combined_preprocess(

@@ -171,7 +171,10 @@ def _write_featurestr_to_file(write_fp, featurestr_q):
 def _features_to_str(features):
     chrom, pos, alignstrand, loc_in_ref, readname, strand, k_mer, signal_means, \
         signal_stds, signal_median, signal_skew, signal_kurt, signal_diff, \
-        signal_lens, cent_signals, qual, mis, ins, dele, methy_label, flag = features
+        signal_lens, cent_signals, qual, mis, ins, dele, methy_label, flag, \
+        mid_base, mid_base_min1, mid_base_min2, mid_base_plus1, \
+        mid_base_plus2 = features
+
     means_text = ','.join([str(x) for x in np.around(signal_means, decimals=6)])
     stds_text = ','.join([str(x) for x in np.around(signal_stds, decimals=6)])
     median_text = ','.join([str(x) for x in np.around(signal_median, decimals=6)])
@@ -184,11 +187,18 @@ def _features_to_str(features):
     mis_text = ','.join([str(x) for x in mis])
     ins_text = ','.join([str(x) for x in ins])
     dele_text = ','.join([str(x) for x in dele])
+    mid_base_txt = ','.join([str(x) for x in mid_base])
+    mid_base_min1_txt = ','.join([str(x) for x in mid_base_min1])
+    mid_base_min2_txt = ','.join([str(x) for x in mid_base_min2])
+    mid_base_plus1_txt = ','.join([str(x) for x in mid_base_plus1])
+    mid_base_plus2_txt = ','.join([str(x) for x in mid_base_plus2])
 
     return "\t".join([chrom, str(pos), alignstrand, str(loc_in_ref), readname, \
         strand, k_mer, means_text, stds_text, median_text, skew_text, \
         kurt_text, diff_text, signal_len_text, cent_signals_text, qual_text, \
-        mis_text, ins_text, dele_text, str(methy_label), str(flag)])
+        mis_text, ins_text, dele_text, str(methy_label), str(flag), \
+        mid_base_min2_txt, mid_base_min1_txt, mid_base_txt, mid_base_plus1_txt, \
+        mid_base_plus2_txt])
 
 
 def _read_position_file(position_file):
@@ -352,6 +362,13 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                         k_signals, raw_signals_len
                     )
 
+                    mid_loc = int((len(k_signals) - 1) / 2)
+                    mid_base = k_signals[mid_loc]
+                    mid_base_min1 = k_signals[mid_loc - 1]
+                    mid_base_min2 = k_signals[mid_loc - 2]
+                    mid_base_plus1 = k_signals[mid_loc + 1]
+                    mid_base_plus2 = k_signals[mid_loc + 2]
+
                     pos_err = [item[0] - 1 for item in error_features]
                     comb_err = error_features[np.argwhere(np.asarray(pos_err) == pos)[0][0]]
                     try: 
@@ -368,12 +385,14 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                         flag = 0
                     else:
                         flag = 1
-                    print(flag)
+                    
                     features_list.append(
                         (chrom, pos, alignstrand, loc_in_ref, readname, strand,
                         k_mer, signal_means, signal_stds, signal_median,  
                         signal_skew, signal_kurtosis, signal_diff, signal_lens, 
-                        cent_signals, qual, mis, ins, dele, methy_label, flag)
+                        cent_signals, qual, mis, ins, dele, methy_label, flag, 
+                        mid_base, mid_base_min1, mid_base_min2, mid_base_plus1, 
+                        mid_base_plus2)
                     )
         except Exception:
             error += 1

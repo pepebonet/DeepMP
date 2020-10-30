@@ -14,11 +14,11 @@ import deepmp.preprocess as pr
 def acc_test_single(data, labels, model_file, score_av='binary'):
     model = load_model(model_file)
     test_loss, test_acc = model.evaluate(data, tf.convert_to_tensor(labels))
-
+    
     pred =  model.predict(data).flatten()
     inferred = np.zeros(len(pred), dtype=int)
     inferred[np.argwhere(pred >= 0.5)] = 1
-
+    
     precision, recall, f_score, _ = precision_recall_fscore_support(
         labels, inferred, average=score_av
     )
@@ -81,6 +81,7 @@ def pred_site(df, pred_label, meth_label,
         else:
             pred_label.append(0)
         meth_label.append(df.methyl_label.unique()[0])
+
     ## threshold prediction
     elif pred_type =='threshold':
         inferred = df['inferred_label'].values
@@ -167,8 +168,8 @@ def call_mods(model_type, test_file, trained_model, kmer, output,
     if test_file.rsplit('.')[-1] == 'tsv':
         print("processing tsv file, this might take a while...")
         test = pd.read_csv(test_file, sep='\t', names=pr.names_all)
-        pr.preprocess_combined(test, os.path.dirname(test_file), 'all', 'test')
-        test_file =os.path.join(os.path.dirname(test_file), 'test_all.h5')
+        ut.preprocess_combined(test, os.path.dirname(test_file), 'all', 'test')
+        test_file = os.path.join(os.path.dirname(test_file), 'test_all.h5')
 
     ## read-based calling
     if model_type == 'seq':
@@ -182,7 +183,6 @@ def call_mods(model_type, test_file, trained_model, kmer, output,
         acc, pred, inferred = acc_test_single(data_err, labels, trained_model)
 
     elif model_type == 'joint':
-
         data_seq, data_err, labels = ut.get_data_jm(test_file, kmer)
         acc, pred, inferred = acc_test_single([data_seq, data_err], labels, trained_model)
 

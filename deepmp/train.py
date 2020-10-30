@@ -15,7 +15,8 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
     if err_features:
         features = 9
     else:
-        features = 5
+        # features = 5
+        features = 3
 
     ## train model
     if rnn:
