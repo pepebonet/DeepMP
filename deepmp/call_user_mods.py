@@ -48,16 +48,40 @@ def pred_site(df, pred_label, meth_label,
     return pred_label, meth_label
 
 
+def pred_site_all(df, pred_min_max, pred_01, pred_02, pred_03, pred_04,  meth_label):
+
+    ## min+max prediction
+    comb_pred = df.pred_prob.min() + df.pred_prob.max()
+    if comb_pred >= 1:
+        pred_min_max.append(1)
+    else:
+        pred_min_max.append(0)
+        
+    ## threshold prediction
+    for i in [(pred_01, 0.1), (pred_02, 0.2), (pred_03, 0.3), (pred_04, 0.4)]:
+        inferred = df['inferred_label'].values
+        if np.sum(inferred) / len(inferred) >= i[1]:
+            i[0].append(1)
+        else:
+            i[0].append(0)
+    
+    meth_label.append(df.methyl_label.unique()[0])
+
+    return pred_min_max, pred_01, pred_02, pred_03, pred_04, meth_label
+
+
 def do_per_position_analysis(df, pred_vec, inferred_vec, output, pred_type):
     df['id'] = df['chrom'] + '_' + df['pos'].astype(str)
     df['pred_prob'] = pred_vec
     df['inferred_label'] = inferred_vec
-    meth_label = []; pred_label = []; cov = []; new_df = pd.DataFrame()
-    pred_label_cov = []
+    cov = []; pred_min_max = []; pred_01 = []; pred_02 = []
+    pred_03 = []; pred_04 = []; meth_label = []
 
     import pdb;pdb.set_trace()
     for i, j in df.groupby('id'):
-        pred_label, meth_label = pred_site(j, pred_label, meth_label, pred_type)
+        pred_min_max, pred_01, pred_02, pred_03, pred_04, meth_label = pred_site(
+            j, pred_min_max, pred_01, pred_02, pred_03, pred_04, meth_label
+        )
         cov.append(len(j))
         import pdb;pdb.set_trace()
 
@@ -113,4 +137,5 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
             #TODO DELETE
             test['methyl_label'] = labels
 
+        #TODO output proper df with all the information. put columns at different thresholds as well as the min max for testing
         do_per_position_analysis(test, pred, inferred, output, pred_type)
