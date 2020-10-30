@@ -211,8 +211,8 @@ def concat_tensors_seq(bases, signal_means, signal_stds, signal_medians,
                                 tf.reshape(signal_means, [-1, kmer, 1]),
                                 tf.reshape(signal_stds, [-1, kmer, 1]),
                                 tf.reshape(signal_medians, [-1, kmer, 1]),
-                                tf.reshape(signal_range, [-1, kmer, 1]),
-                                tf.reshape(signal_lens, [-1, kmer, 1])],
+                                tf.reshape(signal_range, [-1, kmer, 1])],
+                                # tf.reshape(signal_lens, [-1, kmer, 1])],
                                 axis=2)
 
 def concat_tensors_seq_all(bases, signal_means, signal_stds, signal_medians,

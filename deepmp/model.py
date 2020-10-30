@@ -29,7 +29,7 @@ def get_brnn_model(base_num, embedding_size, features = 5, rnn_cell = "lstm"):
 
     return model
 
-def get_sequence_model(base_num, embedding_size, features = 5):
+def get_sequence_model(base_num, embedding_size, features = 4):
 
     depth = embedding_size + features
     model = Sequential()

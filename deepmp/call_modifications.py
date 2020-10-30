@@ -18,7 +18,7 @@ def acc_test_single(data, labels, model_file, score_av='binary'):
     pred =  model.predict(data).flatten()
     inferred = np.zeros(len(pred), dtype=int)
     inferred[np.argwhere(pred >= 0.5)] = 1
-
+    
     precision, recall, f_score, _ = precision_recall_fscore_support(
         labels, inferred, average=score_av
     )
