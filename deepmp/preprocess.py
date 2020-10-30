@@ -9,7 +9,7 @@ import pandas as pd
 import tensorflow as tf
 from multiprocessing import Pool
 from deepmp.utils import kmer2code
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
@@ -84,6 +84,24 @@ def do_single_preprocess(feature_type, sequence_treated, sequence_untreated,
             ut.preprocess_sequence(el[0], output, el[1])
 
 
+def balanced_set(df):
+    label_counts = Counter(df['methyl_label'])
+    if len(labels_counts) == 2:
+        min_label = min(label_counts, key=label_counts.get)
+        zeros = df[df['methyl_label'] == 0]
+        ones = df[df['methyl_label'] == 1]
+
+        if min_label == 0:
+            ones = ones.sample(label_counts[0])
+        else:
+            zeros = zeros.sample(label_counts[1])
+        
+        return pd.concat([ones, zeros])
+    
+    else:
+        return df
+
+
 def save_tsv(df, output, file, mode='w'):
     file_name = os.path.join(output, '{}.tsv'.format(file))
     if mode == 'a':
@@ -94,7 +112,8 @@ def save_tsv(df, output, file, mode='w'):
 
 def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps, split_type):
     df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
-    
+    # df = balanced_set(df)
+
     if split_type == 'read':
         data = get_training_test_val(df)
     else:
@@ -113,11 +132,6 @@ def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps, split_ty
 
 def split_sets_files_single(file, tmp_folder, counter, tsv_flag, output, tmps, split_type):
     df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
-
-    # new_labels = np.zeros(df.shape[0], int)
-    # indices = [i for i, s in enumerate(df['readname'].tolist()) if '_treat.fast5' in s]
-    # new_labels[indices] = 1
-    # df['methyl_label'] = new_labels
 
     if split_type == 'read':
         data = [(df, 'test')]
@@ -139,13 +153,14 @@ def split_sets_files_single(file, tmp_folder, counter, tsv_flag, output, tmps, s
 
 def do_combined_preprocess(features, output, tsv_flag, cpus, split_type):
 
-    tmp_folder = os.path.join(os.path.dirname(features), 'tmp/')
+    tmp_folder = os.path.join(os.path.dirname(features), 'tmp_all/')
     tmp_train = os.path.join(os.path.dirname(features), 'train/')
     tmp_test = os.path.join(os.path.dirname(features), 'test/')
     tmp_val = os.path.join(os.path.dirname(features), 'val/')
 
     print('Splitting original file...')
-    os.mkdir(tmp_folder); os.mkdir(tmp_train); os.mkdir(tmp_test); os.mkdir(tmp_val)
+    os.mkdir(tmp_folder); 
+    os.mkdir(tmp_train); os.mkdir(tmp_test); os.mkdir(tmp_val)
     cmd = 'split -l {} {} {}'.format(20000, features, tmp_folder)
     subprocess.call(cmd, shell=True)
     
@@ -173,11 +188,12 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type):
 
 def no_split_combined_preprocess(features, output, tsv_flag, cpus, split_type):
 
-    tmp_folder = os.path.join(os.path.dirname(features), 'tmp/')
+    tmp_folder = os.path.join(os.path.dirname(features), 'tmp_all/')
     tmp_test = os.path.join(os.path.dirname(features), 'test/')
 
     print('Splitting original file...')
-    os.mkdir(tmp_folder); os.mkdir(tmp_test)
+    os.mkdir(tmp_folder)
+    os.mkdir(tmp_test)
     cmd = 'split -l {} {} {}'.format(20000, features, tmp_folder) 
     subprocess.call(cmd, shell=True)
     
@@ -195,5 +211,5 @@ def no_split_combined_preprocess(features, output, tsv_flag, cpus, split_type):
     mh5.get_set(tmp_test, output, 'test')
 
     print('Removing tmp folders and done')
-    subprocess.call('rm -r {}'.format(tmp_folder), shell=True)
+    # subprocess.call('rm -r {}'.format(tmp_folder), shell=True)
     subprocess.call('rm -r {}'.format(tmp_test), shell=True)
