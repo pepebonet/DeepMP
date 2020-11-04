@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 import tensorflow as tf
-from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.layers import *
+from tensorflow.keras.models import Model, Sequential
+from tensorflow.keras.applications.inception_v3 import InceptionV3
 
 
 class SequenceCNN(Model):
@@ -174,3 +175,68 @@ def get_single_err_model(base_num, depth = 9):
               metrics=['accuracy'])
     print(model.summary())
     return model
+
+
+def inception_layer(indata, training, scope_str="inception_layer", times=16):
+    import pdb;pdb.set_trace()
+
+
+def incept_net(training, scopestr="inception_net"):
+
+        # input_signal = signals
+        
+        model = Sequential()
+        with tf.compat.v1.variable_scope(scopestr + "conv_layer1"):
+            model.add(tf.keras.layers.InputLayer(input_shape=(1, 360)))
+            model.add(tf.keras.layers.Conv1D(filters=64, kernel_size=[1, 7], strides=2, padding="same", use_bias=False, name="conv"))
+            model.add(tf.keras.layers.BatchNormalization(trainable=True, momentum=0.9))
+            model.add(tf.keras.layers.ReLU())
+        with tf.compat.v1.variable_scope(scopestr + "maxpool_layer1"):
+            model.add(tf.keras.layers.MaxPooling1D(3, strides=2, padding="same", name="maxpool"))
+        with tf.compat.v1.variable_scope(scopestr + "conv_layer2"):
+            model.add(tf.keras.layers.Conv1D(filters=128, kernel_size=1, strides=1, padding="same", use_bias=False, name="conv2"))
+            model.add(tf.keras.layers.BatchNormalization(trainable=training, momentum=0.9))
+            model.add(tf.keras.layers.ReLU())
+        with tf.compat.v1.variable_scope(scopestr + "conv_layer3"):
+            model.add(tf.keras.layers.Conv1D(filters=256, kernel_size=3, strides=1, padding="same", use_bias=False, name="conv3"))
+            model.add(tf.keras.layers.BatchNormalization(trainable=training, momentum=0.9))
+            model.add(tf.keras.layers.ReLU())
+        # import pdb;pdb.set_trace()
+        # inception layer x 11
+        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer1'):
+        #     model.add(inception_layer(x, training, scopestr + "1"))
+        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer2'):
+        #     model.add(inception_layer(x, training, scopestr + "2"))
+        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer3'):
+        #     model.add(inception_layer(x, training, scopestr + "3"))
+        # with tf.compat.v1.variable_scope(scopestr + 'maxpool_layer2'):
+        #     model.add(tf.keras.layers.MaxPooling2D(x, [1, 3], strides=2, padding="same", name="maxpool"))
+        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer4'):
+        #     model.add(inception_layer(x, training, scopestr + "4"))
+        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer5'):
+        #     model.add(inception_layer(x, training, scopestr + "5"))
+        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer6'):
+        #     model.add(inception_layer(x, training, scopestr + "6"))
+        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer7'):
+        #     model.add(inception_layer(x, training, scopestr + "7"))
+        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer8'):
+        #     model.add(inception_layer(x, training, scopestr + "8"))
+        # with tf.compat.v1.variable_scope(scopestr + 'maxpool_layer3'):
+        #     model.add(tf.keras.layers.MaxPooling2D(x, [1, 3], strides=2, padding="same", name="maxpool"))
+        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer9'):
+        #     model.add(inception_layer(x, training, scopestr + "9"))
+        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer10'):
+        #     model.add(inception_layer(x, training, scopestr + "10"))
+        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer11'):
+        #     model.add(inception_layer(x, training, scopestr + "11"))
+        # with tf.compat.v1.variable_scope(scopestr + 'avgpool_layer1'):
+        #     model.add(tf.keras.layers.AveragePooling1D(7, strides=1, padding="same", name="avgpool"))
+        
+        model.compile(loss='binary_crossentropy',
+                   optimizer=tf.keras.optimizers.Adam(),
+                   metrics=['accuracy'])
+        print(model.summary())
+        # x_shape = x.get_shape().as_list()
+        # signal_model_output = tf.reshape(x, [-1, x_shape[2] * x_shape[3]])
+        return model
+

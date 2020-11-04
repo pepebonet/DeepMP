@@ -142,7 +142,7 @@ def call_modifications(**kwargs):
 @cli.command(short_help='Trainining neural networks')
 @click.option(
     '-m', '--model_type', required=True,
-    type=click.Choice(['seq', 'err', 'joint']),
+    type=click.Choice(['seq', 'err', 'joint', 'incep']),
     help='choose model to train'
 )
 @click.option(
@@ -201,10 +201,18 @@ def train_nns(**kwargs):
                 )
 
     elif args.model_type == 'joint':
-        train_jm( args.train_file, args.val_file,
-                                    args.log_dir, args.model_dir, args.batch_size,
-                                    args.kmer, args.epochs
-                                    )
+        train_jm(
+                args.train_file, args.val_file,
+                args.log_dir, args.model_dir, args.batch_size,
+                args.kmer, args.epochs
+                )
+    
+    elif args.model_type == 'incep':
+        train_inception(
+                args.train_file, args.val_file,
+                args.log_dir, args.model_dir, args.batch_size,
+                args.epochs
+                )
 
 
 

@@ -161,8 +161,8 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type):
     print('Splitting original file...')
     # os.mkdir(tmp_folder); 
     # os.mkdir(tmp_train); os.mkdir(tmp_test); os.mkdir(tmp_val)
-    cmd = 'split -l {} {} {}'.format(20000, features, tmp_folder)
-    subprocess.call(cmd, shell=True)
+    # cmd = 'split -l {} {} {}'.format(20000, features, tmp_folder)
+    # subprocess.call(cmd, shell=True)
     
     print('Extracting features to h5 and tsv files...')
     counter = 0

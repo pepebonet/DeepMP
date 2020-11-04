@@ -204,6 +204,13 @@ def get_data_jm(file, kmer, get_id=False):
         return data_sequence, data_errors, label
 
 
+def get_data_incep(file, get_id=False):
+    ## preprocess data
+    central_signals, label = load_incep_data(file)
+
+    return tf.reshape(central_signals, [-1, 1, 360]), label
+
+
 def concat_tensors_seq(bases, signal_means, signal_stds, signal_medians,
                         signal_range, signal_lens, kmer):
     return tf.concat([bases,
@@ -278,6 +285,15 @@ def load_jm_data(file):
     return bases, signal_means, signal_stds, signal_medians, signal_range, \
         signal_lens, base_qual, base_mis, base_ins, base_del, label, \
         # chrom, readname, pos, strand, pos_in_strand
+
+
+def load_incep_data(file):
+
+    with h5py.File(file, 'r') as hf:
+        central_signals = hf['central_signals'][:]
+        label = hf['methyl_label'][:]
+
+    return central_signals, label
 
 
 def load_error_data(file):
