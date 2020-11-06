@@ -20,7 +20,12 @@ names_all=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
             'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_median',
             'signal_skew', 'signal_kurt', 'signal_diff', 'signal_lens',
             'cent_signals', 'qual', 'mis', 'ins', 'del', 'methyl_label', 'flag', 
-            'cent_min2', 'cent_min1', 'cent', 'cent_plus1', 'cent_plus2']
+            'cent_min8', 'cent_min7', 'cent_min6', 'cent_min5', 'cent_min4', 
+            'cent_min3', 'cent_min2', 'cent_min1', 'cent', 'cent_plus1', 'cent_plus2',
+            'cent_plus3', 'cent_plus4', 'cent_plus5', 'cent_plus6', 'cent_plus7', 'cent_plus8', 
+            'cent_min8_nonorm', 'cent_min7_nonorm', 'cent_min6_nonorm', 'cent_min5_nonorm', 'cent_min4_nonorm', 
+            'cent_min3_nonorm', 'cent_min2_nonorm', 'cent_min1_nonorm', 'cent_nonorm', 'cent_plus1_nonorm', 'cent_plus2_nonorm',
+            'cent_plus3_nonorm', 'cent_plus4_nonorm', 'cent_plus5_nonorm', 'cent_plus6_nonorm', 'cent_plus7_nonorm', 'cent_plus8_nonorm']
 
 
 def get_data(treated, untreated, names='', nopos=False):
@@ -159,10 +164,10 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type):
     tmp_val = os.path.join(os.path.dirname(features), 'val/')
 
     print('Splitting original file...')
-    # os.mkdir(tmp_folder); 
-    # os.mkdir(tmp_train); os.mkdir(tmp_test); os.mkdir(tmp_val)
-    # cmd = 'split -l {} {} {}'.format(20000, features, tmp_folder)
-    # subprocess.call(cmd, shell=True)
+    os.mkdir(tmp_folder); 
+    os.mkdir(tmp_train); os.mkdir(tmp_test); os.mkdir(tmp_val)
+    cmd = 'split -l {} {} {}'.format(20000, features, tmp_folder)
+    subprocess.call(cmd, shell=True)
     
     print('Extracting features to h5 and tsv files...')
     counter = 0
@@ -180,7 +185,7 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type):
     mh5.get_set(tmp_train, output, 'train')
 
     print('Removing tmp folders and done')
-    # subprocess.call('rm -r {}'.format(tmp_folder), shell=True)
+    subprocess.call('rm -r {}'.format(tmp_folder), shell=True)
     subprocess.call('rm -r {}'.format(tmp_train), shell=True)
     subprocess.call('rm -r {}'.format(tmp_test), shell=True)
     subprocess.call('rm -r {}'.format(tmp_val), shell=True)
