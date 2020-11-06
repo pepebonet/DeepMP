@@ -13,10 +13,9 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
     input_val, vy = ut.get_data_sequence(val_file, kmer, err_features)
 
     if err_features:
-        features = 9
+        features = 8
     else:
-        # features = 5
-        features = 3
+        features = 4
 
     ## train model
     if rnn:

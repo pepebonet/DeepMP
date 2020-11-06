@@ -10,23 +10,39 @@ class SequenceCNN(Model):
 
     def __init__(self, **kwargs):
         super(SequenceCNN, self).__init__(**kwargs)
-        self.conv1 = Conv1D(256, 3, activation='relu')
-        self.localconv1 = LocallyConnected1D(256, 3, activation='relu')
-        self.conv2 = Conv1D(256, 3, activation='relu')
-        self.localconv2 = LocallyConnected1D(256, 3, activation='relu')
+        self.conv1 = Conv1D(256, 3)
+        self.bn1 = BatchNormalization()
+        self.relu1 = ReLU()
+        self.localconv1 = LocallyConnected1D(256, 3)
+        self.bn2 = BatchNormalization()
+        self.relu2 = ReLU()
+        self.conv2 = Conv1D(256, 3)
+        self.bn3 = BatchNormalization()
+        self.relu3 = ReLU()
+        self.localconv2 = LocallyConnected1D(256, 3)
+        self.bn4 = BatchNormalization()
+        self.relu4 = ReLU()
         self.pool = GlobalAveragePooling1D(name='seq_pooling_layer')
-        self.dropout = Dropout(0.2)
+        #self.dropout = Dropout(0.2)
         self.dense = Dense(1, activation='sigmoid', use_bias=False)
 
     def call(self, inputs, submodel=False):
         x = self.conv1(inputs)
+        x = self.bn1(x)
+        x = self.relu1(x)
         x = self.localconv1(x)
+        x = self.bn2(x)
+        x = self.relu2(x)
         x = self.conv2(x)
+        x = self.bn3(x)
+        x = self.relu3(x)
         x = self.localconv2(x)
+        x = self.bn4(x)
+        x = self.relu4(x)
         x = self.pool(x)
         if submodel:
             return x
-        x = self.dropout(x)
+        #x = self.dropout(x)
         return self.dense(x)
 
 
@@ -219,12 +235,12 @@ class Inception(Model):
 
         self.conv_plus = ReLU()
 
-    
+
     def call(self, inputs, submodel=False):
         x = self.max_pool(inputs)
-        x = self.conv1a_1(x) 
-        x = self.conv1a_2(x) 
-        x = self.conv1a_3(x) 
+        x = self.conv1a_1(x)
+        x = self.conv1a_2(x)
+        x = self.conv1a_3(x)
 
         y = self.conv0b_1(inputs)
         y = self.conv0b_2(y)
@@ -238,11 +254,11 @@ class Inception(Model):
         z = self.conv1c_3(z)
 
         r = self.conv0d_1(inputs)
-        r = self.conv0d_2(r) 
-        r = self.conv0d_3(r) 
-        r = self.conv1d_1(r) 
-        r = self.conv1d_2(r) 
-        r = self.conv1d_3(r) 
+        r = self.conv0d_2(r)
+        r = self.conv0d_3(r)
+        r = self.conv1d_1(r)
+        r = self.conv1d_2(r)
+        r = self.conv1d_3(r)
 
         s = self.conv_stem_1(inputs)
         s = self.conv_stem_2(s)
@@ -258,7 +274,7 @@ class Inception(Model):
 
         u =  tf.math.add(s, t)
         u = self.conv_plus(u)
-        
+
         return tf.concat([x, y, z, r, u], axis=-1)
 
 
@@ -295,7 +311,7 @@ class InceptNet(Model):
         self.dropout = Dropout(0.2)
         self.dense_2 = Dense(1, activation='sigmoid', use_bias=False)
 
-        
+
     def call(self, inputs, submodel=False):
         x = self.conv1_1(inputs)
         x = self.batch_norm_1(x)
@@ -324,4 +340,3 @@ class InceptNet(Model):
         x = self.dense_1(x)
         x = self.dropout(x)
         return self.dense_2(x)
-        
