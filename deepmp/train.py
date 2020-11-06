@@ -157,16 +157,22 @@ def train_inception(train_file, val_file, log_dir, model_dir, batch_size, epochs
     input_train, label = ut.get_data_incep(train_file)
     input_val, vy = ut.get_data_incep(val_file)
 
+    # model = incept_net(training=True)
+
     import pdb;pdb.set_trace()
-    model = incept_net(training=True)
+    model = InceptNet()
+    model.compile(loss='binary_crossentropy',
+                   optimizer=tf.keras.optimizers.Adam(),
+                   metrics=['accuracy'])
+    input_shape = (None, 1, 360)
     import pdb;pdb.set_trace()
     
-    # input_shape = ([(None, kmer, 5), (None, kmer, 9)])
-    # model.build(input_shape=(360, 1))
-    # print(model.summary())
-    
-    log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm")
-    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm_model")
+    model.build(input_shape)
+    import pdb;pdb.set_trace()
+    print(model.summary())
+    import pdb;pdb.set_trace()
+    # log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm")
+    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_incep_model")
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
                                             log_dir = log_dir, histogram_freq=1)

@@ -177,66 +177,151 @@ def get_single_err_model(base_num, depth = 9):
     return model
 
 
-def inception_layer(indata, training, scope_str="inception_layer", times=16):
-    import pdb;pdb.set_trace()
+class Inception(Model):
 
+    def __init__(self, **kwargs):
+        super(Inception, self).__init__(**kwargs)
+        times = 16
+        self.max_pool = MaxPooling1D(3, strides=1,  padding="same")
+        self.conv1a_1 = Conv1D(filters=int(times * 3), kernel_size=1, strides=1, padding="same", use_bias=False)
+        self.conv1a_2 = BatchNormalization(trainable=True)
+        self.conv1a_3 = ReLU()
 
-def incept_net(training, scopestr="inception_net"):
+        self.conv0b_1 = Conv1D(filters=times * 3, kernel_size=1, strides=1, padding="same", use_bias=False)
+        self.conv0b_2 = BatchNormalization(trainable=True)
+        self.conv0b_3 = ReLU()
 
-        # input_signal = signals
+        self.conv0c_1 = Conv1D(filters=times * 2, kernel_size=1, strides=1, padding="same", use_bias=False)
+        self.conv0c_2 = BatchNormalization(trainable=True)
+        self.conv0c_3 = ReLU()
+        self.conv1c_1 = Conv1D(filters=times * 3, kernel_size=3, strides=1, padding="same", use_bias=False)
+        self.conv1c_2 = BatchNormalization(trainable=True)
+        self.conv1c_3 = ReLU()
+
+        self.conv0d_1 = Conv1D(filters=times * 2, kernel_size=1, strides=1, padding="same", use_bias=False)
+        self.conv0d_2 = BatchNormalization(trainable=True)
+        self.conv0d_3 = ReLU()
+        self.conv1d_1 = Conv1D(filters=times * 3, kernel_size=5, strides=1, padding="same", use_bias=False)
+        self.conv1d_2 = BatchNormalization(trainable=True)
+        self.conv1d_3 = ReLU()
+
+        self.conv_stem_1 = Conv1D(filters=times * 3, kernel_size=1, strides=1, padding="same", use_bias=False)
+        self.conv_stem_2 = BatchNormalization(trainable=True)
+
+        self.conv0e_1 = Conv1D(filters=times * 2, kernel_size=1, strides=1, padding="same", use_bias=False)
+        self.conv0e_2 = BatchNormalization(trainable=True)
+        self.conv0e_3 = ReLU()
+        self.conv1e_1 = Conv1D(filters=times*4, kernel_size=3, strides=1, padding="same", use_bias=False)
+        self.conv1e_2 = BatchNormalization(trainable=True)
+        self.conv1e_3 = ReLU()
+        self.conv2e_1 = Conv1D(filters=times * 3, kernel_size=1, strides=1, padding="same", use_bias=False)
+        self.conv2e_2 = BatchNormalization(trainable=True)
+
+        self.conv_plus = ReLU()
+
+    
+    def call(self, inputs, submodel=False):
+        x = self.max_pool(inputs)
+        x = self.conv1a_1(x) 
+        x = self.conv1a_2(x) 
+        x = self.conv1a_3(x) 
+
+        y = self.conv0b_1(inputs)
+        y = self.conv0b_2(y)
+        y = self.conv0b_3(y)
+
+        z = self.conv0c_1(inputs)
+        z = self.conv0c_2(z)
+        z = self.conv0c_3(z)
+        z = self.conv1c_1(z)
+        z = self.conv1c_2(z)
+        z = self.conv1c_3(z)
+
+        r = self.conv0d_1(inputs)
+        r = self.conv0d_2(r) 
+        r = self.conv0d_3(r) 
+        r = self.conv1d_1(r) 
+        r = self.conv1d_2(r) 
+        r = self.conv1d_3(r) 
+
+        s = self.conv_stem_1(inputs)
+        s = self.conv_stem_2(s)
+
+        t = self.conv0e_1(inputs)
+        t = self.conv0e_2(t)
+        t = self.conv0e_3(t)
+        t = self.conv1e_1(t)
+        t = self.conv1e_2(t)
+        t = self.conv1e_3(t)
+        t = self.conv2e_1(t)
+        t = self.conv2e_2(t)
+
+        u =  tf.math.add(s, t)
+        u = self.conv_plus(u)
         
-        model = Sequential()
-        with tf.compat.v1.variable_scope(scopestr + "conv_layer1"):
-            model.add(tf.keras.layers.InputLayer(input_shape=(1, 360)))
-            model.add(tf.keras.layers.Conv1D(filters=64, kernel_size=[1, 7], strides=2, padding="same", use_bias=False, name="conv"))
-            model.add(tf.keras.layers.BatchNormalization(trainable=True, momentum=0.9))
-            model.add(tf.keras.layers.ReLU())
-        with tf.compat.v1.variable_scope(scopestr + "maxpool_layer1"):
-            model.add(tf.keras.layers.MaxPooling1D(3, strides=2, padding="same", name="maxpool"))
-        with tf.compat.v1.variable_scope(scopestr + "conv_layer2"):
-            model.add(tf.keras.layers.Conv1D(filters=128, kernel_size=1, strides=1, padding="same", use_bias=False, name="conv2"))
-            model.add(tf.keras.layers.BatchNormalization(trainable=training, momentum=0.9))
-            model.add(tf.keras.layers.ReLU())
-        with tf.compat.v1.variable_scope(scopestr + "conv_layer3"):
-            model.add(tf.keras.layers.Conv1D(filters=256, kernel_size=3, strides=1, padding="same", use_bias=False, name="conv3"))
-            model.add(tf.keras.layers.BatchNormalization(trainable=training, momentum=0.9))
-            model.add(tf.keras.layers.ReLU())
-        # import pdb;pdb.set_trace()
-        # inception layer x 11
-        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer1'):
-        #     model.add(inception_layer(x, training, scopestr + "1"))
-        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer2'):
-        #     model.add(inception_layer(x, training, scopestr + "2"))
-        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer3'):
-        #     model.add(inception_layer(x, training, scopestr + "3"))
-        # with tf.compat.v1.variable_scope(scopestr + 'maxpool_layer2'):
-        #     model.add(tf.keras.layers.MaxPooling2D(x, [1, 3], strides=2, padding="same", name="maxpool"))
-        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer4'):
-        #     model.add(inception_layer(x, training, scopestr + "4"))
-        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer5'):
-        #     model.add(inception_layer(x, training, scopestr + "5"))
-        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer6'):
-        #     model.add(inception_layer(x, training, scopestr + "6"))
-        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer7'):
-        #     model.add(inception_layer(x, training, scopestr + "7"))
-        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer8'):
-        #     model.add(inception_layer(x, training, scopestr + "8"))
-        # with tf.compat.v1.variable_scope(scopestr + 'maxpool_layer3'):
-        #     model.add(tf.keras.layers.MaxPooling2D(x, [1, 3], strides=2, padding="same", name="maxpool"))
-        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer9'):
-        #     model.add(inception_layer(x, training, scopestr + "9"))
-        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer10'):
-        #     model.add(inception_layer(x, training, scopestr + "10"))
-        # with tf.compat.v1.variable_scope(scopestr + 'incp_layer11'):
-        #     model.add(inception_layer(x, training, scopestr + "11"))
-        # with tf.compat.v1.variable_scope(scopestr + 'avgpool_layer1'):
-        #     model.add(tf.keras.layers.AveragePooling1D(7, strides=1, padding="same", name="avgpool"))
-        
-        model.compile(loss='binary_crossentropy',
-                   optimizer=tf.keras.optimizers.Adam(),
-                   metrics=['accuracy'])
-        print(model.summary())
-        # x_shape = x.get_shape().as_list()
-        # signal_model_output = tf.reshape(x, [-1, x_shape[2] * x_shape[3]])
-        return model
+        return tf.concat([x, y, z, r, u], axis=-1)
 
+
+
+class InceptNet(Model):
+
+    def __init__(self, **kwargs):
+        super(InceptNet, self).__init__(**kwargs)
+        self.conv1_1 = Conv1D(filters=64, kernel_size=7, strides=2, padding="same", use_bias=False)
+        self.batch_norm_1 = BatchNormalization(trainable=True)
+        self.relu = ReLU()
+        self.maxpooling = MaxPooling1D(3, strides=2, padding="same")
+        self.conv1_2 = Conv1D(filters=128, kernel_size=1, strides=1, padding="same", use_bias=False)
+        self.batch_norm_2 = BatchNormalization(trainable=True)
+        self.relu = ReLU()
+        self.conv1_3 = Conv1D(filters=256, kernel_size=3, strides=1, padding="same", use_bias=False)
+        self.batch_norm_3 = BatchNormalization(trainable=True)
+        self.relu = ReLU()
+        self.incep_layer_1 = Inception()
+        self.incep_layer_2 = Inception()
+        self.incep_layer_3 = Inception()
+        self.maxpooling_2 = MaxPooling1D(3, strides=2, padding="same")
+        self.incep_layer_4 = Inception()
+        self.incep_layer_5 = Inception()
+        self.incep_layer_6 = Inception()
+        self.incep_layer_7 = Inception()
+        self.incep_layer_8 = Inception()
+        self.maxpooling_3 = MaxPooling1D(3, strides=2, padding="same")
+        self.incep_layer_9 = Inception()
+        self.incep_layer_10 = Inception()
+        self.incep_layer_11 = Inception()
+        self.AveragePooling = AveragePooling1D(7, strides=1, padding="same")
+        self.dense_1 = Dense(units=100, use_bias=False)
+        self.dropout = Dropout(0.2)
+        self.dense_2 = Dense(1, activation='sigmoid', use_bias=False)
+
+        
+    def call(self, inputs, submodel=False):
+        x = self.conv1_1(inputs)
+        x = self.batch_norm_1(x)
+        x = self.relu(x)
+        x = self.maxpooling(x)
+        x = self.conv1_2(x)
+        x = self.batch_norm_2(x)
+        x = self.relu(x)
+        x = self.conv1_3(x)
+        x = self.batch_norm_3(x)
+        x = self.relu(x)
+        x = self.incep_layer_1(x)
+        x = self.incep_layer_2(x)
+        x = self.incep_layer_3(x)
+        x = self.maxpooling_2(x)
+        x = self.incep_layer_4(x)
+        x = self.incep_layer_5(x)
+        x = self.incep_layer_6(x)
+        x = self.incep_layer_7(x)
+        x = self.incep_layer_8(x)
+        x = self.maxpooling_3(x)
+        x = self.incep_layer_9(x)
+        x = self.incep_layer_10(x)
+        x = self.incep_layer_11(x)
+        x = self.AveragePooling(x)
+        x = self.dense_1(x)
+        x = self.dropout(x)
+        return self.dense_2(x)
+        
