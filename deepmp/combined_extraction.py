@@ -172,8 +172,16 @@ def _features_to_str(features):
     chrom, pos, alignstrand, loc_in_ref, readname, strand, k_mer, signal_means, \
         signal_stds, signal_median, signal_skew, signal_kurt, signal_diff, \
         signal_lens, cent_signals, qual, mis, ins, dele, methy_label, flag, \
-        mid_base, mid_base_min1, mid_base_min2, mid_base_plus1, \
-        mid_base_plus2 = features
+        mid_base, mid_base_min1, mid_base_min2, mid_base_min3, mid_base_min4, \
+        mid_base_min5, mid_base_min6, mid_base_min7, mid_base_min8, \
+        mid_base_plus1, mid_base_plus2, mid_base_plus3, mid_base_plus4, \
+        mid_base_plus5, mid_base_plus6, mid_base_plus7, mid_base_plus8, \
+        mid_base_nonorm, mid_base_min1_nonorm, mid_base_min2_nonorm, \
+        mid_base_min3_nonorm, mid_base_min4_nonorm, mid_base_min5_nonorm, \
+        mid_base_min6_nonorm, mid_base_min7_nonorm, mid_base_min8_nonorm, \
+        mid_base_plus1_nonorm, mid_base_plus2_nonorm, mid_base_plus3_nonorm, \
+        mid_base_plus4_nonorm, mid_base_plus5_nonorm, mid_base_plus6_nonorm, \
+        mid_base_plus7_nonorm, mid_base_plus8_nonorm = features
 
     means_text = ','.join([str(x) for x in np.around(signal_means, decimals=6)])
     stds_text = ','.join([str(x) for x in np.around(signal_stds, decimals=6)])
@@ -190,15 +198,50 @@ def _features_to_str(features):
     mid_base_txt = ','.join([str(x) for x in mid_base])
     mid_base_min1_txt = ','.join([str(x) for x in mid_base_min1])
     mid_base_min2_txt = ','.join([str(x) for x in mid_base_min2])
+    mid_base_min3_txt = ','.join([str(x) for x in mid_base_min3])
+    mid_base_min4_txt = ','.join([str(x) for x in mid_base_min4])
+    mid_base_min5_txt = ','.join([str(x) for x in mid_base_min5])
+    mid_base_min6_txt = ','.join([str(x) for x in mid_base_min6])
+    mid_base_min7_txt = ','.join([str(x) for x in mid_base_min7])
+    mid_base_min8_txt = ','.join([str(x) for x in mid_base_min8])
     mid_base_plus1_txt = ','.join([str(x) for x in mid_base_plus1])
     mid_base_plus2_txt = ','.join([str(x) for x in mid_base_plus2])
+    mid_base_plus3_txt = ','.join([str(x) for x in mid_base_plus3])
+    mid_base_plus4_txt = ','.join([str(x) for x in mid_base_plus4])
+    mid_base_plus5_txt = ','.join([str(x) for x in mid_base_plus5])
+    mid_base_plus6_txt = ','.join([str(x) for x in mid_base_plus6])
+    mid_base_plus7_txt = ','.join([str(x) for x in mid_base_plus7])
+    mid_base_plus8_txt = ','.join([str(x) for x in mid_base_plus8])
+    mid_base_nonorm_txt = ','.join([str(x) for x in mid_base_nonorm])
+    mid_base_min1_nonorm_txt = ','.join([str(x) for x in mid_base_min1_nonorm])
+    mid_base_min2_nonorm_txt = ','.join([str(x) for x in mid_base_min2_nonorm])
+    mid_base_min3_nonorm_txt = ','.join([str(x) for x in mid_base_min3_nonorm])
+    mid_base_min4_nonorm_txt = ','.join([str(x) for x in mid_base_min4_nonorm])
+    mid_base_min5_nonorm_txt = ','.join([str(x) for x in mid_base_min5_nonorm])
+    mid_base_min6_nonorm_txt = ','.join([str(x) for x in mid_base_min6_nonorm])
+    mid_base_min7_nonorm_txt = ','.join([str(x) for x in mid_base_min7_nonorm])
+    mid_base_min8_nonorm_txt = ','.join([str(x) for x in mid_base_min8_nonorm])
+    mid_base_plus1_nonorm_txt = ','.join([str(x) for x in mid_base_plus1_nonorm])
+    mid_base_plus2_nonorm_txt = ','.join([str(x) for x in mid_base_plus2_nonorm])
+    mid_base_plus3_nonorm_txt = ','.join([str(x) for x in mid_base_plus3_nonorm])
+    mid_base_plus4_nonorm_txt = ','.join([str(x) for x in mid_base_plus4_nonorm])
+    mid_base_plus5_nonorm_txt = ','.join([str(x) for x in mid_base_plus5_nonorm])
+    mid_base_plus6_nonorm_txt = ','.join([str(x) for x in mid_base_plus6_nonorm])
+    mid_base_plus7_nonorm_txt = ','.join([str(x) for x in mid_base_plus7_nonorm])
+    mid_base_plus8_nonorm_txt = ','.join([str(x) for x in mid_base_plus8_nonorm])
 
     return "\t".join([chrom, str(pos), alignstrand, str(loc_in_ref), readname, \
         strand, k_mer, means_text, stds_text, median_text, skew_text, \
         kurt_text, diff_text, signal_len_text, cent_signals_text, qual_text, \
         mis_text, ins_text, dele_text, str(methy_label), str(flag), \
-        mid_base_min2_txt, mid_base_min1_txt, mid_base_txt, mid_base_plus1_txt, \
-        mid_base_plus2_txt])
+        mid_base_min8_txt, mid_base_min7_txt, mid_base_min6_txt, mid_base_min5_txt, \
+        mid_base_min4_txt, mid_base_min3_txt, mid_base_min2_txt, mid_base_min1_txt, \
+        mid_base_txt, mid_base_plus1_txt, mid_base_plus2_txt, mid_base_plus3_txt, mid_base_plus4_txt, \
+        mid_base_plus5_txt, mid_base_plus6_txt, mid_base_plus7_txt, mid_base_plus8_txt, \
+        mid_base_min8_nonorm_txt, mid_base_min7_nonorm_txt, mid_base_min6_nonorm_txt, mid_base_min5_nonorm_txt, \
+        mid_base_min4_nonorm_txt, mid_base_min3_nonorm_txt, mid_base_min2_nonorm_txt, mid_base_min1_nonorm_txt, \
+        mid_base_nonorm_txt, mid_base_plus1_nonorm_txt, mid_base_plus2_nonorm_txt, mid_base_plus3_nonorm_txt, mid_base_plus4_nonorm_txt, \
+        mid_base_plus5_nonorm_txt, mid_base_plus6_nonorm_txt, mid_base_plus7_nonorm_txt, mid_base_plus8_nonorm_txt])
 
 
 def _read_position_file(position_file):
@@ -276,12 +319,13 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
         try:
             raw_signal = fast5_fp.get_raw_signal()
             norm_signals = _normalize_signals(raw_signal, normalize_method)
-            genomeseq, signal_list = "", []
+            genomeseq, signal_list, signal_nonorm = "", [], []
 
             events = fast5_fp.get_events(corrected_group, basecall_subgroup)
             for e in events:
                 genomeseq += str(e[2])
                 signal_list.append(norm_signals[e[0]:(e[0] + e[1])])
+                signal_nonorm.append(raw_signal[e[0]:(e[0] + e[1])])
             readname = fast5_fp.file.rsplit('/', 1)[1]
 
             strand, alignstrand, chrom, chrom_start = fast5_fp.get_alignment_info(
@@ -349,7 +393,9 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                         loc_in_read - num_bases):(loc_in_read + num_bases + 1)]
                     k_signals = signal_list[(
                         loc_in_read - num_bases):(loc_in_read + num_bases + 1)]
-
+                    k_signals_nonorm = signal_nonorm[(
+                        loc_in_read - num_bases):(loc_in_read + num_bases + 1)]
+                    
                     signal_lens = [len(x) for x in k_signals]
                     signal_means = [np.mean(x) for x in k_signals]
                     signal_stds = [np.std(x) for x in k_signals]
@@ -366,8 +412,40 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                     mid_base = k_signals[mid_loc]
                     mid_base_min1 = k_signals[mid_loc - 1]
                     mid_base_min2 = k_signals[mid_loc - 2]
+                    mid_base_min3 = k_signals[mid_loc - 3]
+                    mid_base_min4 = k_signals[mid_loc - 4]
+                    mid_base_min5 = k_signals[mid_loc - 5]
+                    mid_base_min6 = k_signals[mid_loc - 6]
+                    mid_base_min7 = k_signals[mid_loc - 7]
+                    mid_base_min8 = k_signals[mid_loc - 8]
                     mid_base_plus1 = k_signals[mid_loc + 1]
                     mid_base_plus2 = k_signals[mid_loc + 2]
+                    mid_base_plus3 = k_signals[mid_loc + 3]
+                    mid_base_plus4 = k_signals[mid_loc + 4]
+                    mid_base_plus5 = k_signals[mid_loc + 5]
+                    mid_base_plus6 = k_signals[mid_loc + 6]
+                    mid_base_plus7 = k_signals[mid_loc + 7]
+                    mid_base_plus8 = k_signals[mid_loc + 8]
+
+                    mid_base_nonorm = k_signals_nonorm[mid_loc]
+                    mid_base_min1_nonorm = k_signals_nonorm[mid_loc - 1]
+                    mid_base_min2_nonorm = k_signals_nonorm[mid_loc - 2]
+                    mid_base_min3_nonorm = k_signals_nonorm[mid_loc - 3]
+                    mid_base_min4_nonorm = k_signals_nonorm[mid_loc - 4]
+                    mid_base_min5_nonorm = k_signals_nonorm[mid_loc - 5]
+                    mid_base_min6_nonorm = k_signals_nonorm[mid_loc - 6]
+                    mid_base_min7_nonorm = k_signals_nonorm[mid_loc - 7]
+                    mid_base_min8_nonorm = k_signals_nonorm[mid_loc - 8]
+                    mid_base_plus1_nonorm = k_signals_nonorm[mid_loc + 1]
+                    mid_base_plus2_nonorm = k_signals_nonorm[mid_loc + 2]
+                    mid_base_plus3_nonorm = k_signals_nonorm[mid_loc + 3]
+                    mid_base_plus4_nonorm = k_signals_nonorm[mid_loc + 4]
+                    mid_base_plus5_nonorm = k_signals_nonorm[mid_loc + 5]
+                    mid_base_plus6_nonorm = k_signals_nonorm[mid_loc + 6]
+                    mid_base_plus7_nonorm = k_signals_nonorm[mid_loc + 7]
+                    mid_base_plus8_nonorm = k_signals_nonorm[mid_loc + 8]
+
+
 
                     pos_err = [item[0] - 1 for item in error_features]
                     comb_err = error_features[np.argwhere(np.asarray(pos_err) == pos)[0][0]]
@@ -380,19 +458,27 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                         print('Error in the error features occurred...')
                         error += 1
                         continue
-                    
                     if np.mean(signal_lens) > 7:
                         flag = 0
                     else:
                         flag = 1
-                    
                     features_list.append(
                         (chrom, pos, alignstrand, loc_in_ref, readname, strand,
                         k_mer, signal_means, signal_stds, signal_median,  
                         signal_skew, signal_kurtosis, signal_diff, signal_lens, 
                         cent_signals, qual, mis, ins, dele, methy_label, flag, 
-                        mid_base, mid_base_min1, mid_base_min2, mid_base_plus1, 
-                        mid_base_plus2)
+                        mid_base, mid_base_min1, mid_base_min2, mid_base_min3, mid_base_min4,
+                        mid_base_min5, mid_base_min6, mid_base_min7, mid_base_min8,
+                        mid_base_plus1, mid_base_plus2, mid_base_plus3, mid_base_plus4,
+                        mid_base_plus5, mid_base_plus6, mid_base_plus7, mid_base_plus8,
+                        mid_base_nonorm, mid_base_min1_nonorm, mid_base_min2_nonorm, 
+                        mid_base_min3_nonorm, mid_base_min4_nonorm,
+                        mid_base_min5_nonorm, mid_base_min6_nonorm, 
+                        mid_base_min7_nonorm, mid_base_min8_nonorm,
+                        mid_base_plus1_nonorm, mid_base_plus2_nonorm, 
+                        mid_base_plus3_nonorm, mid_base_plus4_nonorm,
+                        mid_base_plus5_nonorm, mid_base_plus6_nonorm, 
+                        mid_base_plus7_nonorm, mid_base_plus8_nonorm)
                     )
         except Exception:
             error += 1
