@@ -156,21 +156,23 @@ def main(svm_output, deepmp_output, deepsignal_output, deepsignal_probs, deepmod
         )
         plot_ROC_svm(svm, deepmp, out_fig)
     if deepsignal_output:
-        deepsignal = pd.read_csv(deepsignal_output, sep='\t', header=None)
-        original = pd.read_csv(original_test, sep='\t', header=None)
+        deepsignal = pd.read_csv(deepsignal_output, sep='\t', header=None).drop_duplicates()
+        original = pd.read_csv(original_test, sep='\t', header=None).drop_duplicates()
 
-        original['id'] = original[4] + '_' + original[1].astype(str)
-        deepsignal['id'] = deepsignal[4] + '_' + deepsignal[1].astype(str)
+        original['id'] =  original[0] + '_' + original[1].astype(str) + '_' + original[2] \
+            + '_' + original[3].astype(str) + '_' + original[4]
+        deepsignal['id'] = deepsignal[0] + '_' + deepsignal[1].astype(str) + '_' + deepsignal[2] \
+            + '_' + deepsignal[3].astype(str) + '_'  + deepsignal[4]
         merge = pd.merge(deepsignal, original, on='id', how='inner') 
         precision, recall, f_score, _ = precision_recall_fscore_support(
             merge[11].values, merge['8_x'].values, average='binary'
         )
-        import pdb;pdb.set_trace()
-        # ut.save_probs(np.maximum(deepsignal[6].values, deepsignal[7].values), merge[11].values, output)
-        # import pdb;pdb.set_trace()
+        
+        ut.save_probs(np.maximum(merge['6_x'].values, merge['7_x'].values), merge[11].values, output)
+        
         plot_ROC_deepsignal(merge, deepmp, out_fig)
     
-    # save_output([precision, recall, f_score], output) 
+    save_output([precision, recall, f_score], output) 
     if deepmod_output:
         fig_out = os.path.join(output, 'comparison_all.pdf')
         plot_ROC_all(deepmp, merge, deepmod, fig_out)   
