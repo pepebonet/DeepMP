@@ -75,6 +75,30 @@ class JointNN(Model):
         return self.dense2(x)
 
 
+class CentralCNN(Model):
+
+    def __init__(self, **kwargs):
+        super(CentralCNN, self).__init__(**kwargs)
+        self.conv1 = Conv1D(256, 3, activation='relu', padding='same')
+        self.localconv1 = LocallyConnected1D(256, 1, activation='relu')
+        self.conv2 = Conv1D(256, 3, activation='relu', padding='same')
+        self.localconv2 = LocallyConnected1D(256, 1, activation='relu')
+        self.pool = GlobalAveragePooling1D(name='seq_pooling_layer')
+        self.dropout = Dropout(0.2)
+        self.dense = Dense(1, activation='sigmoid', use_bias=False)
+
+    def call(self, inputs, submodel=False):
+        x = self.conv1(inputs)
+        x = self.localconv1(x)
+        x = self.conv2(x)
+        x = self.localconv2(x)
+        x = self.pool(x)
+        if submodel:
+            return x
+        x = self.dropout(x)
+        return self.dense(x)
+
+
 def get_brnn_model(base_num, embedding_size, features = 5, rnn_cell = "lstm"):
 
     depth = embedding_size + features
@@ -184,38 +208,38 @@ class Inception(Model):
         times = 16
         self.max_pool = MaxPooling1D(3, strides=1,  padding="same")
         self.conv1a_1 = Conv1D(filters=int(times * 3), kernel_size=1, strides=1, padding="same", use_bias=False)
-        self.conv1a_2 = BatchNormalization(trainable=True)
+        self.conv1a_2 = BatchNormalization(trainable=kwargs['trainable'])
         self.conv1a_3 = ReLU()
 
         self.conv0b_1 = Conv1D(filters=times * 3, kernel_size=1, strides=1, padding="same", use_bias=False)
-        self.conv0b_2 = BatchNormalization(trainable=True)
+        self.conv0b_2 = BatchNormalization(trainable=kwargs['trainable'])
         self.conv0b_3 = ReLU()
 
         self.conv0c_1 = Conv1D(filters=times * 2, kernel_size=1, strides=1, padding="same", use_bias=False)
-        self.conv0c_2 = BatchNormalization(trainable=True)
+        self.conv0c_2 = BatchNormalization(trainable=kwargs['trainable'])
         self.conv0c_3 = ReLU()
         self.conv1c_1 = Conv1D(filters=times * 3, kernel_size=3, strides=1, padding="same", use_bias=False)
-        self.conv1c_2 = BatchNormalization(trainable=True)
+        self.conv1c_2 = BatchNormalization(trainable=kwargs['trainable'])
         self.conv1c_3 = ReLU()
 
         self.conv0d_1 = Conv1D(filters=times * 2, kernel_size=1, strides=1, padding="same", use_bias=False)
-        self.conv0d_2 = BatchNormalization(trainable=True)
+        self.conv0d_2 = BatchNormalization(trainable=kwargs['trainable'])
         self.conv0d_3 = ReLU()
         self.conv1d_1 = Conv1D(filters=times * 3, kernel_size=5, strides=1, padding="same", use_bias=False)
-        self.conv1d_2 = BatchNormalization(trainable=True)
+        self.conv1d_2 = BatchNormalization(trainable=kwargs['trainable'])
         self.conv1d_3 = ReLU()
 
         self.conv_stem_1 = Conv1D(filters=times * 3, kernel_size=1, strides=1, padding="same", use_bias=False)
-        self.conv_stem_2 = BatchNormalization(trainable=True)
+        self.conv_stem_2 = BatchNormalization(trainable=kwargs['trainable'])
 
         self.conv0e_1 = Conv1D(filters=times * 2, kernel_size=1, strides=1, padding="same", use_bias=False)
-        self.conv0e_2 = BatchNormalization(trainable=True)
+        self.conv0e_2 = BatchNormalization(trainable=kwargs['trainable'])
         self.conv0e_3 = ReLU()
         self.conv1e_1 = Conv1D(filters=times*4, kernel_size=3, strides=1, padding="same", use_bias=False)
-        self.conv1e_2 = BatchNormalization(trainable=True)
+        self.conv1e_2 = BatchNormalization(trainable=kwargs['trainable'])
         self.conv1e_3 = ReLU()
         self.conv2e_1 = Conv1D(filters=times * 3, kernel_size=1, strides=1, padding="same", use_bias=False)
-        self.conv2e_2 = BatchNormalization(trainable=True)
+        self.conv2e_2 = BatchNormalization(trainable=kwargs['trainable'])
 
         self.conv_plus = ReLU()
 
@@ -268,28 +292,28 @@ class InceptNet(Model):
     def __init__(self, **kwargs):
         super(InceptNet, self).__init__(**kwargs)
         self.conv1_1 = Conv1D(filters=64, kernel_size=7, strides=2, padding="same", use_bias=False)
-        self.batch_norm_1 = BatchNormalization(trainable=True)
+        self.batch_norm_1 = BatchNormalization(trainable=kwargs['trainable'])
         self.relu = ReLU()
         self.maxpooling = MaxPooling1D(3, strides=2, padding="same")
         self.conv1_2 = Conv1D(filters=128, kernel_size=1, strides=1, padding="same", use_bias=False)
-        self.batch_norm_2 = BatchNormalization(trainable=True)
+        self.batch_norm_2 = BatchNormalization(trainable=kwargs['trainable'])
         self.relu = ReLU()
         self.conv1_3 = Conv1D(filters=256, kernel_size=3, strides=1, padding="same", use_bias=False)
-        self.batch_norm_3 = BatchNormalization(trainable=True)
+        self.batch_norm_3 = BatchNormalization(trainable=kwargs['trainable'])
         self.relu = ReLU()
-        self.incep_layer_1 = Inception()
-        self.incep_layer_2 = Inception()
-        self.incep_layer_3 = Inception()
+        self.incep_layer_1 = Inception(trainable=kwargs['trainable'])
+        self.incep_layer_2 = Inception(trainable=kwargs['trainable'])
+        self.incep_layer_3 = Inception(trainable=kwargs['trainable'])
         self.maxpooling_2 = MaxPooling1D(3, strides=2, padding="same")
-        self.incep_layer_4 = Inception()
-        self.incep_layer_5 = Inception()
-        self.incep_layer_6 = Inception()
-        self.incep_layer_7 = Inception()
-        self.incep_layer_8 = Inception()
+        self.incep_layer_4 = Inception(trainable=kwargs['trainable'])
+        self.incep_layer_5 = Inception(trainable=kwargs['trainable'])
+        self.incep_layer_6 = Inception(trainable=kwargs['trainable'])
+        self.incep_layer_7 = Inception(trainable=kwargs['trainable'])
+        self.incep_layer_8 = Inception(trainable=kwargs['trainable'])
         self.maxpooling_3 = MaxPooling1D(3, strides=2, padding="same")
-        self.incep_layer_9 = Inception()
-        self.incep_layer_10 = Inception()
-        self.incep_layer_11 = Inception()
+        self.incep_layer_9 = Inception(trainable=kwargs['trainable'])
+        self.incep_layer_10 = Inception(trainable=kwargs['trainable'])
+        self.incep_layer_11 = Inception(trainable=kwargs['trainable'])
         self.AveragePooling = AveragePooling1D(7, strides=1, padding="same")
         self.dense_1 = Dense(units=100, use_bias=False)
         self.dropout = Dropout(0.2)

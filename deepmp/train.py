@@ -157,7 +157,7 @@ def train_inception(train_file, val_file, log_dir, model_dir, batch_size, epochs
     input_train, label = ut.get_data_incep(train_file)
     input_val, vy = ut.get_data_incep(val_file)
 
-    model = InceptNet()
+    model = InceptNet(trainable=True)
     model.compile(loss='binary_crossentropy',
                    optimizer=tf.keras.optimizers.Adam(),
                    metrics=['accuracy'])
@@ -167,6 +167,41 @@ def train_inception(train_file, val_file, log_dir, model_dir, batch_size, epochs
 
     log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm")
     model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_incep_model")
+
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(
+                                            log_dir = log_dir, histogram_freq=1)
+    callback_list = [
+                        tensorboard_callback,
+                        tf.keras.callbacks.ModelCheckpoint(filepath= model_dir,
+                                                            monitor='val_accuracy',
+                                                            mode='max',
+                                                            save_best_only=True)
+                        ]
+
+    model.fit(input_train, label, batch_size=batch_size, epochs=epochs,
+                                                callbacks = callback_list,
+                                                validation_data = (input_val, vy))
+    model.save(model_dir)
+
+    return None
+
+
+def train_central_cnn(train_file, val_file, log_dir, model_dir, batch_size, epochs):
+
+    input_train, label = ut.get_data_incep(train_file)
+    input_val, vy = ut.get_data_incep(val_file)
+
+    model = CentralCNN()
+    model.compile(loss='binary_crossentropy',
+                   optimizer=tf.keras.optimizers.Adam(),
+                   metrics=['accuracy'])
+
+    input_shape = (None, 1, 360)
+    model.build(input_shape)
+    print(model.summary())
+
+    log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm")
+    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_central_cnn_model")
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
                                             log_dir = log_dir, histogram_freq=1)
