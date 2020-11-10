@@ -12,13 +12,24 @@ import deepmp.utils as ut
 import deepmp.plots as pl
 import deepmp.preprocess as pr
 
+read1_pos0 = 0.0001  
+read0_pos1 = 0.4 
+fp = 0.001  
+fn = 0.001  
 
-def test_single_read(data, model_file, score_av='binary'):
+
+def test_single_read(data, model_file, labels, score_av='binary'):
     model = load_model(model_file)
     
     pred =  model.predict(data).flatten()
     inferred = np.zeros(len(pred), dtype=int)
     inferred[np.argwhere(pred >= 0.5)] = 1
+
+    #TODO remove
+    precision, recall, f_score, _ = precision_recall_fscore_support(
+        labels, inferred, average=score_av
+    )
+    print(precision, recall, f_score)
 
     return pred, inferred
 
@@ -43,12 +54,17 @@ def pred_site(df, pred_label, meth_label,
             pred_label.append(1)
         else:
             pred_label.append(0)
-        meth_label.append(df.methyl_label.unique()[0])
+        
+        #TODO remove
+        if len(df.methyl_label.unique()) == 2:
+            meth_label.append(1)
+        else:
+            meth_label.append(df.methyl_label.unique()[0])
 
     return pred_label, meth_label
 
 
-def pred_site_all(df, pred_min_max, pred_01, pred_02, pred_03, pred_04,  meth_label):
+def pred_site_all(df, pred_min_max, pred_005, pred_01, pred_02, pred_03, pred_04,  meth_label):
 
     ## min+max prediction
     comb_pred = df.pred_prob.min() + df.pred_prob.max()
@@ -58,32 +74,82 @@ def pred_site_all(df, pred_min_max, pred_01, pred_02, pred_03, pred_04,  meth_la
         pred_min_max.append(0)
         
     ## threshold prediction
-    for i in [(pred_01, 0.1), (pred_02, 0.2), (pred_03, 0.3), (pred_04, 0.4)]:
+    for i in [(pred_005, 0.05), (pred_01, 0.1), (pred_02, 0.2), (pred_03, 0.3), (pred_04, 0.4)]:
         inferred = df['inferred_label'].values
         if np.sum(inferred) / len(inferred) >= i[1]:
             i[0].append(1)
         else:
             i[0].append(0)
     
-    meth_label.append(df.methyl_label.unique()[0])
+    if len(df.methyl_label.unique()) == 2:
+        meth_label.append(1)
+    else:
+        meth_label.append(df.methyl_label.unique()[0])
+    
+    return pred_min_max, pred_005, pred_01, pred_02, pred_03, pred_04, meth_label
 
-    return pred_min_max, pred_01, pred_02, pred_03, pred_04, meth_label
+
+#obs_reads is the vector of inferred labels
+#fp and fn are false positives and negatives respectively 
+#read1_pos0 is the probability of seeing a modified read if the position is called to be 0
+#read0_pos1 is the probability of seeing an unmodified read if the position is called to be 1
+def likelihood_nomod_pos(obs_reads):
+    return np.prod(obs_reads * ((1 - read1_pos0) * fp + read1_pos0 * (1 - fn)) + \
+        (1 - obs_reads) * ((1 - read1_pos0) * (1 - fp) + read1_pos0 * fn))
+
+
+def likelihood_mod_pos(obs_reads):
+    return np.prod(obs_reads * (read0_pos1 * fp + (1 - read0_pos1) * (1 - fn)) + \
+        (1 - obs_reads) * (read0_pos1 * (1 - fp) + (1 - read0_pos1) * fn))
+
+
+def pred_stats(obs_reads, pred_posterior, prob_mod, prob_unmod):
+    prob_pos_0 = likelihood_nomod_pos(obs_reads)
+    prob_pos_1 = likelihood_mod_pos(obs_reads)
+
+    prob_mod.append(prob_pos_1 / (prob_pos_0 + prob_pos_1))
+    prob_unmod.append(prob_pos_0 / (prob_pos_0 + prob_pos_1))
+
+    if prob_mod[-1] >= prob_unmod[-1]:
+        pred_posterior.append(1)
+    else:
+        pred_posterior.append(0)
+
+    return pred_posterior, prob_mod, prob_unmod
 
 
 def do_per_position_analysis(df, pred_vec, inferred_vec, output, pred_type):
     df['id'] = df['chrom'] + '_' + df['pos'].astype(str)
     df['pred_prob'] = pred_vec
     df['inferred_label'] = inferred_vec
-    cov = []; pred_min_max = []; pred_01 = []; pred_02 = []
-    pred_03 = []; pred_04 = []; meth_label = []
+    cov = []; pred_min_max = []; pred_005 = []; pred_01 = []; pred_02 = []
+    pred_03 = []; pred_04 = []; meth_label = []; ids = []; pred_posterior = []
+    prob_mod = []; prob_unmod = []
 
-    import pdb;pdb.set_trace()
     for i, j in df.groupby('id'):
-        pred_min_max, pred_01, pred_02, pred_03, pred_04, meth_label = pred_site(
-            j, pred_min_max, pred_01, pred_02, pred_03, pred_04, meth_label
+        pred_min_max, pred_005, pred_01, pred_02, pred_03, pred_04, meth_label = pred_site_all(
+            j, pred_min_max, pred_005, pred_01, pred_02, pred_03, pred_04, meth_label
         )
-        cov.append(len(j))
-        import pdb;pdb.set_trace()
+        pred_posterior, prob_mod, prob_unmod = pred_stats(
+            j['inferred_label'].values, pred_posterior, prob_mod, prob_unmod
+        )
+        cov.append(len(j)); ids.append(i)
+
+    preds = pd.DataFrame()
+    preds['id'] = ids
+    preds['cov'] = cov 
+    preds['pred_min_max'] = pred_min_max
+    preds['pred_005'] = pred_005
+    preds['pred_01'] = pred_01
+    preds['pred_02'] = pred_02 
+    preds['pred_03'] = pred_03 
+    preds['pred_04'] = pred_04 
+    preds['pred_posterior'] = pred_posterior
+    preds['prob_mod'] = prob_mod
+    preds['prob_unmod'] = prob_unmod 
+    preds['meth_label'] = meth_label 
+
+    return preds
 
 
 def build_test_df(data):
@@ -120,14 +186,9 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
 
     elif model_type == 'joint':
         data_seq, data_err, labels, data_id = ut.get_data_jm(test_file, kmer, get_id=True)
-        import pdb;pdb.set_trace()
-        pred, inferred = test_single_read([data_seq, data_err], trained_model)
+        pred, inferred = test_single_read([data_seq, data_err], trained_model, labels)
 
-    else:
-        print("unrecognized model type")
-        return None
-
-    ut.save_probs_user(pred, inferred, output)
+    # ut.save_probs_user(pred, inferred, output)
 
     ## position-based calling
     # TODO store position info in test file
@@ -138,4 +199,16 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
             test['methyl_label'] = labels
 
         #TODO output proper df with all the information. put columns at different thresholds as well as the min max for testing
-        do_per_position_analysis(test, pred, inferred, output, pred_type)
+        all_preds = do_per_position_analysis(test, pred, inferred, output, pred_type)
+        import pdb;pdb.set_trace()
+
+        uu = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_005'], average='binary')
+        xx = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_01'], average='binary')
+        yy = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_02'], average='binary')
+        zz = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_03'], average='binary')
+        ww = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_04'], average='binary')
+        vv = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_min_max'], average='binary')
+        pp = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_posterior'], average='binary')
+        import pdb;pdb.set_trace()
+        print(x,y,z,w,v,p)
+
