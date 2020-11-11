@@ -46,6 +46,7 @@ def merge_data(data_list):
 
 def load(filename):
     f = h5py.File(filename, 'r')
+
     data = {}
     for key in f:
         data[key] = f[key][...]

@@ -142,7 +142,7 @@ def call_modifications(**kwargs):
 @cli.command(short_help='Trainining neural networks')
 @click.option(
     '-m', '--model_type', required=True,
-    type=click.Choice(['seq', 'err', 'joint', 'incep']),
+    type=click.Choice(['seq', 'err', 'joint', 'incep', 'central_cnn']),
     help='choose model to train'
 )
 @click.option(
@@ -213,6 +213,13 @@ def train_nns(**kwargs):
                 args.log_dir, args.model_dir, args.batch_size,
                 args.epochs
                 )
+    
+    elif args.model_type == 'central_cnn':
+        train_central_cnn(
+                args.train_file, args.val_file,
+                args.log_dir, args.model_dir, args.batch_size,
+                args.epochs
+                )
 
 
 
@@ -251,6 +258,9 @@ def train_nns(**kwargs):
     '-stsv', '--save-tsv', is_flag=True, help='Whether to store tsv. Default = False'
 )
 @click.option(
+    '-pos', '--positions', default='', help='Pass a position list to filter features'
+)
+@click.option(
     '-st', '--split_type', required=True,
     type=click.Choice(['pos', 'read']),
     help='Type of train-test-val split to select. Positions or read'
@@ -265,11 +275,11 @@ def train_nns(**kwargs):
 )
 def merge_and_preprocess(feature_type, error_treated, error_untreated,
     sequence_treated, sequence_untreated, combined_features, 
-    num_err_feat, output, save_tsv, cpus, split_type):
+    num_err_feat, output, save_tsv, cpus, split_type, positions):
 
     if feature_type == 'combined':
         do_combined_preprocess(
-            combined_features, output, save_tsv, cpus, split_type
+            combined_features, output, save_tsv, cpus, split_type, positions
         )
     elif feature_type == 'combined_single':
         no_split_combined_preprocess(

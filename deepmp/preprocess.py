@@ -19,13 +19,13 @@ import deepmp.merge_h5s as mh5
 names_all=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
             'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_median',
             'signal_skew', 'signal_kurt', 'signal_diff', 'signal_lens',
-            'cent_signals', 'qual', 'mis', 'ins', 'del', 'methyl_label', 'flag', 
-            'cent_min8', 'cent_min7', 'cent_min6', 'cent_min5', 'cent_min4', 
-            'cent_min3', 'cent_min2', 'cent_min1', 'cent', 'cent_plus1', 'cent_plus2',
-            'cent_plus3', 'cent_plus4', 'cent_plus5', 'cent_plus6', 'cent_plus7', 'cent_plus8', 
-            'cent_min8_nonorm', 'cent_min7_nonorm', 'cent_min6_nonorm', 'cent_min5_nonorm', 'cent_min4_nonorm', 
-            'cent_min3_nonorm', 'cent_min2_nonorm', 'cent_min1_nonorm', 'cent_nonorm', 'cent_plus1_nonorm', 'cent_plus2_nonorm',
-            'cent_plus3_nonorm', 'cent_plus4_nonorm', 'cent_plus5_nonorm', 'cent_plus6_nonorm', 'cent_plus7_nonorm', 'cent_plus8_nonorm']
+            'cent_signals', 'qual', 'mis', 'ins', 'del', 'methyl_label', 'flag']
+            # 'cent_min8', 'cent_min7', 'cent_min6', 'cent_min5', 'cent_min4', 
+            # 'cent_min3', 'cent_min2', 'cent_min1', 'cent', 'cent_plus1', 'cent_plus2',
+            # 'cent_plus3', 'cent_plus4', 'cent_plus5', 'cent_plus6', 'cent_plus7', 'cent_plus8', 
+            # 'cent_min8_nonorm', 'cent_min7_nonorm', 'cent_min6_nonorm', 'cent_min5_nonorm', 'cent_min4_nonorm', 
+            # 'cent_min3_nonorm', 'cent_min2_nonorm', 'cent_min1_nonorm', 'cent_nonorm', 'cent_plus1_nonorm', 'cent_plus2_nonorm',
+            # 'cent_plus3_nonorm', 'cent_plus4_nonorm', 'cent_plus5_nonorm', 'cent_plus6_nonorm', 'cent_plus7_nonorm', 'cent_plus8_nonorm']
 
 
 def get_data(treated, untreated, names='', nopos=False):
@@ -115,9 +115,27 @@ def save_tsv(df, output, file, mode='w'):
         df.to_csv(file_name, sep='\t', index=None, mode=mode)
 
 
-def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps, split_type):
+def get_positions_only(df, positions):
+    df = pd.merge(
+        df, positions, right_on=['chr', 'start', 'strand'], left_on=['chrom', 'pos', 'strand']
+    )
+
+    label = np.zeros(len(df), dtype=int)
+    label[np.argwhere(df['status'].values == 'mod')] = 1
+
+    df = df[df.columns[:19]]
+    df['methyl_label'] = label
+
+    return df
+
+
+
+def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps, split_type, positions):
     df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
     # df = balanced_set(df)
+    
+    if isinstance(positions, pd.DataFrame):
+        df = get_positions_only(df, positions)
 
     if split_type == 'read':
         data = get_training_test_val(df)
@@ -132,7 +150,8 @@ def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps, split_ty
                 mode = 'a'
             save_tsv(el[0], output, el[1], 'a')
     for el in data:
-        ut.preprocess_combined(el[0], tmps, el[1], file)
+        if el[0].shape[0] > 0:
+            ut.preprocess_combined(el[0], tmps, el[1], file)
 
 
 def split_sets_files_single(file, tmp_folder, counter, tsv_flag, output, tmps, split_type):
@@ -156,9 +175,9 @@ def split_sets_files_single(file, tmp_folder, counter, tsv_flag, output, tmps, s
             ut.preprocess_combined(el[0], tmps, el[1], file)
 
 
-def do_combined_preprocess(features, output, tsv_flag, cpus, split_type):
+def do_combined_preprocess(features, output, tsv_flag, cpus, split_type, positions):
 
-    tmp_folder = os.path.join(os.path.dirname(features), 'tmp_shuffled/')
+    tmp_folder = os.path.join(os.path.dirname(features), 'tmp_all/')
     tmp_train = os.path.join(os.path.dirname(features), 'train/')
     tmp_test = os.path.join(os.path.dirname(features), 'test/')
     tmp_val = os.path.join(os.path.dirname(features), 'val/')
@@ -169,12 +188,17 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type):
     cmd = 'split -l {} {} {}'.format(20000, features, tmp_folder)
     subprocess.call(cmd, shell=True)
     
+    if positions:
+        print('Getting position file...')
+        positions = pd.read_csv(positions, sep='\t')
+
     print('Extracting features to h5 and tsv files...')
     counter = 0
     
     f = functools.partial(split_sets_files, tmp_folder=tmp_folder, \
             counter=counter, tsv_flag=tsv_flag, output=output, \
-                tmps=os.path.dirname(features), split_type=split_type)
+                tmps=os.path.dirname(features), split_type=split_type, \
+                    positions=positions)
     with Pool(cpus) as p:
         for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
             counter += 1
@@ -185,7 +209,7 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type):
     mh5.get_set(tmp_train, output, 'train')
 
     print('Removing tmp folders and done')
-    subprocess.call('rm -r {}'.format(tmp_folder), shell=True)
+    # subprocess.call('rm -r {}'.format(tmp_folder), shell=True)
     subprocess.call('rm -r {}'.format(tmp_train), shell=True)
     subprocess.call('rm -r {}'.format(tmp_test), shell=True)
     subprocess.call('rm -r {}'.format(tmp_val), shell=True)
