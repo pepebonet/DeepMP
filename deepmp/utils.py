@@ -186,8 +186,8 @@ def get_data_errors(file, kmer):
 def get_data_jm(file, kmer, get_id=False):
     ## preprocess data
     bases, signal_means, signal_stds, signal_medians, signal_range, \
-        signal_lens, base_qual, base_mis, base_ins, base_del, label = load_jm_data(file)
-            # chrom, readname, pos, strand, pos_in_strand = load_jm_data(file)
+        signal_lens, base_qual, base_mis, base_ins, base_del, label, \
+            chrom, readname, pos, strand, pos_in_strand = load_jm_data(file)
 
     ## embed bases
     embedding_size = 5
@@ -276,15 +276,15 @@ def load_jm_data(file):
         base_ins = hf['ins'][:]
         base_del = hf['dele'][:]
         label = hf['methyl_label'][:]
-        # chrom = hf['chrom'][:]
-        # readname = hf['readname'][:]
-        # pos = hf['pos'][:]
-        # strand = hf['strand'][:]
-        # pos_in_strand = hf['pos_in_strand'][:]
+        chrom = hf['chrom'][:]
+        readname = hf['readname'][:]
+        pos = hf['pos'][:]
+        strand = hf['strand'][:]
+        pos_in_strand = hf['pos_in_strand'][:]
 
     return bases, signal_means, signal_stds, signal_medians, signal_range, \
         signal_lens, base_qual, base_mis, base_ins, base_del, label, \
-        # chrom, readname, pos, strand, pos_in_strand
+        chrom, readname, pos, strand, pos_in_strand
 
 
 def load_incep_data(file):
@@ -427,16 +427,16 @@ def preprocess_combined(df, output, label_file, file):
         for i in df['signal_diff'].values]
     base_signal_len = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['signal_lens'].values]
-    cent_signal_min2 = [tf.strings.to_number(i.split(','), tf.float32) \
-        for i in df['cent_min2'].values]
-    cent_signal_min1 = [tf.strings.to_number(i.split(','), tf.float32) \
-        for i in df['cent_min1'].values]
-    cent_signal = [tf.strings.to_number(i.split(','), tf.float32) \
-        for i in df['cent'].values]
-    cent_signal_plus1 = [tf.strings.to_number(i.split(','), tf.float32) \
-        for i in df['cent_plus1'].values]
-    cent_signal_plus2 = [tf.strings.to_number(i.split(','), tf.float32) \
-        for i in df['cent_plus2'].values]
+    # cent_signal_min2 = [tf.strings.to_number(i.split(','), tf.float32) \
+    #     for i in df['cent_min2'].values]
+    # cent_signal_min1 = [tf.strings.to_number(i.split(','), tf.float32) \
+    #     for i in df['cent_min1'].values]
+    # cent_signal = [tf.strings.to_number(i.split(','), tf.float32) \
+    #     for i in df['cent'].values]
+    # cent_signal_plus1 = [tf.strings.to_number(i.split(','), tf.float32) \
+    #     for i in df['cent_plus1'].values]
+    # cent_signal_plus2 = [tf.strings.to_number(i.split(','), tf.float32) \
+    #     for i in df['cent_plus2'].values]
     central_signals = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['cent_signals'].values]
     base_qual = [tf.strings.to_number(i.split(','), tf.float32) \
