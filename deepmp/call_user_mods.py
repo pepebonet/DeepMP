@@ -200,7 +200,7 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
 
         #TODO output proper df with all the information. put columns at different thresholds as well as the min max for testing
         all_preds = do_per_position_analysis(test, pred, inferred, output, pred_type)
-        import pdb;pdb.set_trace()
+        
 
         uu = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_005'], average='binary')
         xx = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_01'], average='binary')
@@ -209,6 +209,7 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
         ww = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_04'], average='binary')
         vv = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_min_max'], average='binary')
         pp = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_posterior'], average='binary')
+        
+        # print(xx,yy,zz,ww,vv,pp)
         import pdb;pdb.set_trace()
-        print(x,y,z,w,v,p)
 
