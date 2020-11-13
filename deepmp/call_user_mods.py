@@ -3,8 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-import seaborn as sns
-import matplotlib.pyplot as plt
+from scipy.special import gamma
 from tensorflow.keras.models import load_model
 from sklearn.metrics import precision_recall_fscore_support
 
@@ -16,7 +15,8 @@ read1_pos0 = 0.0001
 read0_pos1 = 0.4 
 fp = 0.001  
 fn = 0.001  
-
+beta_a = 1
+beta_b = 10
 
 def test_single_read(data, model_file, labels, score_av='binary'):
     model = load_model(model_file)
@@ -118,13 +118,48 @@ def pred_stats(obs_reads, pred_posterior, prob_mod, prob_unmod):
     return pred_posterior, prob_mod, prob_unmod
 
 
+def beta_fct(a, b):
+        return gamma(a) * gamma(b) / gamma(a + b)
+
+
+def likelihood_nomod_beta(obs_reads):
+    return np.prod(obs_reads ** (beta_a - 1) * (1 - obs_reads) ** (beta_b - 1) \
+        * (1 - read1_pos0) / beta_fct(beta_a, beta_b) \
+        + obs_reads ** (beta_b - 1) * (1 - obs_reads) ** (beta_a - 1) \
+        * read1_pos0 / beta_fct(beta_b, beta_a))
+
+
+def likelihood_mod_beta(obs_reads):
+    return np.prod(obs_reads ** (beta_a - 1) * (1 - obs_reads) ** (beta_b - 1) \
+        * read0_pos1 / beta_fct(beta_a, beta_b) \
+        + obs_reads ** (beta_b - 1) * (1 - obs_reads) ** (beta_a - 1) \
+        * (1 - read0_pos1) / beta_fct(beta_b, beta_a))
+
+
+#Assuming prior to be 0.5
+def beta_stats(obs_reads, pred_beta, prob_beta_mod, prob_beta_unmod):
+    prob_pos_0 = likelihood_nomod_beta(obs_reads)
+    prob_pos_1 = likelihood_mod_beta(obs_reads)
+    import pdb;pdb.set_trace()
+    prob_beta_mod.append(prob_pos_1 / (prob_pos_0 + prob_pos_1))
+    prob_beta_unmod.append(prob_pos_0 / (prob_pos_0 + prob_pos_1))
+
+    if prob_mod[-1] >= prob_unmod[-1]:
+        pred_beta.append(1)
+    else:
+        pred_beta.append(0)
+
+    return pred_beta, prob_beta_mod, prob_beta_unmod
+
+
 def do_per_position_analysis(df, pred_vec, inferred_vec, output, pred_type):
     df['id'] = df['chrom'] + '_' + df['pos'].astype(str)
     df['pred_prob'] = pred_vec
     df['inferred_label'] = inferred_vec
     cov = []; pred_min_max = []; pred_005 = []; pred_01 = []; pred_02 = []
     pred_03 = []; pred_04 = []; meth_label = []; ids = []; pred_posterior = []
-    prob_mod = []; prob_unmod = []
+    prob_mod = []; prob_unmod = []; pred_beta = []; prob_beta_mod = []
+    prob_beta_unmod = []
 
     for i, j in df.groupby('id'):
         pred_min_max, pred_005, pred_01, pred_02, pred_03, pred_04, meth_label = pred_site_all(
@@ -133,6 +168,11 @@ def do_per_position_analysis(df, pred_vec, inferred_vec, output, pred_type):
         pred_posterior, prob_mod, prob_unmod = pred_stats(
             j['inferred_label'].values, pred_posterior, prob_mod, prob_unmod
         )
+
+        pred_beta, prob_beta_mod, prob_beta_unmod = beta_stats(
+            j['inferred_label'].values, pred_beta, prob_beta_mod, prob_beta_unmod
+        )
+
         cov.append(len(j)); ids.append(i)
 
     preds = pd.DataFrame()
@@ -187,7 +227,6 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
     elif model_type == 'joint':
         data_seq, data_err, labels, data_id = ut.get_data_jm(test_file, kmer, get_id=True)
         pred, inferred = test_single_read([data_seq, data_err], trained_model, labels)
-
     # ut.save_probs_user(pred, inferred, output)
 
     ## position-based calling
