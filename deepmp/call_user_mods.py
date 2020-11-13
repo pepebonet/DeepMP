@@ -11,12 +11,12 @@ import deepmp.utils as ut
 import deepmp.plots as pl
 import deepmp.preprocess as pr
 
-read1_pos0 = 0.0001  
-read0_pos1 = 0.4 
+read1_pos0 = 0.01  
+read0_pos1 = 0.5 
 fp = 0.001  
 fn = 0.001  
 beta_a = 1
-beta_b = 10
+beta_b = 100
 
 def test_single_read(data, model_file, labels, score_av='binary'):
     model = load_model(model_file)
@@ -140,7 +140,7 @@ def likelihood_mod_beta(obs_reads):
 def beta_stats(obs_reads, pred_beta, prob_beta_mod, prob_beta_unmod):
     prob_pos_0 = likelihood_nomod_beta(obs_reads)
     prob_pos_1 = likelihood_mod_beta(obs_reads)
-    import pdb;pdb.set_trace()
+    
     prob_beta_mod.append(prob_pos_1 / (prob_pos_0 + prob_pos_1))
     prob_beta_unmod.append(prob_pos_0 / (prob_pos_0 + prob_pos_1))
 
@@ -170,11 +170,11 @@ def do_per_position_analysis(df, pred_vec, inferred_vec, output, pred_type):
         )
 
         pred_beta, prob_beta_mod, prob_beta_unmod = beta_stats(
-            j['inferred_label'].values, pred_beta, prob_beta_mod, prob_beta_unmod
+            j['pred_prob'].values, pred_beta, prob_beta_mod, prob_beta_unmod
         )
 
         cov.append(len(j)); ids.append(i)
-
+    import pdb;pdb.set_trace()
     preds = pd.DataFrame()
     preds['id'] = ids
     preds['cov'] = cov 
@@ -187,6 +187,9 @@ def do_per_position_analysis(df, pred_vec, inferred_vec, output, pred_type):
     preds['pred_posterior'] = pred_posterior
     preds['prob_mod'] = prob_mod
     preds['prob_unmod'] = prob_unmod 
+    preds['pred_beta'] = pred_beta
+    preds['prob_beta_mod'] = prob_mod
+    preds['prob_beta_unmod'] = prob_unmod 
     preds['meth_label'] = meth_label 
 
     return preds
@@ -248,6 +251,7 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
         ww = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_04'], average='binary')
         vv = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_min_max'], average='binary')
         pp = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_posterior'], average='binary')
+        pp = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_beta'], average='binary')
         
         # print(xx,yy,zz,ww,vv,pp)
         import pdb;pdb.set_trace()
