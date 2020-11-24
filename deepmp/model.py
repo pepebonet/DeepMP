@@ -50,25 +50,37 @@ class BCErrorCNN(Model):
 
     def __init__(self, **kwargs):
         super(BCErrorCNN, self).__init__(**kwargs)
-        self.conv1 = Conv1D(128, 3, activation='relu')
-        self.localconv1 = LocallyConnected1D(128, 3, activation='relu')
+        self.conv1 = Conv1D(128, 3)
+        self.bn1 = BatchNormalization()
+        self.relu1 = ReLU()
+        self.localconv1 = LocallyConnected1D(128, 3)
+        self.bn2 = BatchNormalization()
+        self.relu2 = ReLU()
         self.maxpool = MaxPooling1D()
-        self.localconv2 = LocallyConnected1D(128, 3, activation='relu')
+        self.localconv2 = LocallyConnected1D(128, 3)
+        self.bn3 = BatchNormalization()
+        self.relu3 = ReLU()
         self.avgpool = GlobalAveragePooling1D(name='err_pooling_layer')
         self.dense1 = Dense(100, activation='relu')
-        self.dropout = Dropout(0.2)
+        #self.dropout = Dropout(0.2)
         self.dense2 = Dense(1, activation='sigmoid', use_bias=False)
 
     def call(self, inputs, submodel = False):
         x = self.conv1(inputs)
+        x = self.bn1(x)
+        x = self.relu1(x)
         x = self.localconv1(x)
+        x = self.bn2(x)
+        x = self.relu2(x)
         x = self.maxpool(x)
         x = self.localconv2(x)
+        x = self.bn3(x)
+        x = self.relu3(x)
         x = self.avgpool(x)
         if submodel:
           return x
         x = self.dense1(x)
-        x = self.dropout(x)
+        #x = self.dropout(x)
         return self.dense2(x)
 
 
