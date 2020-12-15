@@ -176,9 +176,9 @@ v_f = '/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/PRJEB23027/final_fea
 
 # 'seq_block_type' can choose from ['conv','local','convlocal']
 
-params = {'seq_block_type': 'convlocal', 'seq_block_num': 2, \
-            'seq_units' = 256, 'seq_filter' = 3, 'err_clc' = 1, \
-            'err_lc' = 1, 'err_units' = 128, 'err_filter' = 3,\
-            'fc_layers' = 1, 'fc_units' = 512, 'dropout_rate' = 0.2 }
+params = {'seq_block_type': 'convlocal', 'seq_block_num': 2,
+            'seq_units' : 256, 'seq_filter' : 3, 'err_clc' : 1, \
+            'err_lc' : 1, 'err_units' : 128, 'err_filter' : 3,\
+            'fc_layers' : 1, 'fc_units' : 512, 'dropout_rate' : 0.2 }
 
 train_jm(t_f,v_f,'./logs/','./models/',512,17,5, params)
