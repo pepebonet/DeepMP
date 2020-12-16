@@ -159,8 +159,8 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs,
     h = params['fc_layers']
     i = params['fc_units']
 
-    log_dir = log_dir + 'test_' + params['seq_block_type'] + '_{}_{}_{}_{}_{}_{}_{}_{}'.format(a,b,c,d,e,f,g,h,i)
-    model_dir = model_dir + 'test_' + params['seq_block_type'] + '_{}_{}_{}_{}_{}_{}_{}_{}'.format(a,b,c,d,e,f,g,h,i)
+    log_dir = log_dir + 'test_' + params['seq_block_type'] + '_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(a,b,c,d,e,f,g,h,i)
+    model_dir = model_dir + 'test_' + params['seq_block_type'] + '_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(a,b,c,d,e,f,g,h,i)
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
                                             log_dir = log_dir, histogram_freq=1)
