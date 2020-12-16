@@ -153,13 +153,14 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs,
     b = params['seq_units']
     c = params['seq_filter']
     d = params['err_clc']
-    e = params['err_units']
-    f = params['err_filter']
-    g = params['fc_layers']
-    h = params['fc_units']
+    e = params['err_lc'] # missing in the previous rounds
+    f = params['err_units']
+    g = params['err_filter']
+    h = params['fc_layers']
+    i = params['fc_units']
 
-    log_dir = log_dir + 'test_' + params['seq_block_type'] + '_{}_{}_{}_{}_{}_{}_{}_{}'.format(a,b,c,d,e,f,g,h)
-    model_dir = model_dir + 'test_' + params['seq_block_type'] + '_{}_{}_{}_{}_{}_{}_{}_{}'.format(a,b,c,d,e,f,g,h)
+    log_dir = log_dir + 'test_' + params['seq_block_type'] + '_{}_{}_{}_{}_{}_{}_{}_{}'.format(a,b,c,d,e,f,g,h,i)
+    model_dir = model_dir + 'test_' + params['seq_block_type'] + '_{}_{}_{}_{}_{}_{}_{}_{}'.format(a,b,c,d,e,f,g,h,i)
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
                                             log_dir = log_dir, histogram_freq=1)
@@ -198,9 +199,9 @@ v_f = '/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/PRJEB23027/final_fea
                     train_jm(t_f,v_f,'./logs/','./models/',512,17,5, params)
                 except:
                     continue
-"""
 
-for block_num in [1,2,3,4]:
+"""
+for block_num in [2,3,4]:
     for units in [64,128,256,512,1024]:
         for filter in [3,4,5,6]:
             params = {'seq_block_type': 'convlocal', 'seq_block_num': block_num,
@@ -211,3 +212,28 @@ for block_num in [1,2,3,4]:
                 train_jm(t_f,v_f,'./logs/','./models/',512,17,5, params)
             except:
                 continue
+"""
+for clc_num in [1,2,3,4]:
+    for lc_num in [1,2,3,4]:
+        for units in [64,128,256,512,1024]:
+            for filter in [3,4,5,6]:
+                params = {'seq_block_type': 'convlocal', 'seq_block_num': 2,
+                            'seq_units' : 256, 'seq_filter' : 3, 'err_clc' : clc_num, \
+                            'err_lc' : lc_num, 'err_units' : units, 'err_filter' : filter,\
+                            'fc_layers' : 1, 'fc_units' : 512, 'dropout_rate' : 0.2 }
+                try:
+                    train_jm(t_f,v_f,'./logs/','./models/',512,17,5, params)
+                except:
+                    continue
+
+for units in [128,256,512,1024]:
+    for block_num in [1,2,3,4,5]:
+        params = {'seq_block_type': 'convlocal', 'seq_block_num': 2,
+                    'seq_units' : 256, 'seq_filter' : 3, 'err_clc' : 1, \
+                    'err_lc' : 1, 'err_units' : 128, 'err_filter' : 3,\
+                    'fc_layers' : block_num, 'fc_units' : units, 'dropout_rate' : 0.2 }
+        try:
+            train_jm(t_f,v_f,'./logs/','./models/',512,17,5, params)
+        except:
+            continue
+"""
