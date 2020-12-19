@@ -9,9 +9,9 @@ import deepmp.utils as ut
 
 class ConvBlock(Model):
 
-    def __init__(self, units, filter_size):
+    def __init__(self, units, filters):
         super(ConvBlock, self).__init__()
-        self.conv = Conv1D(units, filter_size, padding="same")
+        self.conv = Conv1D(units, filters, padding="same")
         self.bn = BatchNormalization()
         self.relu = ReLU()
 
@@ -23,9 +23,9 @@ class ConvBlock(Model):
 
 class LocalBlock(Model):
 
-    def __init__(self, units, filter_size):
+    def __init__(self, units, filters):
         super(LocalBlock, self).__init__()
-        self.localconv = LocallyConnected1D(units, filter_size)
+        self.localconv = LocallyConnected1D(units, filters)
         self.bn = BatchNormalization()
         self.relu = ReLU()
 
@@ -37,12 +37,12 @@ class LocalBlock(Model):
 
 class ConvLocalBlock(Model):
 
-    def __init__(self, units, filter_size):
+    def __init__(self, units, filters):
         super(ConvLocalBlock, self).__init__()
-        self.conv = Conv1D(units, filter_size)
+        self.conv = Conv1D(units, filters)
         self.bn1 = BatchNormalization()
         self.relu1 = ReLU()
-        self.localconv = LocallyConnected1D(units, filter_size)
+        self.localconv = LocallyConnected1D(units, filters)
         self.bn2 = BatchNormalization()
         self.relu2 = ReLU()
 
@@ -59,18 +59,18 @@ class ConvLocalBlock(Model):
 
 class SequenceCNN(Model):
 
-    def __init__(self, cnn_block, block_num, units, filter_size):
+    def __init__(self, cnn_block, block_num, units, filters):
         super(SequenceCNN, self).__init__()
         self.block_num = block_num
         if cnn_block == 'conv':
             for i in range(self.block_num):
-                setattr(self, "block%i" % i, ConvBlock(units, filter_size))
+                setattr(self, "block%i" % i, ConvBlock(units, filters))
         elif cnn_block == 'local':
             for i in range(self.block_num):
-                setattr(self, "block%i" % i, LocalBlock(units, filter_size))
+                setattr(self, "block%i" % i, LocalBlock(units, filters))
         else:
             for i in range(self.block_num):
-                setattr(self, "block%i" % i, ConvLocalBlock(units, filter_size))
+                setattr(self, "block%i" % i, ConvLocalBlock(units, filters))
         self.pool = GlobalAveragePooling1D(name='seq_pooling_layer')
         self.dense = Dense(1, activation='sigmoid', use_bias=False)
 
@@ -86,28 +86,24 @@ class SequenceCNN(Model):
 
 class BCErrorCNN(Model):
 
-    def __init__(self, convlocal_blocks, local_blocks, units, filter_size):
+    def __init__(self, convlocal_blocks, local_blocks, units, filters):
         super(BCErrorCNN, self).__init__()
         self.convlocal_blocks = convlocal_blocks
         self.local_blocks = local_blocks
-        #self.block1 = ConvLocalBlock(128, 3)
         for i in range(self.convlocal_blocks):
-            setattr(self, "clcblock%i" % i, ConvLocalBlock(units, filter_size))
+            setattr(self, "clcblock%i" % i, ConvLocalBlock(units, filters))
         self.maxpool = MaxPooling1D()
-        #self.block2 = LocalBlock(128, 3)
         for i in range(self.local_blocks):
-            setattr(self, "lblock%i" % i, LocalBlock(units, filter_size))
+            setattr(self, "lblock%i" % i, LocalBlock(units, filters))
         self.avgpool = GlobalAveragePooling1D(name='err_pooling_layer')
         self.dense1 = Dense(100, activation='relu')
         self.dense2 = Dense(1, activation='sigmoid', use_bias=False)
 
     def call(self, inputs, submodel = False):
         x = inputs
-        #x = self.block1(inputs)
         for i in range(self.convlocal_blocks):
             x = getattr(self, "clcblock%i" % i)(x)
         x = self.maxpool(x)
-        #x = self.block2(x)
         for i in range(self.local_blocks):
             x = getattr(self, "lblock%i" % i)(x)
         x = self.avgpool(x)
@@ -185,13 +181,12 @@ t_f = '/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/PRJEB23027/final_fea
 v_f = '/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/PRJEB23027/final_features/Norwich/train_test_val_split/reads/val_combined.h5'
 
 # 'seq_block_type' can choose from ['conv','local','convlocal']
-
-"""for block_type in ['conv','local']:
-    for block_num in [2,3,4,5,6]:
-        for units in [64,128,256,512,1024]:
+"""
+for units in [64,128,256,512,1024]:
+    for block_num in [3,4,5,6]:
             for filter in [3,4,5,6]:
 
-                params = {'seq_block_type': block_type, 'seq_block_num': block_num,
+                params = {'seq_block_type': 'conv', 'seq_block_num': block_num,
                             'seq_units' : units, 'seq_filter' : filter, 'err_clc' : 1, \
                             'err_lc' : 1, 'err_units' : 128, 'err_filter' : 3,\
                             'fc_layers' : 1, 'fc_units' : 512, 'dropout_rate' : 0.2 }
@@ -200,9 +195,23 @@ v_f = '/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/PRJEB23027/final_fea
                 except:
                     continue
 
-"""
-for block_num in [2,3,4]:
-    for units in [64,128,256,512,1024]:
+
+for units in [64,128,256,512,1024]:
+    for block_num in [2,3,4,5,6]:
+            for filter in [3,4,5,6]:
+
+                params = {'seq_block_type': 'local', 'seq_block_num': block_num,
+                            'seq_units' : units, 'seq_filter' : filter, 'err_clc' : 1, \
+                            'err_lc' : 1, 'err_units' : 128, 'err_filter' : 3,\
+                            'fc_layers' : 1, 'fc_units' : 512, 'dropout_rate' : 0.2 }
+                try:
+                    train_jm(t_f,v_f,'./logs/','./models/',512,17,5, params)
+                except:
+                    continue
+
+
+for block_num in [3,4]:
+    for units in [1024]:
         for filter in [3,4,5,6]:
             params = {'seq_block_type': 'convlocal', 'seq_block_num': block_num,
                             'seq_units' : units, 'seq_filter' : filter, 'err_clc' : 1, \
@@ -225,7 +234,7 @@ for clc_num in [1,2,3,4]:
                     train_jm(t_f,v_f,'./logs/','./models/',512,17,5, params)
                 except:
                     continue
-
+"""
 for units in [128,256,512,1024]:
     for block_num in [1,2,3,4,5]:
         params = {'seq_block_type': 'convlocal', 'seq_block_num': 2,
