@@ -4,14 +4,20 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import *
+#from tensorflow.keras.regularizers import L2
+from tensorflow.keras.initializers import *
+import re
 import deepmp.utils as ut
+
 
 
 class ConvBlock(Model):
 
-    def __init__(self, units, filters):
+    def __init__(self, units, filters, lambd):
         super(ConvBlock, self).__init__()
-        self.conv = Conv1D(units, filters, padding="same")
+        self.conv = Conv1D(units, filters, padding="same",
+                            kernel_initializer="he_normal",
+                            kernel_regularizer=tf.keras.regularizers.l2(lambd))
         self.bn = BatchNormalization()
         self.relu = ReLU()
 
@@ -23,9 +29,11 @@ class ConvBlock(Model):
 
 class LocalBlock(Model):
 
-    def __init__(self, units, filters):
+    def __init__(self, units, filters, lambd):
         super(LocalBlock, self).__init__()
-        self.localconv = LocallyConnected1D(units, filters)
+        self.localconv = LocallyConnected1D(units, filters,
+                                            kernel_initializer="he_normal",
+                                            kernel_regularizer=tf.keras.regularizers.l2(lambd))
         self.bn = BatchNormalization()
         self.relu = ReLU()
 
@@ -37,9 +45,11 @@ class LocalBlock(Model):
 
 class ConvLocalBlock(Model):
 
-    def __init__(self, units, filters):
+    def __init__(self, units, filters, lambd):
         super(ConvLocalBlock, self).__init__()
-        self.conv = Conv1D(units, filters, padding="same")
+        self.conv = Conv1D(units, filters, padding="same",
+                            kernel_initializer="he_normal",
+                            kernel_regularizer=tf.keras.regularizers.l2(lambd))
         self.bn1 = BatchNormalization()
         self.relu1 = ReLU()
         self.localconv = LocallyConnected1D(units, filters)
@@ -59,18 +69,18 @@ class ConvLocalBlock(Model):
 
 class SequenceCNN(Model):
 
-    def __init__(self, cnn_block, block_num, units, filters):
+    def __init__(self, cnn_block, block_num, units, filters, lambd):
         super(SequenceCNN, self).__init__()
         self.block_num = block_num
         if cnn_block == 'conv':
             for i in range(self.block_num):
-                setattr(self, "block%i" % i, ConvBlock(units, filters))
+                setattr(self, "block%i" % i, ConvBlock(units, filters, lambd))
         elif cnn_block == 'local':
             for i in range(self.block_num):
-                setattr(self, "block%i" % i, LocalBlock(units, filters))
+                setattr(self, "block%i" % i, LocalBlock(units, filters, lambd))
         else:
             for i in range(self.block_num):
-                setattr(self, "block%i" % i, ConvLocalBlock(units, filters))
+                setattr(self, "block%i" % i, ConvLocalBlock(units, filters, lambd))
         self.pool = GlobalAveragePooling1D(name='seq_pooling_layer')
         self.dense = Dense(1, activation='sigmoid', use_bias=False)
 
@@ -115,15 +125,15 @@ class BCErrorCNN(Model):
 
 class BCErrorCNN(Model):
 
-    def __init__(self, conv_blocks, local_blocks, units, filters):
+    def __init__(self, conv_blocks, local_blocks, units, filters, lambd):
         super(BCErrorCNN, self).__init__()
         self.conv_blocks = conv_blocks
         self.local_blocks = local_blocks
         for i in range(self.conv_blocks):
-            setattr(self, "cblock%i" % i, ConvBlock(units, filters))
+            setattr(self, "cblock%i" % i, ConvBlock(units, filters, lambd))
         self.maxpool = MaxPooling1D()
         for i in range(self.local_blocks):
-            setattr(self, "lblock%i" % i, LocalBlock(units, filters))
+            setattr(self, "lblock%i" % i, LocalBlock(units, filters,lambd))
         self.avgpool = GlobalAveragePooling1D(name='err_pooling_layer')
         self.dense1 = Dense(100, activation='relu')
         self.dense2 = Dense(1, activation='sigmoid', use_bias=False)
@@ -140,15 +150,15 @@ class BCErrorCNN(Model):
           return x
         x = self.dense1(x)
         return self.dense2(x)
-#"""
+
 
 class JointNN(Model):
 
     def __init__(self, params):
         super(JointNN, self).__init__()
-        self.seqnn = SequenceCNN(params['seq_block_type'], params['seq_block_num'], params['seq_units'], params['seq_filter'])
-        self.errnn = BCErrorCNN(params['err_clc'], params['err_lc'], params['err_units'], params['err_filter'])
-        self.dense1 = Dense(params['fc_units'], activation='relu')
+        self.seqnn = SequenceCNN('conv', 6, 256, 4, params['reg'])
+        self.errnn = BCErrorCNN(3, 3, 128, 3, params['reg'])
+        self.dense1 = Dense(512, activation='relu')
         self.dropout = Dropout(params['dropout_rate'])
         self.dense2 = Dense(1, activation='sigmoid', use_bias=False)
 
@@ -168,26 +178,21 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs,
     ## train model
     model = JointNN(params)
     model.compile(loss='binary_crossentropy',
-                   optimizer=tf.keras.optimizers.Adam(),
+                   optimizer=tf.keras.optimizers.Adam(learning_rate= params['learning_rate']),
                    metrics=['accuracy'])
     input_shape = ([(None, kmer, 9), (None, kmer, 9)])
     model.build(input_shape)
     print(model.summary())
 
-    a = params['seq_block_num']
-    b = params['seq_units']
-    c = params['seq_filter']
-    d = params['err_clc']
-    e = params['err_lc'] # missing in the previous rounds
-    f = params['err_units']
-    g = params['err_filter']
-    h = params['fc_layers']
-    i = params['fc_units']
+    a = params['learning_rate']
+    a = re.sub(r'(?<=\d)[,\.]','',str(a))
+    b = params['reg']
+    b = re.sub(r'(?<=\d)[,\.]','',str(b))
+    c = params['dropout_rate']
+    d = batch_size
 
-    log_dir = log_dir + 'test_' + params['seq_block_type'] + '_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(a,b,c,d,e,f,g,h,i)
-    model_dir = model_dir + 'test_' + params['seq_block_type'] + '_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(a,b,c,d,e,f,g,h,i)
-    #log_dir = log_dir + 'test_' + 'newerr' + '_{}_{}_{}_{}_{}_{}'.format(d,e,f,g,h,i)
-    #model_dir = model_dir + 'test_' + 'newerr' + '_{}_{}_{}_{}_{}_{}'.format(d,e,f,g,h,i)
+    log_dir = log_dir + 'hpo_' +  '_{}_{}_{}_{}'.format(a,b,c,d)
+    model_dir = model_dir + 'hpo_' +  '_{}_{}_{}_{}'.format(a,b,c,d)
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
                                             log_dir = log_dir, histogram_freq=1)
@@ -208,82 +213,31 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs,
     return None
 
 
+
+
 t_f = '/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/PRJEB23027/final_features/Norwich/train_test_val_split/reads/train_combined.h5'
 v_f = '/cfs/klemming/nobackup/m/mandiche/DeepMP-master/data/PRJEB23027/final_features/Norwich/train_test_val_split/reads/val_combined.h5'
 
-# 'seq_block_type' can choose from ['conv','local','convlocal']
+
+#lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+#                                                            initial_learning_rate=1e-2,
+#                                                            decay_steps=10000,
+#                                                            decay_rate=0.9)
 
 
-params = {'seq_block_type': 'conv', 'seq_block_num': 5,
-            'seq_units' : 512, 'seq_filter' : 3, 'err_clc' : 3, \
-            'err_lc' : 3, 'err_units' : 128, 'err_filter' : 3,\
-            'fc_layers' : 1, 'fc_units' : 512, 'dropout_rate' : 0.2 }
+dropouts = 0.2
+batch_size = 512
 
-train_jm(t_f,v_f,'./logs/','./models/',512,17,5, params)
+for _ in range(50):
+    r1 = -4 * np.random.rand()
+    alpha = 10 ** r1
+    alpha = np.around(alpha,4)
 
-"""
-for units in [512,256,128]:
-    for block_num in [4,5,6,7,8]:
-            for filter in [3,4,5,6]:
-                if units == 512 and block_num ==4 and filter ==3:
-                    continue
-                params = {'seq_block_type': 'conv', 'seq_block_num': block_num,
-                            'seq_units' : units, 'seq_filter' : filter, 'err_clc' : 1, \
-                            'err_lc' : 1, 'err_units' : 128, 'err_filter' : 3,\
-                            'fc_layers' : 1, 'fc_units' : 512, 'dropout_rate' : 0.2 }
-                try:
-                    train_jm(t_f,v_f,'./logs/','./models/',512,17,5, params)
-                except:
-                    continue
+    r2 = -4 * np.random.rand()
+    lambd = 10 ** r2
+    lambd = np.around(lambd,4)
+    #lambd = 0.01
 
+    params = {'learning_rate': alpha, 'reg': lambd, 'dropout_rate' : dropouts }
 
-for units in [512,1024]:
-    for block_num in [4,5,6]:
-            for filter in [3,4,5,6]:
-
-                params = {'seq_block_type': 'local', 'seq_block_num': block_num,
-                            'seq_units' : units, 'seq_filter' : filter, 'err_clc' : 1, \
-                            'err_lc' : 1, 'err_units' : 128, 'err_filter' : 3,\
-                            'fc_layers' : 1, 'fc_units' : 512, 'dropout_rate' : 0.2 }
-                try:
-                    train_jm(t_f,v_f,'./logs/','./models/',512,17,5, params)
-                except:
-                    continue
-
-
-for block_num in [5,6]:
-    for units in [512,256]:
-        for filter in [3,4,5,6]:
-            params = {'seq_block_type': 'convlocal', 'seq_block_num': block_num,
-                            'seq_units' : units, 'seq_filter' : filter, 'err_clc' : 1, \
-                            'err_lc' : 1, 'err_units' : 128, 'err_filter' : 3,\
-                            'fc_layers' : 1, 'fc_units' : 512, 'dropout_rate' : 0.2 }
-            try:
-                train_jm(t_f,v_f,'./logs/','./models/',512,17,5, params)
-            except:
-                continue
-
-for lc_num in [3,4]:
-    for clc_num in [2,3,4,5]:
-        for units in [128,256,512]:
-            for filter in [3,4,5,6]:
-                params = {'seq_block_type': 'convlocal', 'seq_block_num': 2,
-                            'seq_units' : 256, 'seq_filter' : 3, 'err_clc' : clc_num, \
-                            'err_lc' : lc_num, 'err_units' : units, 'err_filter' : filter,\
-                            'fc_layers' : 1, 'fc_units' : 512, 'dropout_rate' : 0.2 }
-                try:
-                    train_jm(t_f,v_f,'./logs/','./models/',512,17,5, params)
-                except:
-                    continue
-
-for units in [128,256,512,1024]:
-    for block_num in [1,2,3,4,5]:
-        params = {'seq_block_type': 'convlocal', 'seq_block_num': 2,
-                    'seq_units' : 256, 'seq_filter' : 3, 'err_clc' : 1, \
-                    'err_lc' : 1, 'err_units' : 128, 'err_filter' : 3,\
-                    'fc_layers' : block_num, 'fc_units' : units, 'dropout_rate' : 0.2 }
-        try:
-            train_jm(t_f,v_f,'./logs/','./models/',512,17,5, params)
-        except:
-            continue
-"""
+    train_jm(t_f,v_f,'./logs/','./models/',batch_size,17,5,params)
