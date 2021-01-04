@@ -6,90 +6,120 @@ from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.applications.inception_v3 import InceptionV3
 
 
-class SequenceCNN(Model):
+class ConvBlock(Model):
 
-    def __init__(self, **kwargs):
-        super(SequenceCNN, self).__init__(**kwargs)
-        self.conv1 = Conv1D(256, 3)
+    def __init__(self, units, filters):
+        super(ConvBlock, self).__init__()
+        self.conv = Conv1D(units, filters, padding="same",
+                            kernel_initializer="lecun_normal")
+        self.bn = BatchNormalization()
+        self.relu = ReLU()
+
+    def call(self, inputs):
+        x = self.conv(inputs)
+        x = self.bn(x)
+        x = self.relu(x)
+        return x
+
+class LocalBlock(Model):
+
+    def __init__(self, units, filters):
+        super(LocalBlock, self).__init__()
+        self.localconv = LocallyConnected1D(units, filters,
+                                            kernel_initializer="lecun_normal")
+        self.bn = BatchNormalization()
+        self.relu = ReLU()
+
+    def call(self, inputs):
+        x = self.localconv(inputs)
+        x = self.bn(x)
+        x = self.relu(x)
+        return x
+
+class ConvLocalBlock(Model):
+
+    def __init__(self, units, filters):
+        super(ConvLocalBlock, self).__init__()
+        self.conv = Conv1D(units, filters, padding="same",
+                            kernel_initializer="lecun_normal")
         self.bn1 = BatchNormalization()
         self.relu1 = ReLU()
-        self.localconv1 = LocallyConnected1D(256, 3)
+        self.localconv = LocallyConnected1D(units, filters)
         self.bn2 = BatchNormalization()
         self.relu2 = ReLU()
-        self.conv2 = Conv1D(256, 3)
-        self.bn3 = BatchNormalization()
-        self.relu3 = ReLU()
-        self.localconv2 = LocallyConnected1D(256, 3)
-        self.bn4 = BatchNormalization()
-        self.relu4 = ReLU()
+
+    def call(self, inputs):
+        x = self.conv(inputs)
+        x = self.bn1(x)
+        x = self.relu1(x)
+        x = self.localconv(x)
+        x = self.bn2(x)
+        x = self.relu2(x)
+        return x
+
+
+class SequenceCNN(Model):
+
+    def __init__(self, cnn_block, block_num, units, filters):
+        super(SequenceCNN, self).__init__()
+        self.block_num = block_num
+        if cnn_block == 'conv':
+            for i in range(self.block_num):
+                setattr(self, "block%i" % i, ConvBlock(units, filters))
+        elif cnn_block == 'local':
+            for i in range(self.block_num):
+                setattr(self, "block%i" % i, LocalBlock(units, filters))
+        else:
+            for i in range(self.block_num):
+                setattr(self, "block%i" % i, ConvLocalBlock(units, filters))
         self.pool = GlobalAveragePooling1D(name='seq_pooling_layer')
-        #self.dropout = Dropout(0.2)
         self.dense = Dense(1, activation='sigmoid', use_bias=False)
 
     def call(self, inputs, submodel=False):
-        x = self.conv1(inputs)
-        x = self.bn1(x)
-        x = self.relu1(x)
-        x = self.localconv1(x)
-        x = self.bn2(x)
-        x = self.relu2(x)
-        x = self.conv2(x)
-        x = self.bn3(x)
-        x = self.relu3(x)
-        x = self.localconv2(x)
-        x = self.bn4(x)
-        x = self.relu4(x)
+        x = inputs
+        for i in range(self.block_num):
+            x = getattr(self, "block%i" % i)(x)
         x = self.pool(x)
         if submodel:
             return x
-        #x = self.dropout(x)
         return self.dense(x)
 
 
 class BCErrorCNN(Model):
 
-    def __init__(self, **kwargs):
-        super(BCErrorCNN, self).__init__(**kwargs)
-        self.conv1 = Conv1D(128, 3)
-        self.bn1 = BatchNormalization()
-        self.relu1 = ReLU()
-        self.localconv1 = LocallyConnected1D(128, 3)
-        self.bn2 = BatchNormalization()
-        self.relu2 = ReLU()
+    def __init__(self, conv_blocks, local_blocks, units, filters):
+        super(BCErrorCNN, self).__init__()
+        self.conv_blocks = conv_blocks
+        self.local_blocks = local_blocks
+        for i in range(self.conv_blocks):
+            setattr(self, "cblock%i" % i, ConvBlock(units, filters))
         self.maxpool = MaxPooling1D()
-        self.localconv2 = LocallyConnected1D(128, 3)
-        self.bn3 = BatchNormalization()
-        self.relu3 = ReLU()
+        for i in range(self.local_blocks):
+            setattr(self, "lblock%i" % i, LocalBlock(units, filters))
         self.avgpool = GlobalAveragePooling1D(name='err_pooling_layer')
         self.dense1 = Dense(100, activation='relu')
-        #self.dropout = Dropout(0.2)
         self.dense2 = Dense(1, activation='sigmoid', use_bias=False)
 
     def call(self, inputs, submodel = False):
-        x = self.conv1(inputs)
-        x = self.bn1(x)
-        x = self.relu1(x)
-        x = self.localconv1(x)
-        x = self.bn2(x)
-        x = self.relu2(x)
+        x = inputs
+        for i in range(self.conv_blocks):
+            x = getattr(self, "cblock%i" % i)(x)
         x = self.maxpool(x)
-        x = self.localconv2(x)
-        x = self.bn3(x)
-        x = self.relu3(x)
+        for i in range(self.local_blocks):
+            x = getattr(self, "lblock%i" % i)(x)
         x = self.avgpool(x)
         if submodel:
           return x
         x = self.dense1(x)
-        #x = self.dropout(x)
         return self.dense2(x)
 
 
 class JointNN(Model):
 
-    def __init__(self, **kwargs):
-        super(JointNN, self).__init__(**kwargs)
-        self.seqnn = SequenceCNN()
-        self.errnn = BCErrorCNN()
+    def __init__(self):
+        super(JointNN, self).__init__()
+        self.seqnn = SequenceCNN('conv', 6, 256, 4)
+        self.errnn = BCErrorCNN(3, 3, 128, 3)
         self.dense1 = Dense(512, activation='relu')
         self.dropout = Dropout(0.2)
         self.dense2 = Dense(1, activation='sigmoid', use_bias=False)
@@ -101,6 +131,7 @@ class JointNN(Model):
         x = self.dense1(x)
         x = self.dropout(x)
         return self.dense2(x)
+
 
 
 class CentralCNN(Model):
@@ -149,84 +180,6 @@ def get_brnn_model(base_num, embedding_size, features = 5, rnn_cell = "lstm"):
 
     return model
 
-def get_sequence_model(base_num, embedding_size, features = 4):
-
-    depth = embedding_size + features
-    model = Sequential()
-    model.add(tf.keras.layers.InputLayer(input_shape=(base_num,depth)))
-    model.add(tf.keras.layers.Conv1D(256, 3, activation='relu'))
-    model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
-    model.add(tf.keras.layers.Conv1D(256, 3, activation='relu'))
-    model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
-    model.add(tf.keras.layers.GlobalAveragePooling1D(name='seq_pooling_layer'))
-    model.add(tf.keras.layers.Dropout(0.2))
-    model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))
-
-    model.compile(loss='binary_crossentropy',
-              optimizer=tf.keras.optimizers.Adam(),
-              metrics=['accuracy'])
-    print(model.summary())
-    return model
-
-#TODO delete in future
-def get_error_model(feat):
-
-    model = tf.keras.Sequential()
-    model.add(tf.keras.layers.Conv1D(128, 3, padding='same', input_shape=(feat, 1), activation='relu'))
-    model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
-    # model.add(tf.keras.layers.MaxPooling1D(2))
-    model.add(tf.keras.layers.Conv1D(128, 3, padding='same', activation='relu'))
-    model.add(tf.keras.layers.LocallyConnected1D(256, 3, activation='relu'))
-    model.add(tf.keras.layers.GlobalAveragePooling1D(name='err_pooling_layer'))
-    model.add(tf.keras.layers.Dropout(0.2))
-    model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))
-
-    model.compile(
-        optimizer='adam', loss='binary_crossentropy', metrics=['acc']
-    )
-    print(model.summary())
-    return model
-
-
-def joint_model(base_num, embedding_size):
-
-    model1 = get_sequence_model(base_num, embedding_size)
-    output1 = model1.get_layer("seq_pooling_layer").output
-    model2 = get_single_err_model(base_num)
-    output2 = model2.get_layer("err_pooling_layer").output
-
-    x = concatenate([output1, output2],axis=-1)
-    x = Dense(512, activation='relu')(x)
-    x = Dropout(0.2)(x)
-    out = Dense(1, activation='sigmoid', use_bias=False)(x)
-    model = Model(inputs=[model1.input, model2.input], outputs=out)
-    model.compile(loss='binary_crossentropy',
-                  optimizer=tf.keras.optimizers.Adam(),
-                  metrics=['accuracy'])
-    print(model.summary())
-
-    return model
-
-
-def get_single_err_model(base_num, depth = 9):
-
-    model = Sequential()
-    model.add(tf.keras.layers.InputLayer(input_shape=(base_num,depth)))
-    model.add(tf.keras.layers.Conv1D(128, 3, activation='relu'))
-    model.add(tf.keras.layers.LocallyConnected1D(128, 3, activation='relu'))
-    model.add(tf.keras.layers.MaxPooling1D())
-    model.add(tf.keras.layers.LocallyConnected1D(128, 3, activation='relu'))
-    model.add(tf.keras.layers.GlobalAveragePooling1D(name='err_pooling_layer'))
-    #model.add(Flatten())
-    model.add(Dense(100, activation='relu'))
-    model.add(tf.keras.layers.Dropout(0.2))
-    model.add(tf.keras.layers.Dense(1, activation='sigmoid', use_bias=False))
-
-    model.compile(loss='binary_crossentropy',
-              optimizer=tf.keras.optimizers.Adam(),
-              metrics=['accuracy'])
-    print(model.summary())
-    return model
 
 
 class Inception(Model):
