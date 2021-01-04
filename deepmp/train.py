@@ -126,7 +126,7 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs)
     #model = joint_model(kmer, embedding_size)
     model = JointNN()
     model.compile(loss='binary_crossentropy',
-                   optimizer=tf.keras.optimizers.Adam(),
+                   optimizer=tf.keras.optimizers.Adam(learning_rate=0.00125),
                    metrics=['accuracy'])
     input_shape = ([(None, kmer, 9), (None, kmer, 9)])
     model.build(input_shape)
