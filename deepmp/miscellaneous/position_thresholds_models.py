@@ -12,7 +12,7 @@ plt.switch_backend('agg')
 from sklearn.metrics import precision_recall_fscore_support
 
 read1_pos0 = 0.02  
-read0_pos1 = 0.85 
+read0_pos1 = 0.80
 fp = 0.02  
 fn = 0.03  
 beta_a = 1
@@ -27,7 +27,8 @@ palette_dict = {
 
 names_deepsignal = ['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 't/c', 'pred_unmod', 'pred_prob', 'inferred_label', 'kmer']
 
-def pred_site_all(df, pred_min_max, pred_0001, pred_009, pred_01, pred_02, pred_03, pred_04,  meth_label):
+def pred_site_all(df, pred_min_max, pred_001, pred_002, pred_004, pred_005, pred_006, 
+    pred_008, pred_009, pred_01, pred_02, pred_03, pred_04,  meth_label):
 
     ## min+max prediction
     comb_pred = df.pred_prob.min() + df.pred_prob.max()
@@ -37,7 +38,8 @@ def pred_site_all(df, pred_min_max, pred_0001, pred_009, pred_01, pred_02, pred_
         pred_min_max.append(0)
         
     ## threshold prediction
-    for i in [(pred_0001, 0.001), (pred_009, 0.09), (pred_01, 0.1), (pred_02, 0.2), (pred_03, 0.3), (pred_04, 0.4)]:
+    for i in [(pred_001, 0.01), (pred_002, 0.02), (pred_004, 0.04), (pred_005, 0.05), (pred_006, 0.06), \
+        (pred_008, 0.08), (pred_009, 0.09), (pred_01, 0.1), (pred_02, 0.2), (pred_03, 0.3), (pred_04, 0.4)]:
         inferred = df['inferred_label'].values
         if np.sum(inferred) / len(inferred) >= i[1]:
             i[0].append(1)
@@ -49,7 +51,8 @@ def pred_site_all(df, pred_min_max, pred_0001, pred_009, pred_01, pred_02, pred_
     else:
         meth_label.append(df.methyl_label.unique()[0])
     
-    return pred_min_max, pred_0001, pred_009, pred_01, pred_02, pred_03, pred_04, meth_label
+    return pred_min_max, pred_001, pred_002, pred_004, pred_005, pred_006, pred_008, \
+        pred_009, pred_01, pred_02, pred_03, pred_04, meth_label
 
 
 #obs_reads is the vector of inferred labels
@@ -130,7 +133,8 @@ def do_per_position_analysis(df):
     pred_03 = []; pred_04 = []; meth_label = []; ids = []; pred_posterior = []
     prob_mod = []; prob_unmod = []; pred_beta = []; prob_beta_mod = []
     prob_beta_unmod = []; meth_freq_diff = []; fp_freq = []; fn_freq = []
-    true_meth_freq = []; pred_deepsignal = []
+    true_meth_freq = []; pred_deepsignal = []; 
+    pred_001, pred_002, pred_004, pred_006, pred_008 = [], [], [], [], []
 
     for i, j in df.groupby('id'):
         meth_freq_diff.append(1 - (np.absolute(j.inferred_label.values - j.methyl_label).sum() / len(j)))
@@ -143,8 +147,11 @@ def do_per_position_analysis(df):
 
         pred_deepsignal = pred_deepsignal_pos(j, pred_deepsignal)
 
-        pred_min_max, pred_0001, pred_009, pred_01, pred_02, pred_03, pred_04, meth_label = pred_site_all(
-            j, pred_min_max, pred_005, pred_009, pred_01, pred_02, pred_03, pred_04, meth_label
+        pred_min_max, pred_001, pred_002, pred_004, pred_005, pred_006, pred_008,\
+            pred_009, pred_01, pred_02, pred_03, pred_04, meth_label = pred_site_all(
+            j, pred_min_max,  pred_001, pred_002, pred_004, pred_005, 
+            pred_006, pred_008, pred_009, pred_01, pred_02, pred_03, 
+            pred_04, meth_label
         )
         pred_posterior, prob_mod, prob_unmod = pred_stats(
             j['inferred_label'].values, pred_posterior, prob_mod, prob_unmod
@@ -160,7 +167,12 @@ def do_per_position_analysis(df):
     preds['id'] = ids
     preds['cov'] = cov 
     preds['pred_min_max'] = pred_min_max
-    preds['pred_0001'] = pred_0001
+    preds['pred_001'] = pred_001
+    preds['pred_002'] = pred_002
+    preds['pred_004'] = pred_004
+    preds['pred_005'] = pred_005
+    preds['pred_006'] = pred_006
+    preds['pred_008'] = pred_008
     preds['pred_009'] = pred_009
     preds['pred_01'] = pred_01
     preds['pred_02'] = pred_02 
@@ -196,13 +208,27 @@ def extract_preds_deepmp(predictions_file, output):
     q1, median, q3 = [], [], []
     q1_fp, median_fp, q3_fp = [], [], []
     q1_fn, median_fn, q3_fn = [], [], []
-    label = []
+    label = []; accuracy_beta, accuracy_01, accuracy_005, accuracy_001 = [], [], [], []
     for file in tqdm(predictions_file):
         test = pd.read_csv(file, sep='\t').drop_duplicates()
         label.append(file.rsplit('/', 1)[1].split('_')[0])
         # import pdb;pdb.set_trace()
         all_preds = do_per_position_analysis(test)
-        # import pdb;pdb.set_trace()
+        
+        labels = all_preds['meth_label'].values
+        inf_beta = all_preds['pred_beta'].values
+        inf_01 = all_preds['pred_01'].values
+        inf_005 = all_preds['pred_005'].values
+        inf_001 = all_preds['pred_001'].values
+
+        acc_beta = round(1 - np.argwhere(labels != inf_beta).shape[0] / len(labels), 5)
+        acc_01 = round(1 - np.argwhere(labels != inf_01).shape[0] / len(labels), 5)
+        acc_005 = round(1 - np.argwhere(labels != inf_005).shape[0] / len(labels), 5)
+        acc_001 = round(1 - np.argwhere(labels != inf_001).shape[0] / len(labels), 5)
+
+        accuracy_beta.append(acc_beta); accuracy_01.append(acc_01)
+        accuracy_005.append(acc_005); accuracy_001.append(acc_001)
+        
         Q1, med, Q3 = np.percentile(all_preds['meth_freq_diff'].values, [25, 50, 75])
         q1.append(Q1); median.append(med); q3.append(Q3)
         Q1_fp, med_fp, Q3_fp = np.percentile(all_preds['fp_freq'].values, [25, 50, 75])
@@ -210,14 +236,17 @@ def extract_preds_deepmp(predictions_file, output):
         Q1_fn, med_fn, Q3_fn = np.percentile(all_preds['fn_freq'].values, [25, 50, 75])
         q1_fn.append(Q1_fn); median_fn.append(med_fn); q3_fn.append(Q3_fn)
     
-    return (q1, median, q3, label, 'DeepMP', all_preds)
+    return (q1, median, q3, label, 'DeepMP', accuracy_beta, \
+        accuracy_01, accuracy_005, accuracy_001)
 
 
 def extract_preds_deepsignal(predictions_file, ids):
     q1, median, q3 = [], [], []
     q1_fp, median_fp, q3_fp = [], [], []
     q1_fn, median_fn, q3_fn = [], [], []
-    label = []
+    label = []; accuracy_dps = []; accuracy_beta = []
+    accuracy_01, accuracy_005, accuracy_001 = [], [], []
+
     for file in tqdm(predictions_file):
         mod_perc = file.rsplit('/', 1)[1].split('_')[2]
         for el in ids: 
@@ -233,7 +262,22 @@ def extract_preds_deepsignal(predictions_file, ids):
         label.append(file.rsplit('/', 1)[1].split('_')[2])
 
         all_preds = do_per_position_analysis(test)
-        # import pdb;pdb.set_trace()
+
+        labels = all_preds['meth_label'].values
+        inf_dps = all_preds['pred_deepsignal'].values
+        inf_beta = all_preds['pred_beta'].values
+        inf_01 = all_preds['pred_01'].values
+        inf_005 = all_preds['pred_005'].values
+        inf_001 = all_preds['pred_001'].values
+        acc_dps = round(1 - np.argwhere(labels != inf_dps).shape[0] / len(labels), 5)
+        acc_beta = round(1 - np.argwhere(labels != inf_beta).shape[0] / len(labels), 5)
+        acc_01 = round(1 - np.argwhere(labels != inf_01).shape[0] / len(labels), 5)
+        acc_005 = round(1 - np.argwhere(labels != inf_005).shape[0] / len(labels), 5)
+        acc_001 = round(1 - np.argwhere(labels != inf_001).shape[0] / len(labels), 5)
+        accuracy_dps.append(acc_dps); accuracy_beta.append(acc_beta)
+        accuracy_01.append(acc_01)
+        accuracy_005.append(acc_005); accuracy_001.append(acc_001)
+
         Q1, med, Q3 = np.percentile(all_preds['meth_freq_diff'].values, [25, 50, 75])
         q1.append(Q1); median.append(med); q3.append(Q3)
         Q1_fp, med_fp, Q3_fp = np.percentile(all_preds['fp_freq'].values, [25, 50, 75])
@@ -241,14 +285,17 @@ def extract_preds_deepsignal(predictions_file, ids):
         Q1_fn, med_fn, Q3_fn = np.percentile(all_preds['fn_freq'].values, [25, 50, 75])
         q1_fn.append(Q1_fn); median_fn.append(med_fn); q3_fn.append(Q3_fn)
     
-    return (q1, median, q3, label, 'DeepSignal', all_preds)
+    return (q1, median, q3, label, 'DeepSignal', accuracy_beta, \
+        accuracy_dps, accuracy_01, accuracy_005, accuracy_001)
 
 
 def extract_preds_deepmod(predictions_file, output):
     q1, median, q3 = [], [], []
     q1_fp, median_fp, q3_fp = [], [], []
     q1_fn, median_fn, q3_fn = [], [], []
-    label = []
+    label = []; accuracy_beta = []; accuracy_02 = []
+    accuracy_01, accuracy_005, accuracy_001 = [], [], []
+
     for file in tqdm(predictions_file):
         test = pd.read_csv(file, sep='\t')
         test['inferred_label'] = test['mod_pred']
@@ -257,6 +304,24 @@ def extract_preds_deepmod(predictions_file, output):
         label.append(file.rsplit('/', 2)[1].split('_')[0])
 
         all_preds = do_per_position_analysis(test)
+
+        labels = all_preds['meth_label'].values
+        inf_02 = all_preds['pred_02'].values
+        inf_beta = all_preds['pred_beta'].values
+        inf_01 = all_preds['pred_01'].values
+        inf_005 = all_preds['pred_005'].values
+        inf_001 = all_preds['pred_001'].values
+
+        acc_02 = round(1 - np.argwhere(labels != inf_02).shape[0] / len(labels), 5)
+        acc_beta = round(1 - np.argwhere(labels != inf_beta).shape[0] / len(labels), 5)
+        acc_01 = round(1 - np.argwhere(labels != inf_01).shape[0] / len(labels), 5)
+        acc_005 = round(1 - np.argwhere(labels != inf_005).shape[0] / len(labels), 5)
+        acc_001 = round(1 - np.argwhere(labels != inf_001).shape[0] / len(labels), 5)
+
+        accuracy_02.append(acc_02); accuracy_beta.append(acc_beta)
+        accuracy_01.append(acc_01)
+        accuracy_005.append(acc_005); accuracy_001.append(acc_001)
+
         Q1, med, Q3 = np.percentile(all_preds['meth_freq_diff'].values, [25, 50, 75])
         q1.append(Q1); median.append(med); q3.append(Q3)
         Q1_fp, med_fp, Q3_fp = np.percentile(all_preds['fp_freq'].values, [25, 50, 75])
@@ -264,7 +329,8 @@ def extract_preds_deepmod(predictions_file, output):
         Q1_fn, med_fn, Q3_fn = np.percentile(all_preds['fn_freq'].values, [25, 50, 75])
         q1_fn.append(Q1_fn); median_fn.append(med_fn); q3_fn.append(Q3_fn)
     
-    return (q1, median, q3, label, 'DeepMod', all_preds)
+    return (q1, median, q3, label, 'DeepMod', accuracy_beta, \
+        accuracy_02, accuracy_01, accuracy_005, accuracy_001)
 
 
 def plot_please(Q1, median, Q3, label, output):
@@ -358,28 +424,24 @@ def plot_pos_accuracy(deepmp, deepsignal, deepmod, output):
         if pred[4] == 'DeepMP':
             pos = -3
             plt.plot(
-                np.asarray(pred[3]).astype(np.int) + pos, pred[5]['pred_beta'], 
+                np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[5][1:], 
                 marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
-                ecolor='black', capsize=2.5, elinewidth=1, capthick=1, c=palette_dict[pred[4]]
+                c=palette_dict[pred[4]]
             )
         elif pred[4] == 'DeepMod':
             pos = 3
             plt.plot(
-                np.asarray(pred[3]).astype(np.int) + pos, pred[5]['pred_02'], 
+                np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[6][1:], 
                 marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
-                ecolor='black', capsize=2.5, elinewidth=1, capthick=1, c=palette_dict[pred[4]]
+                c=palette_dict[pred[4]]
             )
         else:
             pos = 0
             plt.plot(
-                np.asarray(pred[3]).astype(np.int) + pos, pred[5]['pred_deepsignal'], 
+                np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[6][1:], 
                 marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
-                ecolor='black', capsize=2.5, elinewidth=1, capthick=1, c=palette_dict[pred[4]]
+                c=palette_dict[pred[4]]
             )
-        
-        plt.plot(
-            np.asarray(pred[3]).astype(np.int) + pos,
-        )
     import pdb;pdb.set_trace()
 
     ax.set_xlabel("Methylation percentage", fontsize=12)
@@ -401,6 +463,120 @@ def plot_pos_accuracy(deepmp, deepsignal, deepmod, output):
     plt.close()
 
 
+def plot_pos_accuracy_beta(deepmp, deepsignal, deepmod, output):
+    fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
+
+    custom_lines = []
+    for pred in [deepmp, deepsignal, deepmod]:
+        custom_lines.append(
+            plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
+            mew=1, color=palette_dict[pred[4]], label=pred[4])[0] 
+        )
+
+        if pred[4] == 'DeepMP':
+            pos = -3
+            plt.plot(
+                np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[5][1:], 
+                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+                c=palette_dict[pred[4]]
+            )
+        elif pred[4] == 'DeepMod':
+            pos = 3
+            plt.plot(
+                np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[5][1:], 
+                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+                c=palette_dict[pred[4]]
+            )
+        else:
+            pos = 0
+            plt.plot(
+                np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[5][1:], 
+                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+                c=palette_dict[pred[4]]
+            )
+    import pdb;pdb.set_trace()
+
+    ax.set_xlabel("Methylation percentage", fontsize=12)
+    ax.set_ylabel("Position Accuracy", fontsize=12)
+    plt.xticks(rotation=0)
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    plt.ylim(bottom=0, top=1.05)
+
+    ax.legend(
+        bbox_to_anchor=(0., 1.2, 1., .102),
+        handles=custom_lines, loc='upper center', 
+        facecolor='white', ncol=1, fontsize=8, frameon=False
+    )
+
+    plt.tight_layout()
+    out_dir = os.path.join(output, 'position_accuracy_beta.pdf')
+    plt.savefig(out_dir)
+    plt.close()
+
+
+def plot_pos_accuracy_around_0(deepmp, deepsignal, deepmod, output):
+    fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
+    import pdb;pdb.set_trace()
+    custom_lines = []
+    for pred in [deepmp, deepsignal, deepmod]:
+        custom_lines.append(
+            plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
+            mew=1, color=palette_dict[pred[4]], label=pred[4])[0] 
+        )
+
+        if pred[4] == 'DeepMP':
+            import pdb;pdb.set_trace()
+            pos = -0.1
+            plt.plot(
+                np.asarray(pred[3]).astype(np.int) + pos, pred[5], 
+                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+                c=palette_dict[pred[4]]
+            )
+        elif pred[4] == 'DeepMod':
+
+            pos = 0.1
+            for el in pred[7:10]:
+                import pdb;pdb.set_trace()
+                plt.plot(
+                    np.asarray(pred[3]).astype(np.int) + pos, el, 
+                    marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+                    c=palette_dict[pred[4]]
+                )
+        else:
+            pos = 0
+            for el in pred[7:10]:
+                import pdb;pdb.set_trace()
+                plt.plot(
+                    np.asarray(pred[3]).astype(np.int) + pos, el, 
+                    marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+                    c=palette_dict[pred[4]]
+                )
+    import pdb;pdb.set_trace()
+
+    ax.set_xlabel("Methylation percentage", fontsize=12)
+    ax.set_ylabel("Position Accuracy", fontsize=12)
+    plt.xticks(rotation=0)
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    plt.ylim(bottom=0, top=1.05)
+
+    ax.legend(
+        bbox_to_anchor=(0., 1.2, 1., .102),
+        handles=custom_lines, loc='upper center', 
+        facecolor='white', ncol=1, fontsize=8, frameon=False
+    )
+
+    plt.tight_layout()
+    out_dir = os.path.join(output, 'position_accuracy_around0.pdf')
+    plt.savefig(out_dir)
+    plt.close()
+
+
 @click.command(short_help='Convert DeepMod output into accuracy scores.')
 @click.option(
     '-pd', '--predictions_deepmp', multiple=True,
@@ -415,19 +591,28 @@ def plot_pos_accuracy(deepmp, deepsignal, deepmod, output):
     help='Folder containing the predictions on test from deepmod'
 )
 @click.option(
+    '-az', '--around_zero', is_flag=True, default=False, 
+    help='whether the inputs are around 0 percentages'
+)
+@click.option(
     '-o', '--output', default='', help='output folder'
 )
-def main(predictions_deepmp, predictions_deepsignal, predictions_deepmod, output):
+def main(predictions_deepmp, predictions_deepsignal, predictions_deepmod, around_zero, output):
     ids = get_ids(predictions_deepmp)
+
     preds_deepmp = extract_preds_deepmp(predictions_deepmp, output)
-    # import pdb;pdb.set_trace()
     preds_deepsignal = extract_preds_deepsignal(predictions_deepsignal, ids)
     preds_deepmod = extract_preds_deepmod(predictions_deepmod, output)
-    import pdb;pdb.set_trace()
+    # import pdb;pdb.set_trace()
     # plot_please(q1, median, q3, label, output)
     # plot_comparison(preds_deepmp, preds_deepsignal, preds_deepmod, output)
 
-    plot_pos_accuracy(preds_deepmp, preds_deepsignal, preds_deepmod, output)
+    if around_zero:
+        plot_pos_accuracy_around_0(preds_deepmp, preds_deepsignal, preds_deepmod, output)
+    
+    else:
+        plot_pos_accuracy(preds_deepmp, preds_deepsignal, preds_deepmod, output)
+        plot_pos_accuracy_beta(preds_deepmp, preds_deepsignal, preds_deepmod, output)
     import pdb;pdb.set_trace()
 
 
