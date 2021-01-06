@@ -23,6 +23,10 @@ palette_dict = {
         'DeepSignal':'#f03b20', 
         'DeepMod':'#238443'
 }
+palette_dict_2 = {
+        'DeepMP_1':'#08519c', 'DeepMP_2':'#6baed6', 
+        'DeepMP_3':'#a6bddb', 'DeepMP_4':'#f1eef6'
+}
 
 
 names_deepsignal = ['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 't/c', 'pred_unmod', 'pred_prob', 'inferred_label', 'kmer']
@@ -236,7 +240,7 @@ def extract_preds_deepmp(predictions_file, output):
         Q1_fn, med_fn, Q3_fn = np.percentile(all_preds['fn_freq'].values, [25, 50, 75])
         q1_fn.append(Q1_fn); median_fn.append(med_fn); q3_fn.append(Q3_fn)
     
-    return (q1, median, q3, label, 'DeepMP', accuracy_beta, \
+    return (q1, median, q3, label, 'DeepMP', accuracy_beta, accuracy_beta, \
         accuracy_01, accuracy_005, accuracy_001)
 
 
@@ -520,26 +524,33 @@ def plot_pos_accuracy_beta(deepmp, deepsignal, deepmod, output):
 def plot_pos_accuracy_around_0(deepmp, deepsignal, deepmod, output):
     fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
     import pdb;pdb.set_trace()
+    labels = ['Beta Model', '10{} Filter'.format('%'), '5{} Filter'.format('%'), '1{} Filter'.format('%')]
+    positions = [0.2, -0.2, -0.05, 0.05]
     custom_lines = []
-    for pred in [deepmp, deepsignal, deepmod]:
-        custom_lines.append(
-            plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
-            mew=1, color=palette_dict[pred[4]], label=pred[4])[0] 
-        )
+    for pred in [deepmp]:
+        
 
         if pred[4] == 'DeepMP':
-            import pdb;pdb.set_trace()
+            
+            counter = 1
             pos = -0.1
-            plt.plot(
-                np.asarray(pred[3]).astype(np.int) + pos, pred[5], 
-                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
-                c=palette_dict[pred[4]]
-            )
+            for el in pred[5:9]:
+                import pdb;pdb.set_trace()
+                custom_lines.append(
+                    plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
+                    mew=1, color=palette_dict_2[pred[4] + '_' + str(counter)], label=labels[counter - 1])[0] 
+                )
+                plt.plot(
+                    np.asarray(pred[3]).astype(np.int) + positions[counter - 1], el, 
+                    marker='o', mfc=palette_dict_2[pred[4] + '_' + str(counter)], mec='black', 
+                    ms=8, mew=1, c=palette_dict_2[pred[4] + '_' + str(counter)]
+                )
+
+                counter += 1 
         elif pred[4] == 'DeepMod':
 
             pos = 0.1
             for el in pred[7:10]:
-                import pdb;pdb.set_trace()
                 plt.plot(
                     np.asarray(pred[3]).astype(np.int) + pos, el, 
                     marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
@@ -548,7 +559,6 @@ def plot_pos_accuracy_around_0(deepmp, deepsignal, deepmod, output):
         else:
             pos = 0
             for el in pred[7:10]:
-                import pdb;pdb.set_trace()
                 plt.plot(
                     np.asarray(pred[3]).astype(np.int) + pos, el, 
                     marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
@@ -573,6 +583,50 @@ def plot_pos_accuracy_around_0(deepmp, deepsignal, deepmod, output):
 
     plt.tight_layout()
     out_dir = os.path.join(output, 'position_accuracy_around0.pdf')
+    plt.savefig(out_dir)
+    plt.close()
+
+
+def plot_pos_barplot_around_0(deepmp, deepsignal, deepmod, output):
+    fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
+
+    df = pd.DataFrame()
+    custom_lines = []
+
+    for pred in [deepmp, deepsignal, deepmod]:
+        custom_lines.append(
+            plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
+            mew=1, color=palette_dict[pred[4]], label=pred[4])[0] 
+        )
+
+        alg_df = pd.DataFrame(
+            [[pred[4], pred[5][0], 'Beta Model'],[pred[4], pred[7][0], '10% Filter'], \
+            [pred[4], pred[8][0], '5% Filter'], [pred[4], pred[9][0], '1% Filter']], \
+            columns=['Model', 'Accuracy', 'Filter']
+        )
+        df = pd.concat([df, alg_df])
+
+
+    sns.barplot(x="Filter", y="Accuracy", hue="Model", data=df, 
+        palette=['#08519c', '#f03b20','#238443'])
+
+    ax.set_xlabel("Filters", fontsize=12)
+    ax.set_ylabel("Position Accuracy", fontsize=12)
+    plt.xticks(rotation=0)
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    plt.ylim(bottom=0, top=1.05)
+
+    ax.legend(
+        bbox_to_anchor=(0., 1.2, 1., .102),
+        handles=custom_lines, loc='upper center', 
+        facecolor='white', ncol=1, fontsize=8, frameon=False
+    )
+
+    plt.tight_layout()
+    out_dir = os.path.join(output, 'position_accuracy_around0_barplot.pdf')
     plt.savefig(out_dir)
     plt.close()
 
@@ -608,7 +662,9 @@ def main(predictions_deepmp, predictions_deepsignal, predictions_deepmod, around
     # plot_comparison(preds_deepmp, preds_deepsignal, preds_deepmod, output)
 
     if around_zero:
-        plot_pos_accuracy_around_0(preds_deepmp, preds_deepsignal, preds_deepmod, output)
+        plot_pos_barplot_around_0(preds_deepmp, preds_deepsignal, preds_deepmod, output)
+        # plot_pos_accuracy_around_0(preds_deepmp, preds_deepsignal, preds_deepmod, output)
+        
     
     else:
         plot_pos_accuracy(preds_deepmp, preds_deepsignal, preds_deepmod, output)
