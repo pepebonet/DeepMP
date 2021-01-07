@@ -4,7 +4,8 @@ import click
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_curve, auc, f1_score
+from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import precision_recall_fscore_support
 
 sys.path.append('../')
@@ -25,6 +26,23 @@ def get_labels(x):
         return 0
     else:
         return 1
+
+
+def plot_ROC_alone(deepmp, fig_out, kn='Linear'):
+    fpr_dmp, tpr_dmp, thresholds = roc_curve(
+        deepmp['labels'].values, deepmp['probs'].values
+    )
+    roc_auc_dmp = auc(fpr_dmp, tpr_dmp)
+    plt.plot (fpr_dmp, tpr_dmp, lw=2, label ='DeepMP: {}'.format(round(roc_auc_dmp, 3)))
+
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.xlim([-0.05, 1.05])
+    plt.ylim([-0.05, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    # plt.title('Ecoli data')
+    plt.legend(loc="lower right")
+    plt.savefig(fig_out)
 
 
 def plot_ROC_svm(svm, deepmp, fig_out, kn='Linear'):
@@ -88,7 +106,7 @@ def plot_ROC_all(deepmp, deepsignal, deepmod, fig_out, kn='Linear'):
     roc_auc_dmo = auc(fpr_dmo, tpr_dmo)
 
     plt.plot (fpr_dmp, tpr_dmp, lw=2, label ='DeepMP: {}'.format(round(roc_auc_dmp, 3)))
-    plt.plot (fpr_ds, tpr_ds, label ='Deepsignal: {}'.format(round(roc_auc_ds, 3)))
+    plt.plot (fpr_ds, tpr_ds, lw=2, label ='Deepsignal: {}'.format(round(roc_auc_ds, 3)))
     plt.plot (fpr_dmo, tpr_dmo, lw=2, label ='DeepMod: {}'.format(round(roc_auc_dmo, 3)))
 
     plt.plot([0, 1], [0, 1], 'k--')
@@ -97,8 +115,56 @@ def plot_ROC_all(deepmp, deepsignal, deepmod, fig_out, kn='Linear'):
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.title('Ecoli data')
-    plt.legend(loc="lower right")
+    plt.legend(loc="lower right", title='AUC')
     plt.savefig(fig_out)
+    plt.close()
+
+
+def plot_precision_recall_curve(labels, probs, fig_out):
+    lr_precision, lr_recall, _ = precision_recall_curve(labels, probs)
+    lr_auc = auc(lr_recall, lr_precision)
+
+    # summarize scores
+    print('auc=%.3f' % (lr_auc))
+    # plot the precision-recall curves
+    plt.plot(lr_recall, lr_precision, marker='.', label='AUC: {}'.format(lr_auc))
+    # axis labels
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    
+    plt.legend()
+    plt.savefig(fig_out)
+
+    plt.close()
+
+
+def plot_precision_recall_curve_all(deepmp, deepsignal, deepmod, fig_out):
+    dmp_prec, dmp_rec, _ = precision_recall_curve(
+        deepmp['labels'].values, deepmp['probs'].values
+    )
+    ds_prec, ds_rec, _ = precision_recall_curve(
+        deepsignal[11].values, deepsignal['7_x'].values
+    )
+    dmo_prec, dmo_rec, _ = precision_recall_curve(
+        deepmod['labels'].values, deepmod['probs'].values
+    )
+
+    auc_dmp = auc(dmp_rec, dmp_prec)
+    auc_ds = auc(ds_rec, ds_prec)
+    auc_dmo = auc(dmo_rec, dmo_prec)
+
+    # plot the precision-recall curves
+    plt.plot(dmp_rec, dmp_prec, lw=2, label='DeepMP: {}'.format(round(auc_dmp, 3)))
+    plt.plot(ds_rec, ds_prec, lw=2, label='DeepSignal: {}'.format(round(auc_ds, 3)))
+    plt.plot(dmo_rec, dmo_prec, lw=2, label='DeepMod: {}'.format(round(auc_dmo, 3)))
+    # axis labels
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    
+    plt.legend(title='AUC')
+    plt.savefig(fig_out)
+
+    plt.close()
 
 
 def save_output(acc, output):
@@ -147,6 +213,11 @@ def main(svm_output, deepmp_output, deepsignal_output, deepsignal_probs, deepmod
 
     if deepmp_output:
         deepmp = pd.read_csv(deepmp_output, sep='\t')
+        out_prere = os.path.join(output, 'AUC_prec_recall.png')
+        plot_precision_recall_curve(deepmp['labels'].values, deepmp['probs'].values, out_prere)
+        out_fig_deepmp = os.path.join(output, 'AUC_comparison_deepmp.pdf')
+        plot_ROC_alone(deepmp, out_fig_deepmp)
+
     if svm_output:
         svm = pd.read_csv(svm_output, sep=',')
         accuracy_svm = get_accuracy(svm)
@@ -167,15 +238,19 @@ def main(svm_output, deepmp_output, deepsignal_output, deepsignal_probs, deepmod
         precision, recall, f_score, _ = precision_recall_fscore_support(
             merge[11].values, merge['8_x'].values, average='binary'
         )
-        
-        ut.save_probs(np.maximum(merge['6_x'].values, merge['7_x'].values), merge[11].values, output)
-        
-        plot_ROC_deepsignal(merge, deepmp, out_fig)
+        import pdb; pdb.set_trace()
+        # ut.save_probs(np.maximum(merge['6_x'].values, merge['7_x'].values), merge[11].values, output)
+        # out_prere = os.path.join(output, 'AUC_prec_recall.png')
+        # import pdb;pdb.set_trace()
+        # plot_precision_recall_curve(merge[11].values, merge['7_x'].values, out_prere)
+        # plot_ROC_deepsignal(merge, deepmp, out_fig)
     
     save_output([precision, recall, f_score], output) 
     if deepmod_output:
         fig_out = os.path.join(output, 'comparison_all.pdf')
         plot_ROC_all(deepmp, merge, deepmod, fig_out)   
+        out_prere = os.path.join(output, 'AUC_prec_recall_all.pdf')
+        plot_precision_recall_curve_all(deepmp, merge, deepmod, out_prere)
 
 
 if __name__ == "__main__":
