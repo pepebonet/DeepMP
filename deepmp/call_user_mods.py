@@ -11,25 +11,25 @@ import deepmp.utils as ut
 import deepmp.plots as pl
 import deepmp.preprocess as pr
 
-read1_pos0 = 0.01  
-read0_pos1 = 0.5 
+read1_pos0 = 0.005  
+read0_pos1 = 0.9 
 fp = 0.001  
 fn = 0.001  
 beta_a = 1
-beta_b = 100
+beta_b = 5
 
 def test_single_read(data, model_file, labels, score_av='binary'):
     model = load_model(model_file)
-    
+
     pred =  model.predict(data).flatten()
     inferred = np.zeros(len(pred), dtype=int)
     inferred[np.argwhere(pred >= 0.5)] = 1
 
     #TODO remove
-    precision, recall, f_score, _ = precision_recall_fscore_support(
-        labels, inferred, average=score_av
-    )
-    print(precision, recall, f_score)
+    # precision, recall, f_score, _ = precision_recall_fscore_support(
+    #     labels, inferred, average=score_av
+    # )
+    # print(precision, recall, f_score)
 
     return pred, inferred
 
@@ -144,7 +144,7 @@ def beta_stats(obs_reads, pred_beta, prob_beta_mod, prob_beta_unmod):
     prob_beta_mod.append(prob_pos_1 / (prob_pos_0 + prob_pos_1))
     prob_beta_unmod.append(prob_pos_0 / (prob_pos_0 + prob_pos_1))
 
-    if prob_mod[-1] >= prob_unmod[-1]:
+    if prob_beta_mod[-1] >= prob_beta_unmod[-1]:
         pred_beta.append(1)
     else:
         pred_beta.append(0)
@@ -156,6 +156,7 @@ def do_per_position_analysis(df, pred_vec, inferred_vec, output, pred_type):
     df['id'] = df['chrom'] + '_' + df['pos'].astype(str)
     df['pred_prob'] = pred_vec
     df['inferred_label'] = inferred_vec
+    # import pdb;pdb.set_trace()
     cov = []; pred_min_max = []; pred_005 = []; pred_01 = []; pred_02 = []
     pred_03 = []; pred_04 = []; meth_label = []; ids = []; pred_posterior = []
     prob_mod = []; prob_unmod = []; pred_beta = []; prob_beta_mod = []
@@ -174,7 +175,7 @@ def do_per_position_analysis(df, pred_vec, inferred_vec, output, pred_type):
         )
 
         cov.append(len(j)); ids.append(i)
-    import pdb;pdb.set_trace()
+
     preds = pd.DataFrame()
     preds['id'] = ids
     preds['cov'] = cov 
@@ -242,8 +243,9 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
 
         #TODO output proper df with all the information. put columns at different thresholds as well as the min max for testing
         all_preds = do_per_position_analysis(test, pred, inferred, output, pred_type)
-        
 
+        test.to_csv(os.path.join(output, '9_mod_91_unmod_pred_table.tsv'), sep='\t', index=None)
+        import pdb;pdb.set_trace()
         uu = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_005'], average='binary')
         xx = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_01'], average='binary')
         yy = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_02'], average='binary')
