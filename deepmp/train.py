@@ -46,7 +46,8 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
                         tf.keras.callbacks.ModelCheckpoint(filepath= model_dir,
                                                             monitor='val_accuracy',
                                                             mode='max',
-                                                            save_best_only=True)
+                                                            save_best_only=True,
+                                                            save_weights_only= False)
                         ]
 
     model.fit(input_train, label, batch_size=batch_size, epochs=epochs,
@@ -104,7 +105,8 @@ def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
                         tf.keras.callbacks.ModelCheckpoint(filepath= model_dir,
                                                             monitor='val_accuracy',
                                                             mode='max',
-                                                            save_best_only=True)
+                                                            save_best_only=True,
+                                                            save_weights_only= False)
                         ]
 
     model.fit(input_train, label, batch_size=batch_size, epochs=epochs,
@@ -124,9 +126,8 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs)
     #model = joint_model(kmer, embedding_size)
     model = JointNN()
     model.compile(loss='binary_crossentropy',
-                   optimizer=tf.keras.optimizers.Adam(),
+                   optimizer=tf.keras.optimizers.Adam(learning_rate=0.00125),
                    metrics=['accuracy'])
-
     input_shape = ([(None, kmer, 9), (None, kmer, 9)])
     model.build(input_shape)
     print(model.summary())
@@ -141,7 +142,8 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs)
                         tf.keras.callbacks.ModelCheckpoint(filepath= model_dir,
                                                             monitor='val_accuracy',
                                                             mode='max',
-                                                            save_best_only=True)
+                                                            save_best_only=True,
+                                                            save_weights_only= False)
                         ]
 
     model.fit([input_train_seq, input_train_err], label, batch_size=batch_size, epochs=epochs,
@@ -175,7 +177,8 @@ def train_inception(train_file, val_file, log_dir, model_dir, batch_size, epochs
                         tf.keras.callbacks.ModelCheckpoint(filepath= model_dir,
                                                             monitor='val_accuracy',
                                                             mode='max',
-                                                            save_best_only=True)
+                                                            save_best_only=True,
+                                                            save_weights_only= False)
                         ]
 
     model.fit(input_train, label, batch_size=batch_size, epochs=epochs,
@@ -210,7 +213,8 @@ def train_central_cnn(train_file, val_file, log_dir, model_dir, batch_size, epoc
                         tf.keras.callbacks.ModelCheckpoint(filepath= model_dir,
                                                             monitor='val_accuracy',
                                                             mode='max',
-                                                            save_best_only=True)
+                                                            save_best_only=True,
+                                                            save_weights_only= False)
                         ]
 
     model.fit(input_train, label, batch_size=batch_size, epochs=epochs,
