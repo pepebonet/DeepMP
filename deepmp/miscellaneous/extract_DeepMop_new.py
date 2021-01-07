@@ -101,6 +101,7 @@ def accuracy_cov(pred, label, cov, output):
 
 def get_plots_and_accuracies(treat_true, treat_pred, untreat_true, untreat_pred,
     output, test_all):
+    import pdb;pdb.set_trace()
     treat_true = np.concatenate(treat_true)
     treat_pred = np.concatenate(treat_pred)
     untreat_true = np.concatenate(untreat_true)
@@ -119,6 +120,8 @@ def get_plots_and_accuracies(treat_true, treat_pred, untreat_true, untreat_pred,
     print(precision, recall, f_score)
     
     ut.save_probs(pred, true, output)
+    import pdb;pdb.set_trace()
+    test_all.to_csv(os.path.join(output, 'deepMod_outputs.tsv'), sep='\t', index=None)
 
     if not test_all.empty:
         do_per_position_analysis(test_all, output)
@@ -181,13 +184,9 @@ def do_read_analysis(el, test, ind, detect_subfolder):
     help='Test file to save only given positions.'
 )
 @click.option(
-    '-cpu', '--cpus', default=1, 
-    help='Select number of cpus to run'
-)
-@click.option(
     '-o', '--output', default='', help='output folder'
 )
-def main(detect_folder, file_id, output, test_file, cpus):
+def main(detect_folder, file_id, output, test_file):
 
     test = get_test_df(test_file)
     
@@ -195,7 +194,6 @@ def main(detect_folder, file_id, output, test_file, cpus):
     untreat_true = []; untreat_pred = []
     test_all = pd.DataFrame()
     treatments = os.listdir(detect_folder)
-
     
     for treat in treatments:
 
@@ -219,6 +217,7 @@ def main(detect_folder, file_id, output, test_file, cpus):
                     untreat_true.append(rval[0])
                     untreat_pred.append(rval[1])
     
+    test_all.to_csv(os.path.join(output, 'deepMod_outputs.tsv'), sep='\t', index=None)
     get_plots_and_accuracies(
         treat_true, treat_pred, untreat_true, untreat_pred, output, test_all
     )

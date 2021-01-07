@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc
 
 
-def plot_ROC_seq(mean, median, std, skew, kurt, diff, currents, fig_out, kn='Linear'):
+def plot_ROC_seq(mean, median, std, diff, currents, fig_out, kn='Linear'):
 
     fpr_mean, tpr_mean, thresholds = roc_curve(
         mean['labels'].values, mean['probs'].values
@@ -15,12 +15,12 @@ def plot_ROC_seq(mean, median, std, skew, kurt, diff, currents, fig_out, kn='Lin
     fpr_std, tpr_std, thresholds = roc_curve(
         std['labels'].values, std['probs'].values
     )
-    fpr_skew, tpr_skew, thresholds = roc_curve(
-        skew['labels'].values, skew['probs'].values
-    )
-    fpr_kurt, tpr_kurt, thresholds = roc_curve(
-        kurt['labels'].values, kurt['probs'].values
-    )
+    # fpr_skew, tpr_skew, thresholds = roc_curve(
+    #     skew['labels'].values, skew['probs'].values
+    # )
+    # fpr_kurt, tpr_kurt, thresholds = roc_curve(
+    #     kurt['labels'].values, kurt['probs'].values
+    # )
     fpr_diff, tpr_diff, thresholds = roc_curve(
         diff['labels'].values, diff['probs'].values
     )
@@ -31,16 +31,16 @@ def plot_ROC_seq(mean, median, std, skew, kurt, diff, currents, fig_out, kn='Lin
     roc_auc_mean = auc(fpr_mean, tpr_mean)
     roc_auc_median = auc(fpr_median, tpr_median)
     roc_auc_std = auc(fpr_std, tpr_std)
-    roc_auc_skew = auc(fpr_skew, tpr_skew)
-    roc_auc_kurt = auc(fpr_kurt, tpr_kurt)
+    # roc_auc_skew = auc(fpr_skew, tpr_skew)
+    # roc_auc_kurt = auc(fpr_kurt, tpr_kurt)
     roc_auc_diff = auc(fpr_diff, tpr_diff)
     roc_auc_currents = auc(fpr_currents, tpr_currents)
 
     plt.plot (fpr_mean, tpr_mean, label='mean: {}'.format(round(roc_auc_mean, 3)))
     plt.plot (fpr_median, tpr_median, label='median: {}'.format(round(roc_auc_median, 3)))
     plt.plot (fpr_std, tpr_std, label='std: {}'.format(round(roc_auc_std, 3)))
-    plt.plot (fpr_skew, tpr_skew, label='skew: {}'.format(round(roc_auc_skew, 3)))
-    plt.plot (fpr_kurt, tpr_kurt, label='kurt: {}'.format(round(roc_auc_kurt, 3)))
+    # plt.plot (fpr_skew, tpr_skew, label='skew: {}'.format(round(roc_auc_skew, 3)))
+    # plt.plot (fpr_kurt, tpr_kurt, label='kurt: {}'.format(round(roc_auc_kurt, 3)))
     plt.plot (fpr_diff, tpr_diff, label='diff: {}'.format(round(roc_auc_diff, 3)))
     plt.plot (fpr_currents, tpr_currents, label='currents: {}'.format(round(roc_auc_currents, 3)))
 
@@ -98,16 +98,16 @@ def plot_ROC_err(all, quality, mis, ins, dele, fig_out, kn='Linear'):
 
 
 def main_sequence():
-    mean = pd.read_csv('/workspace/projects/nanopore/DeepMP/outputs/test_features/only_mean/test_pred_prob.txt', sep='\t')
-    median = pd.read_csv('/workspace/projects/nanopore/DeepMP/outputs/test_features/only_median/test_pred_prob.txt', sep='\t')
-    std = pd.read_csv('/workspace/projects/nanopore/DeepMP/outputs/test_features/only_std/test_pred_prob.txt', sep='\t')
-    skew = pd.read_csv('/workspace/projects/nanopore/DeepMP/outputs/test_features/only_skew/test_pred_prob.txt', sep='\t')
-    kurt = pd.read_csv('/workspace/projects/nanopore/DeepMP/outputs/test_features/only_kurt/test_pred_prob.txt', sep='\t')
-    diff = pd.read_csv('/workspace/projects/nanopore/DeepMP/outputs/test_features/only_diff/test_pred_prob.txt', sep='\t')
-    currents = pd.read_csv('/workspace/projects/nanopore/DeepMP/outputs/test_features/only_currents/test_pred_prob.txt', sep='\t')
+    mean = pd.read_csv('/workspace/projects/nanopore/DeepMP/outputs/ecoli/prove_things_work/both_template_complement/indiv_features/mean/test_pred_prob.txt', sep='\t')
+    median = pd.read_csv('/workspace/projects/nanopore/DeepMP/outputs/ecoli/prove_things_work/both_template_complement/indiv_features/median/test_pred_prob.txt', sep='\t')
+    std = pd.read_csv('/workspace/projects/nanopore/DeepMP/outputs/ecoli/prove_things_work/both_template_complement/indiv_features/std/test_pred_prob.txt', sep='\t')
+    # skew = pd.read_csv('/workspace/projects/nanopore/DeepMP/outputs/ecoli/prove_things_work/both_template_complement/indiv_features/skew/test_pred_prob.txt', sep='\t')
+    # kurt = pd.read_csv('/workspace/projects/nanopore/DeepMP/outputs/ecoli/prove_things_work/both_template_complement/indiv_features/kurt/test_pred_prob.txt', sep='\t')
+    diff = pd.read_csv('/workspace/projects/nanopore/DeepMP/outputs/ecoli/prove_things_work/both_template_complement/indiv_features/range/test_pred_prob.txt', sep='\t')
+    currents = pd.read_csv('/workspace/projects/nanopore/DeepMP/outputs/ecoli/prove_things_work/both_template_complement/indiv_features/signal_len/test_pred_prob.txt', sep='\t')
 
-    fig_out = '/workspace/projects/nanopore/DeepMP/outputs/test_features/ROC_features.pdf'
-    plot_ROC_seq(mean, median, std, skew, kurt, diff, currents, fig_out)
+    fig_out = '/workspace/projects/nanopore/DeepMP/outputs/ecoli/prove_things_work/both_template_complement/indiv_features/ROC_features.pdf'
+    plot_ROC_seq(mean, median, std, diff, currents, fig_out)
 
 
 def main_errors():
@@ -122,6 +122,6 @@ def main_errors():
 
 
 if __name__ == '__main__':
-    # main_sequence()
+    main_sequence()
 
-    main_errors()
+    # main_errors()
