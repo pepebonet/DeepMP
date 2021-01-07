@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import h5py
+import click
 import random
 import numpy as np
 from collections import OrderedDict
@@ -49,7 +50,8 @@ def load(filename):
 
     data = {}
     for key in f:
-        data[key] = f[key][...]
+        if key != 'central_signals':
+            data[key] = f[key][...]
     f.close()
     return data
 
@@ -72,3 +74,28 @@ def get_set(folder, output, label):
 
     out_file = os.path.join(output, '{}_combined.h5'.format(label))
     save(out_file, merge_data(data))
+
+
+# ------------------------------------------------------------------------------
+# Click
+# ------------------------------------------------------------------------------
+
+@click.command(short_help='SVM accuracy output')
+@click.option(
+    '-f', '--filelist', required=True, multiple=True,
+    help='h5 files to concat'
+)
+@click.option(
+    '-o', '--out_file', required=True, 
+    help='Output file extension'
+)
+def main(filelist, out_file):
+    data = OrderedDict()
+    for f in filelist:
+        data[f] = load(f)
+        
+    save(out_file, merge_data(data))
+
+
+if __name__ == "__main__":
+    main()

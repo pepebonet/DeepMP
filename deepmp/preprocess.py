@@ -203,6 +203,7 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type, positio
         for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
             counter += 1
 
+
     print('Concatenating features into h5s...')
     mh5.get_set(tmp_test, output, 'test')
     mh5.get_set(tmp_val, output, 'val')

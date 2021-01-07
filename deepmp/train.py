@@ -84,7 +84,7 @@ def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
     input_val, vy = ut.get_data_errors(val_file, kmer)
 
     #model = get_single_err_model(kmer)
-    depth = 9
+    depth = 6
     input_shape = (None, kmer, depth)
     model = BCErrorCNN()
     model.compile(loss='binary_crossentropy',
@@ -126,7 +126,8 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs)
     model.compile(loss='binary_crossentropy',
                    optimizer=tf.keras.optimizers.Adam(),
                    metrics=['accuracy'])
-    input_shape = ([(None, kmer, 5), (None, kmer, 9)])
+
+    input_shape = ([(None, kmer, 9), (None, kmer, 9)])
     model.build(input_shape)
     print(model.summary())
 

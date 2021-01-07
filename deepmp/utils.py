@@ -197,7 +197,7 @@ def get_data_jm(file, kmer, get_id=False):
     data_sequence = concat_tensors_seq(embedded_bases, signal_means, signal_stds,
                                         signal_medians, signal_range, signal_lens, kmer)
     data_errors = concat_tensors_err(embedded_bases, base_qual, base_mis, base_ins, base_del, kmer)
-
+    
     if get_id: 
         return data_sequence, data_errors, label, (chrom, readname, pos, strand, pos_in_strand)
     else:
@@ -437,8 +437,8 @@ def preprocess_combined(df, output, label_file, file):
     #     for i in df['cent_plus1'].values]
     # cent_signal_plus2 = [tf.strings.to_number(i.split(','), tf.float32) \
     #     for i in df['cent_plus2'].values]
-    central_signals = [tf.strings.to_number(i.split(','), tf.float32) \
-        for i in df['cent_signals'].values]
+    # central_signals = [tf.strings.to_number(i.split(','), tf.float32) \
+    #     for i in df['cent_signals'].values]
     base_qual = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['qual'].values]
     base_mis = [tf.strings.to_number(i.split(','), tf.float32) \
@@ -468,7 +468,7 @@ def preprocess_combined(df, output, label_file, file):
         hf.create_dataset("signal_kurt",  data=np.stack(base_kurt), chunks=True, maxshape=(None,None))
         hf.create_dataset("signal_diff",  data=np.stack(base_diff), chunks=True, maxshape=(None,None))
         hf.create_dataset("signal_lens",  data=np.stack(base_signal_len), chunks=True, maxshape=(None,None))
-        hf.create_dataset("central_signals",  data=np.stack(central_signals), chunks=True, maxshape=(None,None))
+        # hf.create_dataset("central_signals",  data=np.stack(central_signals), chunks=True, maxshape=(None,None))
         # hf.create_dataset("cent_signal_min2",  data=np.stack(cent_signal_min2), chunks=True, maxshape=(None,None))
         # hf.create_dataset("cent_signal_min1",  data=np.stack(cent_signal_min1), chunks=True, maxshape=(None,None))
         # hf.create_dataset("cent_signal",  data=np.stack(cent_signal), chunks=True, maxshape=(None,None))
