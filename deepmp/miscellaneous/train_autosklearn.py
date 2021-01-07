@@ -26,10 +26,11 @@ import deepmp.utils as ut
 def main(train_file, val_file, kmer, model_dir):
     input_train_seq, input_train_err, label = ut.get_data_jm(train_file, kmer)
     input_val_seq, input_val_err, vy = ut.get_data_jm(val_file, kmer)
-    import pdb;pdb.set_trace()
+    # import pdb;pdb.set_trace()
     cls = autosklearn.classification.AutoSklearnClassifier()
-    cls.fit(X_train, y_train)
-    predictions = cls.predict(X_test)
+    cls.fit([input_train_seq, input_train_err], label)
+    import pdb;pdb.set_trace()
+    predictions = cls.predict([input_val_seq, input_val_err])
 
     import pdb;pdb.set_trace()
 
