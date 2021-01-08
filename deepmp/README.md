@@ -78,7 +78,7 @@ Site-based data
 
 # Trained models
 
-#### On Norwich 10ep
+#### On Norwich 10 ep
 
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepmp/models/20210104-170947_jm_model`
 
@@ -86,7 +86,7 @@ Site-based data
 |--------------------|-------------------|--------------------|--------------------|
 | 0.9176812171936035 | 0.939413472673029 | 0.9239651244992538 | 0.9316252612880689 |
 
-#### On UCSC 7ep
+#### On UCSC 7 ep
 
 `/cfs/klemming/nobackup/m/mandiche/DeepMP-master/deepmp/models/20210105-035844_jm_model`
 
@@ -94,3 +94,10 @@ Site-based data
 |--------------------|--------------------|--------------------|--------------------|
 | 0.9225872755050659 | 0.9359483323073174 | 0.9374880161759835 | 0.9367175415469722 |
 
+#### On NA12878 10 ep
+
+`/cfs/klemming/nobackup/m/mandiche/DeepMP-master/trained_models/all/20210104-161209_jm_model`
+
+| Accuracy           | Precision          | Recall            | F-score            |
+|--------------------|--------------------|-------------------|--------------------|
+| 0.9300261735916138 | 0.9439573278421376 | 0.940198670538505 | 0.9420742501629747 |
