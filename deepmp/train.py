@@ -23,7 +23,6 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
 
         log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq_lstm")
     else:
-        #model = get_sequence_model(kmer, embedding_size, features)
         depth = embedding_size + features
         input_shape = (None, kmer, depth)
         model = SequenceCNN()
@@ -57,25 +56,6 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
 
     return None
 
-#TODO DELETE in future
-def train_errors(train_file, val_file, log_dir, model_dir, feat,
-    epochs, batch_size):
-    X_train, Y_train= ut.load_error_data(train_file)
-    X_val, Y_val = ut.load_error_data(val_file)
-
-    model = get_error_model(feat)
-
-    log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_errors")
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(
-        log_dir=log_dir, histogram_freq=1
-    )
-
-    model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs,
-                            callbacks = [tensorboard_callback],
-                            validation_data=(X_val, Y_val))
-    model.save(model_dir + "error_model")
-
-    return None
 
 
 def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
@@ -84,8 +64,7 @@ def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
     input_train, label = ut.get_data_errors(train_file, kmer)
     input_val, vy = ut.get_data_errors(val_file, kmer)
 
-    #model = get_single_err_model(kmer)
-    depth = 6
+    depth = 9
     input_shape = (None, kmer, depth)
     model = BCErrorCNN()
     model.compile(loss='binary_crossentropy',
@@ -123,8 +102,8 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs)
     input_val_seq, input_val_err, vy = ut.get_data_jm(val_file, kmer)
 
     ## train model
-    #model = joint_model(kmer, embedding_size)
     model = JointNN()
+    #model.load_weights("")
     model.compile(loss='binary_crossentropy',
                    optimizer=tf.keras.optimizers.Adam(learning_rate=0.00125),
                    metrics=['accuracy'])
