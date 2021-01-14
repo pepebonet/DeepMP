@@ -73,7 +73,8 @@ class SequenceCNN(Model):
             for i in range(self.block_num):
                 setattr(self, "block%i" % i, ConvLocalBlock(units, filters))
         self.pool = GlobalAveragePooling1D(name='seq_pooling_layer')
-        self.dense = Dense(1, activation='sigmoid', use_bias=False)
+        self.dense1 = Dense(256, activation='relu')
+        self.dense2 = Dense(1, activation='sigmoid', use_bias=False)
 
     def call(self, inputs, submodel=False):
         x = inputs
@@ -82,7 +83,8 @@ class SequenceCNN(Model):
         x = self.pool(x)
         if submodel:
             return x
-        return self.dense(x)
+        x = self.dense1(x)
+        return self.dense2(x)
 
 
 class BCErrorCNN(Model):
@@ -97,7 +99,7 @@ class BCErrorCNN(Model):
         for i in range(self.local_blocks):
             setattr(self, "lblock%i" % i, LocalBlock(units, filters))
         self.avgpool = GlobalAveragePooling1D(name='err_pooling_layer')
-        self.dense1 = Dense(100, activation='relu')
+        self.dense1 = Dense(256, activation='relu')
         self.dense2 = Dense(1, activation='sigmoid', use_bias=False)
 
     def call(self, inputs, submodel = False):
@@ -180,6 +182,22 @@ def get_brnn_model(base_num, embedding_size, features = 5, rnn_cell = "lstm"):
 
     return model
 
+
+class RawSigNN(Model):
+
+    def __init__(self, rnn_cell):
+        super(CentralBaseNN, self).__init__(rnn_cell)
+        if rnn_cell == "gru":
+            self.brnn = Bidirectional(RNN([GRUCell(256, dropout=0.2), \
+                            GRUCell(256, dropout=0.2),GRUCell(256, dropout=0.2)]))
+        else:
+            self.brnn = Bidirectional(RNN([LSTMCell(256, dropout=0.2), \
+                            LSTMCell(256, dropout=0.2),LSTMCell(256, dropout=0.2)]))
+        self.fc = Dense(1, activation='sigmoid',use_bias=False)
+
+    def call(self, inputs, submodel=False):
+        x = self.brnn(inputs)
+        return self.fc(x)
 
 
 class Inception(Model):

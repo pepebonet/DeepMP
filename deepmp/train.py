@@ -25,7 +25,7 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
     else:
         depth = embedding_size + features
         input_shape = (None, kmer, depth)
-        model = SequenceCNN()
+        model = SequenceCNN('conv', 6, 256, 4)
         model.compile(loss='binary_crossentropy',
                           optimizer=tf.keras.optimizers.Adam(),
                           metrics=['accuracy'])
@@ -66,7 +66,7 @@ def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
 
     depth = 9
     input_shape = (None, kmer, depth)
-    model = BCErrorCNN()
+    model = BCErrorCNN(3, 3, 128, 3)
     model.compile(loss='binary_crossentropy',
               optimizer=tf.keras.optimizers.Adam(),
               metrics=['accuracy'])
