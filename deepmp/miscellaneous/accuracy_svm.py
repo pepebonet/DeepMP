@@ -90,6 +90,7 @@ def plot_ROC_deepsignal(deepsignal, deepmp, fig_out, kn='Linear'):
 
 
 def plot_ROC_all(deepmp, deepsignal, deepmod, fig_out, kn='Linear'):
+
     fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
     custom_lines = []
 
@@ -111,32 +112,41 @@ def plot_ROC_all(deepmp, deepsignal, deepmod, fig_out, kn='Linear'):
     plt.plot (fpr_dmp, tpr_dmp, lw=2, c='#08519c')
     custom_lines.append(
         plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
-        mew=1, color='#08519c', label='DeepMP: {}'.format(round(roc_auc_dmp, 3)))[0] 
+        mew=1, color='#08519c', label='DeepMP AUC: {}'.format(round(roc_auc_dmp, 3)))[0] 
     )
     # plt.plot (fpr_ds, tpr_ds, lw=2, label ='Deepsignal: {}'.format(round(roc_auc_ds, 3)), c='#f03b20')
     plt.plot (fpr_ds, tpr_ds, lw=2, c='#f03b20')
     custom_lines.append(
         plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
-        mew=1, color='#f03b20', label='DeepSignal: {}'.format(round(roc_auc_ds, 3)))[0] 
+        mew=1, color='#f03b20', label='DeepSignal AUC: {}'.format(round(roc_auc_ds, 3)))[0] 
     )
     # plt.plot (fpr_dmo, tpr_dmo, lw=2, label ='DeepMod: {}'.format(round(roc_auc_dmo, 3)), c='#238443')
     plt.plot (fpr_dmo, tpr_dmo, lw=2, c='#238443')
     custom_lines.append(
         plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
-        mew=1, color='#238443', label='DeepMod: {}'.format(round(roc_auc_dmo, 3)))[0] 
+        mew=1, color='#238443', label='DeepMod AUC: {}'.format(round(roc_auc_dmo, 3)))[0] 
     )
 
     plt.plot([0, 1], [0, 1], 'k--')
     plt.xlim([-0.05, 1.05])
     plt.ylim([-0.05, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
+
+    ax.set_xlabel("False Positive Rate", fontsize=12)
+    ax.set_ylabel("True Positive Rate", fontsize=12)
+    # plt.xlabel('False Positive Rate')
+    # plt.ylabel('True Positive Rate')
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     # plt.title('Ecoli data')
-    plt.legend(loc="lower right", title='AUC',  fontsize=8, \
-        bbox_to_anchor=(0., 1.2, 1., .102), frameon=False, facecolor='white', handles=custom_lines)
+    # plt.legend(loc="lower right", title='AUC',  fontsize=8, frameon=False, facecolor='white', handles=custom_lines)
+    ax.legend(
+        bbox_to_anchor=(0., 1.2, 1., .102),
+        handles=custom_lines, loc='upper center', 
+        facecolor='white', ncol=1, fontsize=8, frameon=False
+    )
+
+    plt.tight_layout()
     plt.savefig(fig_out)
     plt.close()
 
@@ -182,31 +192,38 @@ def plot_precision_recall_curve_all(deepmp, deepsignal, deepmod, fig_out):
     plt.plot(dmp_rec, dmp_prec, lw=2, c='#08519c')
     custom_lines.append(
         plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
-        mew=1, color='#08519c', label='DeepMP: {}'.format(round(auc_dmp, 3)))[0] 
+        mew=1, color='#08519c', label='DeepMP AUC: {}'.format(round(auc_dmp, 3)))[0] 
     )
     # plt.plot(ds_rec, ds_prec, lw=2, label='DeepSignal: {}'.format(round(auc_ds, 3)), c='#f03b20')
     plt.plot(ds_rec, ds_prec, lw=2, c='#f03b20')
     custom_lines.append(
         plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
-        mew=1, color='#f03b20', label='DeepSignal: {}'.format(round(auc_ds, 3)))[0] 
+        mew=1, color='#f03b20', label='DeepSignal AUC: {}'.format(round(auc_ds, 3)))[0] 
     )
     # plt.plot(dmo_rec, dmo_prec, lw=2, label='DeepMod: {}'.format(round(auc_dmo, 3)), c='#238443')
     plt.plot(dmo_rec, dmo_prec, lw=2, c='#238443')
     custom_lines.append(
         plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
-        mew=1, color='#238443', label='DeepMod: {}'.format(round(auc_dmo, 3)))[0] 
+        mew=1, color='#238443', label='DeepMod AUC: {}'.format(round(auc_dmo, 3)))[0] 
     )
     # axis labels
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
+    ax.set_xlabel("Recall", fontsize=12)
+    ax.set_ylabel("Precision", fontsize=12)
+    # plt.xlabel('Recall')
+    # plt.ylabel('Precision')
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     
-    plt.legend(title='AUC', frameon=False, facecolor='white', fontsize=8, \
-        bbox_to_anchor=(0., 1.2, 1., .102), handles=custom_lines, loc="lower left")
-    plt.savefig(fig_out)
+    # plt.legend(title='AUC', frameon=False, facecolor='white',  fontsize=8, handles=custom_lines, loc="lower left")
+    ax.legend(
+        bbox_to_anchor=(0., 1.2, 1., .102),
+        handles=custom_lines, loc='upper center', 
+        facecolor='white', ncol=1, fontsize=8, frameon=False
+    )
 
+    plt.tight_layout()
+    plt.savefig(fig_out)
     plt.close()
 
 
@@ -281,7 +298,7 @@ def main(svm_output, deepmp_output, deepsignal_output, deepsignal_probs, deepmod
         precision, recall, f_score, _ = precision_recall_fscore_support(
             merge[11].values, merge['8_x'].values, average='binary'
         )
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         # ut.save_probs(np.maximum(merge['6_x'].values, merge['7_x'].values), merge[11].values, output)
         # out_prere = os.path.join(output, 'AUC_prec_recall.png')
         # import pdb;pdb.set_trace()
