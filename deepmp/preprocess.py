@@ -48,6 +48,13 @@ def get_training_test_val(df):
     return [(train, 'train'), (test, 'test'), (val, 'val')]
 
 
+def get_training_test_val_chr(df):
+    test = df[df['chrom'] == 'chr1']
+    df_red = df[df['chrom'] != 'chr1']
+    train, val = train_test_split(df_red, test_size=0.05, random_state=0)
+    return [(train, 'train'), (test, 'test'), (val, 'val')]
+
+
 def get_training_test_val_pos(df):
     test = df[(df['pos_in_strand'] >= 1000000) & (df['pos_in_strand'] <= 2000000)]
     df_red = pd.concat([df[df['pos_in_strand'] < 1000000], df[df['pos_in_strand'] > 2000000]])
@@ -139,6 +146,8 @@ def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps, split_ty
 
     if split_type == 'read':
         data = get_training_test_val(df)
+    if split_type == 'chr':
+        data = get_training_test_val_chr(df)
     else:
         data = get_training_test_val_pos(df)
     
@@ -183,10 +192,10 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type, positio
     tmp_val = os.path.join(os.path.dirname(features), 'val/')
 
     print('Splitting original file...')
-    os.mkdir(tmp_folder); 
+    # os.mkdir(tmp_folder); 
     os.mkdir(tmp_train); os.mkdir(tmp_test); os.mkdir(tmp_val)
-    cmd = 'split -l {} {} {}'.format(20000, features, tmp_folder)
-    subprocess.call(cmd, shell=True)
+    # cmd = 'split -l {} {} {}'.format(2000, features, tmp_folder)
+    # subprocess.call(cmd, shell=True)
     
     if positions:
         print('Getting position file...')
@@ -203,7 +212,7 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type, positio
         for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
             counter += 1
 
-
+    import pdb;pdb.set_trace()
     print('Concatenating features into h5s...')
     mh5.get_set(tmp_test, output, 'test')
     mh5.get_set(tmp_val, output, 'val')

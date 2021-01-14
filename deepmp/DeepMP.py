@@ -262,7 +262,7 @@ def train_nns(**kwargs):
 )
 @click.option(
     '-st', '--split_type', required=True,
-    type=click.Choice(['pos', 'read']),
+    type=click.Choice(['pos', 'read', 'chr']),
     help='Type of train-test-val split to select. Positions or read'
     'pos option creates and independent test set with positions never seen'
     'read option creates and independent test set with reads never seen '
