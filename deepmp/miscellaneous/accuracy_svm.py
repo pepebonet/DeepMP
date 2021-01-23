@@ -170,7 +170,8 @@ def plot_ROC_deepsignal(deepsignal, deepmp, fig_out, kn='Linear'):
 
     roc_auc_dmp = auc(fpr_dmp, tpr_dmp)
     roc_auc_ds = auc(fpr_ds, tpr_ds)
-
+    import pdb;pdb.set_trace()
+    # with open(os.path.join('../deepsignal/outputs/human/norwich/chr1_analysis/mixed/', 'auc.txt'), 'w') as f: f.write(str(roc_auc_ds))
     custom_lines.append(
         plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
         mew=0, color='#08519c', label='DeepMP AUC: {}'.format(round(roc_auc_dmp, 3)))[0] 
@@ -684,8 +685,8 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies, deepmp
             get_barplot(deepmp_accuracies, merge, precision, recall, f_score, output)
             
             
-        # test_acc = round(1 - np.argwhere(merge[11].values != merge['8_x'].values).shape[0] / len(merge[11].values), 5)
-        # ut.save_output([test_acc, precision, recall, f_score], '/workspace/projects/nanopore/deepsignal/outputs/human/norwich/mixed/', 'accuracy_measurements.txt')
+        test_acc = round(1 - np.argwhere(merge[11].values != merge['8_x'].values).shape[0] / len(merge[11].values), 5)
+        ut.save_output([test_acc, precision, recall, f_score], output, 'accuracy_measurements.txt')
 
         roc_fig_ds = os.path.join(output, 'ROC_deepsignal.pdf')
         prc_fig_ds = os.path.join(output, 'PRC_deepsignal.pdf')
