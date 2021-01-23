@@ -11,12 +11,14 @@ import matplotlib.pyplot as plt
 plt.switch_backend('agg')
 from sklearn.metrics import precision_recall_fscore_support
 
-read1_pos0 = 0.02  
-read0_pos1 = 0.80
+epsilon = 0.05  
+gamma_val = 0.80
+beta_a = 1
+beta_b = 22
+beta_c = 14.5
 fp = 0.02  
 fn = 0.03  
-beta_a = 1
-beta_b = 8
+
 
 palette_dict = { 
         'DeepMP':'#08519c',
@@ -61,16 +63,16 @@ def pred_site_all(df, pred_min_max, pred_001, pred_002, pred_004, pred_005, pred
 
 #obs_reads is the vector of inferred labels
 #fp and fn are false positives and negatives respectively 
-#read1_pos0 is the probability of seeing a modified read if the position is called to be 0
+#epsilon is the probability of seeing a modified read if the position is called to be 0
 #read0_pos1 is the probability of seeing an unmodified read if the position is called to be 1
 def likelihood_nomod_pos(obs_reads):
-    return np.prod(obs_reads * ((1 - read1_pos0) * fp + read1_pos0 * (1 - fn)) + \
-        (1 - obs_reads) * ((1 - read1_pos0) * (1 - fp) + read1_pos0 * fn))
+    return np.prod(obs_reads * ((1 - epsilon) * fp + epsilon * (1 - fn)) + \
+        (1 - obs_reads) * ((1 - epsilon) * (1 - fp) + epsilon * fn))
 
 
 def likelihood_mod_pos(obs_reads):
-    return np.prod(obs_reads * (read0_pos1 * fp + (1 - read0_pos1) * (1 - fn)) + \
-        (1 - obs_reads) * (read0_pos1 * (1 - fp) + (1 - read0_pos1) * fn))
+    return np.prod(obs_reads * (gamma_val * fp + (1 - gamma_val) * (1 - fn)) + \
+        (1 - obs_reads) * (gamma_val * (1 - fp) + (1 - gamma_val) * fn))
 
 
 def pred_stats(obs_reads, pred_posterior, prob_mod, prob_unmod):
@@ -94,16 +96,16 @@ def beta_fct(a, b):
 
 def likelihood_nomod_beta(obs_reads):
     return np.prod(obs_reads ** (beta_a - 1) * (1 - obs_reads) ** (beta_b - 1) \
-        * (1 - read1_pos0) / beta_fct(beta_a, beta_b) \
-        + obs_reads ** (beta_b - 1) * (1 - obs_reads) ** (beta_a - 1) \
-        * read1_pos0 / beta_fct(beta_b, beta_a))
+        * (1 - epsilon) / beta_fct(beta_a, beta_b) \
+        + obs_reads ** (beta_c - 1) * (1 - obs_reads) ** (beta_a - 1) \
+        * epsilon / beta_fct(beta_c, beta_a))
 
 
 def likelihood_mod_beta(obs_reads):
     return np.prod(obs_reads ** (beta_a - 1) * (1 - obs_reads) ** (beta_b - 1) \
-        * read0_pos1 / beta_fct(beta_a, beta_b) \
-        + obs_reads ** (beta_b - 1) * (1 - obs_reads) ** (beta_a - 1) \
-        * (1 - read0_pos1) / beta_fct(beta_b, beta_a))
+        * gamma_val / beta_fct(beta_a, beta_b) \
+        + obs_reads ** (beta_c - 1) * (1 - obs_reads) ** (beta_a - 1) \
+        * (1 - gamma_val) / beta_fct(beta_c, beta_a))
 
 
 #Assuming prior to be 0.5
@@ -376,7 +378,7 @@ def plot_comparison(deepmp, deepsignal, deepmod, output):
 
         plt.errorbar(
             np.asarray(pred[3]).astype(np.int) + pos, np.asarray(pred[1]), yerr=yerr, 
-            marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+            marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
             ecolor='black', capsize=2.5, elinewidth=1, capthick=1, c=palette_dict[pred[4]]
         )
 
@@ -420,18 +422,19 @@ def plot_fp_fn(deepmp, deepsignal, deepmod, output, label):
         else:
             pos = 0
 
-        if '0' in pred[3] and label == 'Negative': 
-            pred[3].remove('0')
+        y_axis_labels = pred[3].copy()
+        if '0' in y_axis_labels and label == 'Negative': 
+            y_axis_labels.remove('0')
 
-        elif '100' in pred[3] and label == 'Positive':
-            pred[3].remove('100')
+        elif '100' in y_axis_labels and label == 'Positive':
+            y_axis_labels.remove('100')
 
         yerr = np.array([[np.asarray(pred[1]) - np.asarray(pred[0])], [np.asarray(pred[2]) - np.asarray(pred[1])]])
         yerr = yerr.reshape(2, yerr.shape[2])
 
         plt.errorbar(
-            np.asarray(pred[3]).astype(np.int) + pos, np.asarray(pred[1]), yerr=yerr, 
-            marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+            np.asarray(y_axis_labels).astype(np.int) + pos, np.asarray(pred[1]), yerr=yerr, 
+            marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
             ecolor='black', capsize=2.5, elinewidth=1, capthick=1, c=palette_dict[pred[4]]
         )
 
@@ -459,7 +462,6 @@ def plot_fp_fn(deepmp, deepsignal, deepmod, output, label):
     out_dir = os.path.join(output, 'False_{}_Rate.pdf'.format(label))
     plt.savefig(out_dir)
     plt.close()
-    import pdb;pdb.set_trace()
 
 
 def plot_pos_accuracy(deepmp, deepsignal, deepmod, output):
@@ -476,21 +478,21 @@ def plot_pos_accuracy(deepmp, deepsignal, deepmod, output):
             pos = -3
             plt.plot(
                 np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[5][1:], 
-                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
                 c=palette_dict[pred[4]]
             )
         elif pred[4] == 'DeepMod':
             pos = 3
             plt.plot(
                 np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[6][1:], 
-                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
                 c=palette_dict[pred[4]]
             )
         else:
             pos = 0
             plt.plot(
                 np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[6][1:], 
-                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
                 c=palette_dict[pred[4]]
             )
 
@@ -527,21 +529,21 @@ def plot_pos_accuracy_beta(deepmp, deepsignal, deepmod, output):
             pos = -3
             plt.plot(
                 np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[5][1:], 
-                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
                 c=palette_dict[pred[4]]
             )
         elif pred[4] == 'DeepMod':
             pos = 3
             plt.plot(
                 np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[5][1:], 
-                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
                 c=palette_dict[pred[4]]
             )
         else:
             pos = 0
             plt.plot(
                 np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[5][1:], 
-                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
                 c=palette_dict[pred[4]]
             )
 
@@ -598,7 +600,7 @@ def plot_pos_accuracy_around_0(deepmp, deepsignal, deepmod, output):
             for el in pred[7:10]:
                 plt.plot(
                     np.asarray(pred[3]).astype(np.int) + pos, el, 
-                    marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+                    marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
                     c=palette_dict[pred[4]]
                 )
         else:
@@ -606,7 +608,7 @@ def plot_pos_accuracy_around_0(deepmp, deepsignal, deepmod, output):
             for el in pred[7:10]:
                 plt.plot(
                     np.asarray(pred[3]).astype(np.int) + pos, el, 
-                    marker='o', mfc=palette_dict[pred[4]], mec='black', ms=10, mew=1, 
+                    marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
                     c=palette_dict[pred[4]]
                 )
 
@@ -640,7 +642,7 @@ def plot_pos_barplot_around_0(deepmp, deepsignal, deepmod, output):
     for pred in [deepmp, deepsignal, deepmod]:
         custom_lines.append(
             plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
-            mew=1, color=palette_dict[pred[4]], label=pred[4])[0] 
+            mew=0, color=palette_dict[pred[4]], label=pred[4])[0] 
         )
 
         alg_df = pd.DataFrame(
@@ -702,14 +704,16 @@ def main(predictions_deepmp, predictions_deepsignal, predictions_deepmod, around
     preds_deepsignal, deepsignal_fp, deepsignal_fn = extract_preds_deepsignal(predictions_deepsignal, ids)
     preds_deepmod, deepmod_fp, deepmod_fn = extract_preds_deepmod(predictions_deepmod, output)
     
+    import pdb;pdb.set_trace()
+
     if around_zero:
         plot_pos_barplot_around_0(preds_deepmp, preds_deepsignal, preds_deepmod, output)
         # plot_pos_accuracy_around_0(preds_deepmp, preds_deepsignal, preds_deepmod, output) 
     
     else:
-        # plot_comparison(preds_deepmp, preds_deepsignal, preds_deepmod, output)
-        # plot_pos_accuracy(preds_deepmp, preds_deepsignal, preds_deepmod, output)
-        # plot_pos_accuracy_beta(preds_deepmp, preds_deepsignal, preds_deepmod, output)
+        plot_comparison(preds_deepmp, preds_deepsignal, preds_deepmod, output)
+        plot_pos_accuracy(preds_deepmp, preds_deepsignal, preds_deepmod, output)
+        plot_pos_accuracy_beta(preds_deepmp, preds_deepsignal, preds_deepmod, output)
         plot_fp_fn(deepmp_fp, deepsignal_fp, deepmod_fp, output, 'Positive')
         plot_fp_fn(deepmp_fn, deepsignal_fn, deepmod_fn, output, 'Negative')
 
