@@ -72,6 +72,8 @@ Train joint model from binary files.
 ```
     DeepMP train-nns -m joint -tf path/to/train/data -vf path/to/validation/data -md save/model/to/directory -ld save/log/to/directory
 ```
+- Use `-cp` to specify the checkpoint file while training model from checkpoints.
+
 ### Plotting Arguments
 ### Other Arguments
 
