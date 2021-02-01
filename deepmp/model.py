@@ -185,7 +185,7 @@ class CentralCNN(Model):
 
 class RawSigNN(Model):
 
-    def __init__(self, **kwargs)):
+    def __init__(self, **kwargs):
         super(RawSigNN, self).__init__(**kwargs)
         self.brnn = Bidirectional(RNN([GRUCell(256, dropout=0.2), \
                             GRUCell(256, dropout=0.2),GRUCell(256, dropout=0.2)]))
