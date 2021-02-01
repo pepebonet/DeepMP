@@ -37,7 +37,7 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
     log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq")
 
     ## save checkpoints
-    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq_model.h5")
+    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq_model")
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
                                             log_dir = log_dir, histogram_freq=1)
@@ -78,7 +78,7 @@ def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
         model.load_weights(checkpoint_path)
 
     ## save checkpoints
-    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_err_model.h5")
+    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_err_model")
     log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_err_read")
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
@@ -117,7 +117,7 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs,
         model.load_weights(checkpoint_path)
 
     log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm")
-    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm_model.h5")
+    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm_model")
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
                                             log_dir = log_dir, histogram_freq=1)
