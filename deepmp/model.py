@@ -135,6 +135,28 @@ class JointNN(Model):
         return self.dense2(x)
 
 
+class SequenceBRNN(Model):
+
+    def __init__(self, units, dropout_rate, rnn_cell):
+        super(SequenceBRNN, self).__init__()
+        if rnn_cell == "gru":
+            self.brnn = Bidirectional(RNN([GRUCell(units, dropout=dropout_rate), \
+                                GRUCell(units, dropout=dropout_rate),GRUCell(units, dropout=dropout_rate)]))
+        else:
+            self.brnn = Bidirectional(RNN([LSTMCell(units, dropout=dropout_rate), \
+                    LSTMCell(units, dropout=dropout_rate),LSTMCell(units, dropout=dropout_rate)]))
+        self.fc1 = Dense(512, activation='relu', use_bias=False)
+        self.dropout = Dropout(0.2)
+        self.fc2 = Dense(1, activation='sigmoid', use_bias=False)
+
+    def call(self, inputs, submodel=False):
+        x = self.brnn(inputs)
+        if submodel:
+            return x
+        x = self.fc1(x)
+        x = self.dropout(x)
+        return self.fc2(x)
+
 
 class CentralCNN(Model):
 
@@ -160,33 +182,11 @@ class CentralCNN(Model):
         return self.dense(x)
 
 
-def get_brnn_model(base_num, embedding_size, features = 5, rnn_cell = "lstm"):
-
-    depth = embedding_size + features
-    input = Input(shape=(base_num, depth))
-
-    if rnn_cell == "gru":
-        x = Bidirectional(RNN([GRUCell(256, dropout=0.2), \
-                GRUCell(256, dropout=0.2),GRUCell(256, dropout=0.2)]))(input)
-    else:
-        x = Bidirectional(RNN([LSTMCell(256, dropout=0.2), \
-                LSTMCell(256, dropout=0.2),LSTMCell(256, dropout=0.2)]))(input)
-    #x = Dense(50, activation='relu', use_bias=False)(x)
-    x = Dense(512, activation='relu', use_bias=False)(x)
-    x = Dropout(0.2)(x)
-    out = Dense(1, activation='sigmoid', use_bias=False)(x)
-    model = Model(input, outputs=out)
-    model.compile(optimizer=tf.keras.optimizers.Adam(),
-        loss='binary_crossentropy', metrics=['acc'])
-    print(model.summary())
-
-    return model
-
 
 class RawSigNN(Model):
 
-    def __init__(self, rnn_cell):
-        super(CentralBaseNN, self).__init__(rnn_cell)
+    def __init__(self, **kwargs)):
+        super(RawSigNN, self).__init__(**kwargs)
         self.brnn = Bidirectional(RNN([GRUCell(256, dropout=0.2), \
                             GRUCell(256, dropout=0.2),GRUCell(256, dropout=0.2)]))
         self.fc = Dense(1, activation='sigmoid',use_bias=False)

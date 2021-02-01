@@ -18,21 +18,21 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
         features = 4
 
     ## train model
-    if rnn:
-        model = get_brnn_model(kmer, embedding_size, features, rnn_cell = rnn)
+    depth = embedding_size + features
+    input_shape = (None, kmer, depth)
 
-        log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq_lstm")
+    if rnn:
+        model = SequenceBRNN(256, 0.2, rnn_cell = rnn)
     else:
-        depth = embedding_size + features
-        input_shape = (None, kmer, depth)
         model = SequenceCNN('conv', 6, 256, 4)
-        model.compile(loss='binary_crossentropy',
+
+    model.compile(loss='binary_crossentropy',
                           optimizer=tf.keras.optimizers.Adam(),
                           metrics=['accuracy'])
-        model.build(input_shape)
-        print(model.summary())
+    model.build(input_shape)
+    print(model.summary())
 
-        log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq_cnn")
+    log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq")
 
     ## save checkpoints
     model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq_model")
@@ -182,7 +182,7 @@ def train_central_cnn(train_file, val_file, log_dir, model_dir, batch_size, epoc
     model.build(input_shape)
     print(model.summary())
 
-    log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm")
+    log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_central_cnn")
     model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_central_cnn_model")
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
