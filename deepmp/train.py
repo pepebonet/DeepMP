@@ -7,7 +7,7 @@ from deepmp.model import *
 embedding_size = 5
 
 def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
-                                kmer, epochs, err_features = False, rnn = None):
+                                kmer, epochs, err_features = False, rnn = None, checkpoint_path = None):
 
     input_train, label = ut.get_data_sequence(train_file, kmer, err_features)
     input_val, vy = ut.get_data_sequence(val_file, kmer, err_features)
@@ -31,11 +31,13 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
                           metrics=['accuracy'])
     model.build(input_shape)
     print(model.summary())
+    if checkpoint_path:
+        model.load_weights(checkpoint_path)
 
     log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq")
 
     ## save checkpoints
-    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq_model")
+    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq_model.h5")
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
                                             log_dir = log_dir, histogram_freq=1)
@@ -59,7 +61,7 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
 
 
 def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
-    epochs, batch_size):
+    epochs, batch_size, checkpoint_path = None):
 
     input_train, label = ut.get_data_errors(train_file, kmer)
     input_val, vy = ut.get_data_errors(val_file, kmer)
@@ -72,9 +74,11 @@ def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
               metrics=['accuracy'])
     model.build(input_shape)
     print(model.summary())
+    if checkpoint_path:
+        model.load_weights(checkpoint_path)
 
     ## save checkpoints
-    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_err_model")
+    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_err_model.h5")
     log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_err_read")
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
@@ -96,23 +100,24 @@ def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
     return None
 
 
-def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs):
+def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs, checkpoint_path = None):
 
     input_train_seq, input_train_err, label = ut.get_data_jm(train_file, kmer)
     input_val_seq, input_val_err, vy = ut.get_data_jm(val_file, kmer)
 
     ## train model
     model = JointNN()
-    #model.load_weights("")
     model.compile(loss='binary_crossentropy',
                    optimizer=tf.keras.optimizers.Adam(learning_rate=0.00125),
                    metrics=['accuracy'])
     input_shape = ([(None, kmer, 9), (None, kmer, 9)])
     model.build(input_shape)
     print(model.summary())
+    if checkpoint_path:
+        model.load_weights(checkpoint_path)
 
     log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm")
-    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm_model")
+    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm_model.h5")
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(
                                             log_dir = log_dir, histogram_freq=1)

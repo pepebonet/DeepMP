@@ -5,20 +5,20 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 from sklearn.metrics import precision_recall_fscore_support
-
+from deepmp.model import *
 import deepmp.utils as ut
 import deepmp.plots as pl #this script needs to debug
 import deepmp.preprocess as pr
 
 
-def acc_test_single(data, labels, model_file, score_av='binary'):
-    model = load_model(model_file)
+def acc_test_single(data, labels, model, score_av='binary'):
+    #model = load_model(model_file)
     test_loss, test_acc = model.evaluate(data, tf.convert_to_tensor(labels))
-    
+
     pred =  model.predict(data).flatten()
     inferred = np.zeros(len(pred), dtype=int)
     inferred[np.argwhere(pred >= 0.5)] = 1
-    
+
     precision, recall, f_score, _ = precision_recall_fscore_support(
         labels, inferred, average=score_av
     )
@@ -175,16 +175,46 @@ def call_mods(model_type, test_file, trained_model, kmer, output,
     if model_type == 'seq':
 
         data_seq, labels = ut.get_data_sequence(test_file, kmer, err_features)
-        acc, pred, inferred = acc_test_single(data_seq, labels, trained_model)
+        try:
+            model = load_model(trained_model)
+        except:
+            model = SequenceCNN('conv', 6, 256, 4)
+            input_shape = (None, kmer, 9)
+            model.compile(loss='binary_crossentropy',
+                                  optimizer=tf.keras.optimizers.Adam(),
+                                  metrics=['accuracy'])
+            model.build(input_shape)
+            model.load_weights(trained_model)
+        acc, pred, inferred = acc_test_single(data_seq, labels, model)
 
     elif model_type == 'err':
 
         data_err, labels = ut.get_data_errors(test_file, kmer)
-        acc, pred, inferred = acc_test_single(data_err, labels, trained_model)
+        try:
+            model = load_model(trained_model)
+        except:
+            model = BCErrorCNN(3, 3, 128, 3)
+            model.compile(loss='binary_crossentropy',
+                      optimizer=tf.keras.optimizers.Adam(),
+                      metrics=['accuracy'])
+            input_shape = (None, kmer, 9)
+            model.build(input_shape)
+            model.load_weights(trained_model)
+        acc, pred, inferred = acc_test_single(data_err, labels, model)
 
     elif model_type == 'joint':
         data_seq, data_err, labels = ut.get_data_jm(test_file, kmer)
-        acc, pred, inferred = acc_test_single([data_seq, data_err], labels, trained_model)
+        try:
+            model = load_model(trained_model)
+        except:
+            model = JointNN()
+            model.compile(loss='binary_crossentropy',
+                           optimizer=tf.keras.optimizers.Adam(learning_rate=0.00125),
+                           metrics=['accuracy'])
+            input_shape = ([(None, kmer, 9), (None, kmer, 9)])
+            model.build(input_shape)
+            model.load_weights(trained_model)
+        acc, pred, inferred = acc_test_single([data_seq, data_err], labels, model)
 
     else:
         print("unrecognized model type")
