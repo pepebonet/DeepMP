@@ -7,7 +7,7 @@ from deepmp.model import *
 embedding_size = 5
 
 def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
-                                kmer, epochs, err_features = False, rnn = None):
+                                kmer, epochs, err_features = False, rnn = None, checkpoint_path = None):
 
     input_train, label = ut.get_data_sequence(train_file, kmer, err_features)
     input_val, vy = ut.get_data_sequence(val_file, kmer, err_features)
@@ -18,22 +18,23 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
         features = 4
 
     ## train model
-    if rnn:
-        model = get_brnn_model(kmer, embedding_size, features, rnn_cell = rnn)
+    depth = embedding_size + features
+    input_shape = (None, kmer, depth)
 
-        log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq_lstm")
+    if rnn:
+        model = SequenceBRNN(256, 0.2, rnn_cell = rnn)
     else:
-        #model = get_sequence_model(kmer, embedding_size, features)
-        depth = embedding_size + features
-        input_shape = (None, kmer, depth)
         model = SequenceCNN('conv', 6, 256, 4)
-        model.compile(loss='binary_crossentropy',
+
+    model.compile(loss='binary_crossentropy',
                           optimizer=tf.keras.optimizers.Adam(),
                           metrics=['accuracy'])
-        model.build(input_shape)
-        print(model.summary())
+    model.build(input_shape)
+    print(model.summary())
+    if checkpoint_path:
+        model.load_weights(checkpoint_path)
 
-        log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq_cnn")
+    log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq")
 
     ## save checkpoints
     model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq_model")
@@ -57,42 +58,24 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
 
     return None
 
-#TODO DELETE in future
-def train_errors(train_file, val_file, log_dir, model_dir, feat,
-    epochs, batch_size):
-    X_train, Y_train= ut.load_error_data(train_file)
-    X_val, Y_val = ut.load_error_data(val_file)
-
-    model = get_error_model(feat)
-
-    log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_errors")
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(
-        log_dir=log_dir, histogram_freq=1
-    )
-
-    model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs,
-                            callbacks = [tensorboard_callback],
-                            validation_data=(X_val, Y_val))
-    model.save(model_dir + "error_model")
-
-    return None
 
 
 def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
-    epochs, batch_size):
+    epochs, batch_size, checkpoint_path = None):
 
     input_train, label = ut.get_data_errors(train_file, kmer)
     input_val, vy = ut.get_data_errors(val_file, kmer)
 
-    #model = get_single_err_model(kmer)
-    depth = 6
+    depth = 9
     input_shape = (None, kmer, depth)
-    model = BCErrorCNN()
+    model = BCErrorCNN(3, 3, 128, 3)
     model.compile(loss='binary_crossentropy',
               optimizer=tf.keras.optimizers.Adam(),
               metrics=['accuracy'])
     model.build(input_shape)
     print(model.summary())
+    if checkpoint_path:
+        model.load_weights(checkpoint_path)
 
     ## save checkpoints
     model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_err_model")
@@ -117,13 +100,12 @@ def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
     return None
 
 
-def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs):
+def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs, checkpoint_path = None):
 
     input_train_seq, input_train_err, label = ut.get_data_jm(train_file, kmer)
     input_val_seq, input_val_err, vy = ut.get_data_jm(val_file, kmer)
 
     ## train model
-    #model = joint_model(kmer, embedding_size)
     model = JointNN()
     model.compile(loss='binary_crossentropy',
                    optimizer=tf.keras.optimizers.Adam(learning_rate=0.00125),
@@ -131,6 +113,8 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs)
     input_shape = ([(None, kmer, 9), (None, kmer, 9)])
     model.build(input_shape)
     print(model.summary())
+    if checkpoint_path:
+        model.load_weights(checkpoint_path)
 
     log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm")
     model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm_model")
@@ -203,7 +187,7 @@ def train_central_cnn(train_file, val_file, log_dir, model_dir, batch_size, epoc
     model.build(input_shape)
     print(model.summary())
 
-    log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm")
+    log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_central_cnn")
     model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_central_cnn_model")
 
     tensorboard_callback = tf.keras.callbacks.TensorBoard(

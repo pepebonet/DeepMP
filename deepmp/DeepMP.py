@@ -137,8 +137,6 @@ def call_modifications(**kwargs):
 # ------------------------------------------------------------------------------
 
 #TODO <MC,PB> An additional parser might be needed in train.py
-#TODO <MC,PB> Separate each NN module?
-#TODO <MC, PB> How to combine outputs properly --> Joint model
 @cli.command(short_help='Trainining neural networks')
 @click.option(
     '-m', '--model_type', required=True,
@@ -181,6 +179,10 @@ def call_modifications(**kwargs):
     '-ef', '--err_features' , is_flag=True,
     help='use error features in sequence model'
 )
+@click.option(
+    '-cp', '--checkpoint', default='',
+    help='path to checkpoint file'
+)
 
 def train_nns(**kwargs):
     """Train Neural Networks"""
@@ -190,30 +192,30 @@ def train_nns(**kwargs):
         train_sequence(
                 args.train_file, args.val_file,
                 args.log_dir, args.model_dir, args.batch_size, args.kmer,
-                args.epochs, args.err_features, args.rnn_type
+                args.epochs, args.err_features, args.rnn_type, args.checkpoint
                 )
 
     elif args.model_type == 'err':
         train_single_error(
                 args.train_file, args.val_file,
                 args.log_dir, args.model_dir, args.kmer,
-                args.epochs, args.batch_size
+                args.epochs, args.batch_size, args.checkpoint
                 )
 
     elif args.model_type == 'joint':
         train_jm(
                 args.train_file, args.val_file,
                 args.log_dir, args.model_dir, args.batch_size,
-                args.kmer, args.epochs
+                args.kmer, args.epochs, args.checkpoint
                 )
-    
+
     elif args.model_type == 'incep':
         train_inception(
                 args.train_file, args.val_file,
                 args.log_dir, args.model_dir, args.batch_size,
                 args.epochs
                 )
-    
+
     elif args.model_type == 'central_cnn':
         train_central_cnn(
                 args.train_file, args.val_file,
@@ -274,7 +276,7 @@ def train_nns(**kwargs):
     '-o', '--output', default='', help='Output file'
 )
 def merge_and_preprocess(feature_type, error_treated, error_untreated,
-    sequence_treated, sequence_untreated, combined_features, 
+    sequence_treated, sequence_untreated, combined_features,
     num_err_feat, output, save_tsv, cpus, split_type, positions):
 
     if feature_type == 'combined':
