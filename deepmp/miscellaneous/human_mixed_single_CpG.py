@@ -49,7 +49,7 @@ def get_count_CpG(seq):
     help='Output file extension'
 )
 def main(test_file, output):
-    import pdb;pdb.set_trace()
+    # import pdb;pdb.set_trace()
     df = pd.read_csv(test_file, sep='\t', header=None, names=names_all)
     df['CpG_Counter'] = df['kmer'].apply(get_count_CpG)
 
@@ -58,11 +58,10 @@ def main(test_file, output):
 
     single.to_csv(os.path.join(output, 'single_test.tsv'), sep='\t', index=None)
     mixed.to_csv(os.path.join(output, 'mixed_test.tsv'), sep='\t', index=None)
-    import pdb;pdb.set_trace()
-    ut.preprocess_combined(df, output, 'test', 'all')
+
     ut.preprocess_combined(single, output, 'test', 'single')
     ut.preprocess_combined(mixed, output, 'test', 'mixed')
-    import pdb;pdb.set_trace()
+
 
 if __name__ == '__main__':
     main()
