@@ -8,7 +8,6 @@ from tensorflow.keras.models import load_model
 from sklearn.metrics import precision_recall_fscore_support
 
 import deepmp.utils as ut
-import deepmp.plots as pl
 import deepmp.preprocess as pr
 
 read1_pos0 = 0.005  
