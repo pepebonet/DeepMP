@@ -427,18 +427,6 @@ def preprocess_combined(df, output, label_file, file):
         for i in df['signal_diff'].values]
     base_signal_len = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['signal_lens'].values]
-    # cent_signal_min2 = [tf.strings.to_number(i.split(','), tf.float32) \
-    #     for i in df['cent_min2'].values]
-    # cent_signal_min1 = [tf.strings.to_number(i.split(','), tf.float32) \
-    #     for i in df['cent_min1'].values]
-    # cent_signal = [tf.strings.to_number(i.split(','), tf.float32) \
-    #     for i in df['cent'].values]
-    # cent_signal_plus1 = [tf.strings.to_number(i.split(','), tf.float32) \
-    #     for i in df['cent_plus1'].values]
-    # cent_signal_plus2 = [tf.strings.to_number(i.split(','), tf.float32) \
-    #     for i in df['cent_plus2'].values]
-    # central_signals = [tf.strings.to_number(i.split(','), tf.float32) \
-    #     for i in df['cent_signals'].values]
     base_qual = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['qual'].values]
     base_mis = [tf.strings.to_number(i.split(','), tf.float32) \
@@ -457,7 +445,7 @@ def preprocess_combined(df, output, label_file, file):
     file_name = os.path.join(
         output, '{}'.format(label_file), '{}_{}.h5'.format(file, label_file)
     )
-
+    
     if not os.path.isdir(os.path.dirname(file_name)):
         file_name = os.path.join(output, '{}_{}.h5'.format(file, label_file))
 
@@ -470,12 +458,6 @@ def preprocess_combined(df, output, label_file, file):
         hf.create_dataset("signal_kurt",  data=np.stack(base_kurt), chunks=True, maxshape=(None,None))
         hf.create_dataset("signal_diff",  data=np.stack(base_diff), chunks=True, maxshape=(None,None))
         hf.create_dataset("signal_lens",  data=np.stack(base_signal_len), chunks=True, maxshape=(None,None))
-        # hf.create_dataset("central_signals",  data=np.stack(central_signals), chunks=True, maxshape=(None,None))
-        # hf.create_dataset("cent_signal_min2",  data=np.stack(cent_signal_min2), chunks=True, maxshape=(None,None))
-        # hf.create_dataset("cent_signal_min1",  data=np.stack(cent_signal_min1), chunks=True, maxshape=(None,None))
-        # hf.create_dataset("cent_signal",  data=np.stack(cent_signal), chunks=True, maxshape=(None,None))
-        # hf.create_dataset("cent_signal_plus1",  data=np.stack(cent_signal_plus1), chunks=True, maxshape=(None,None))
-        # hf.create_dataset("cent_signal_plus2",  data=np.stack(cent_signal_plus2), chunks=True, maxshape=(None,None))
         hf.create_dataset('qual',  data=np.stack(base_qual), chunks=True, maxshape=(None,None))
         hf.create_dataset('mis',  data=np.stack(base_mis), chunks=True, maxshape=(None,None))
         hf.create_dataset('ins',  data=np.stack(base_ins), chunks=True, maxshape=(None,None))
@@ -488,25 +470,6 @@ def preprocess_combined(df, output, label_file, file):
         hf.create_dataset('pos_in_strand',  data=pos_in_strand, chunks=True, maxshape=(None,))
 
     return None
-
-
-# ------------------------------------------------------------------------------
-# SVM
-# ------------------------------------------------------------------------------
-
-def arrange_columns(cols_in):
-    cols = []
-    for c in cols_in.split(','):
-        if re.search (r'-',c):
-            c1,c2 = c.split('-')
-            cols +=  list (range(int(c1) - 1, int(c2)))
-        elif re.search(r':',c):
-            c1,c2 = c.split(':')
-            cols += list (range(int(c1) - 1, int(c2)))
-        else:
-            cols.append(int(c) - 1)
-
-    return list(set(cols))
 
 
 # ------------------------------------------------------------------------------
