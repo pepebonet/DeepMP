@@ -193,26 +193,26 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type, positio
 
     print('Splitting original file...')
     # os.mkdir(tmp_folder); 
-    os.mkdir(tmp_train); os.mkdir(tmp_test); os.mkdir(tmp_val)
+    # os.mkdir(tmp_train); os.mkdir(tmp_test); os.mkdir(tmp_val)
     # cmd = 'split -l {} {} {}'.format(2000, features, tmp_folder)
     # subprocess.call(cmd, shell=True)
     
-    if positions:
-        print('Getting position file...')
-        positions = pd.read_csv(positions, sep='\t')
+    # if positions:
+    #     print('Getting position file...')
+    #     positions = pd.read_csv(positions, sep='\t')
 
-    print('Extracting features to h5 and tsv files...')
-    counter = 0
+    # print('Extracting features to h5 and tsv files...')
+    # counter = 0
     
-    f = functools.partial(split_sets_files, tmp_folder=tmp_folder, \
-            counter=counter, tsv_flag=tsv_flag, output=output, \
-                tmps=os.path.dirname(features), split_type=split_type, \
-                    positions=positions)
-    with Pool(cpus) as p:
-        for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
-            counter += 1
+    # f = functools.partial(split_sets_files, tmp_folder=tmp_folder, \
+    #         counter=counter, tsv_flag=tsv_flag, output=output, \
+    #             tmps=os.path.dirname(features), split_type=split_type, \
+    #                 positions=positions)
+    # with Pool(cpus) as p:
+    #     for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
+    #         counter += 1
 
-    import pdb;pdb.set_trace()
+    
     print('Concatenating features into h5s...')
     mh5.get_set(tmp_test, output, 'test')
     mh5.get_set(tmp_val, output, 'val')

@@ -684,9 +684,9 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies, deepmp
         if deepmp_accuracies:
             get_barplot(deepmp_accuracies, merge, precision, recall, f_score, output)
             
-            
-        test_acc = round(1 - np.argwhere(merge[11].values != merge['8_x'].values).shape[0] / len(merge[11].values), 5)
-        ut.save_output([test_acc, precision, recall, f_score], output, 'accuracy_measurements.txt')
+        import pdb;pdb.set_trace()
+        # test_acc = round(1 - np.argwhere(merge[11].values != merge['8_x'].values).shape[0] / len(merge[11].values), 5)
+        # ut.save_output([test_acc, precision, recall, f_score], output, 'accuracy_measurements.txt')
 
         roc_fig_ds = os.path.join(output, 'ROC_deepsignal.pdf')
         prc_fig_ds = os.path.join(output, 'PRC_deepsignal.pdf')

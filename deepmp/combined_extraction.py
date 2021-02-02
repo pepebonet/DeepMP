@@ -233,15 +233,15 @@ def _features_to_str(features):
     return "\t".join([chrom, str(pos), alignstrand, str(loc_in_ref), readname, \
         strand, k_mer, means_text, stds_text, median_text, skew_text, \
         kurt_text, diff_text, signal_len_text, cent_signals_text, qual_text, \
-        mis_text, ins_text, dele_text, str(methy_label), str(flag), \
-        mid_base_min8_txt, mid_base_min7_txt, mid_base_min6_txt, mid_base_min5_txt, \
-        mid_base_min4_txt, mid_base_min3_txt, mid_base_min2_txt, mid_base_min1_txt, \
-        mid_base_txt, mid_base_plus1_txt, mid_base_plus2_txt, mid_base_plus3_txt, mid_base_plus4_txt, \
-        mid_base_plus5_txt, mid_base_plus6_txt, mid_base_plus7_txt, mid_base_plus8_txt, \
-        mid_base_min8_nonorm_txt, mid_base_min7_nonorm_txt, mid_base_min6_nonorm_txt, mid_base_min5_nonorm_txt, \
-        mid_base_min4_nonorm_txt, mid_base_min3_nonorm_txt, mid_base_min2_nonorm_txt, mid_base_min1_nonorm_txt, \
-        mid_base_nonorm_txt, mid_base_plus1_nonorm_txt, mid_base_plus2_nonorm_txt, mid_base_plus3_nonorm_txt, mid_base_plus4_nonorm_txt, \
-        mid_base_plus5_nonorm_txt, mid_base_plus6_nonorm_txt, mid_base_plus7_nonorm_txt, mid_base_plus8_nonorm_txt])
+        mis_text, ins_text, dele_text, str(methy_label), str(flag)])
+        # mid_base_min8_txt, mid_base_min7_txt, mid_base_min6_txt, mid_base_min5_txt, \
+        # mid_base_min4_txt, mid_base_min3_txt, mid_base_min2_txt, mid_base_min1_txt, \
+        # mid_base_txt, mid_base_plus1_txt, mid_base_plus2_txt, mid_base_plus3_txt, mid_base_plus4_txt, \
+        # mid_base_plus5_txt, mid_base_plus6_txt, mid_base_plus7_txt, mid_base_plus8_txt, \
+        # mid_base_min8_nonorm_txt, mid_base_min7_nonorm_txt, mid_base_min6_nonorm_txt, mid_base_min5_nonorm_txt, \
+        # mid_base_min4_nonorm_txt, mid_base_min3_nonorm_txt, mid_base_min2_nonorm_txt, mid_base_min1_nonorm_txt, \
+        # mid_base_nonorm_txt, mid_base_plus1_nonorm_txt, mid_base_plus2_nonorm_txt, mid_base_plus3_nonorm_txt, mid_base_plus4_nonorm_txt, \
+        # mid_base_plus5_nonorm_txt, mid_base_plus6_nonorm_txt, mid_base_plus7_nonorm_txt, mid_base_plus8_nonorm_txt])
 
 
 def _read_position_file(position_file):
@@ -352,7 +352,14 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                     error_read, kmer_len, motif_seqs, methyloc
                 )
             else:
-                raise NotImplementedError('not sure how to deal with it')
+                error_read = os.path.join(
+                    errors, '{}.txt'.format(readname.rsplit('.', 1)[0])
+                )
+                
+                error_features = get_error_features(
+                    error_read, kmer_len, motif_seqs, methyloc
+                )
+                # raise NotImplementedError('not sure how to deal with it')
 
             chromlen = chrom2len[chrom]
             if alignstrand == '+':

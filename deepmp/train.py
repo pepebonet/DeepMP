@@ -26,7 +26,7 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
         #model = get_sequence_model(kmer, embedding_size, features)
         depth = embedding_size + features
         input_shape = (None, kmer, depth)
-        model = SequenceCNN()
+        model = SequenceCNN('conv', 6, 256, 4)
         model.compile(loss='binary_crossentropy',
                           optimizer=tf.keras.optimizers.Adam(),
                           metrics=['accuracy'])

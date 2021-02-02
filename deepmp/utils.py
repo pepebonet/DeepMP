@@ -456,8 +456,10 @@ def preprocess_combined(df, output, label_file, file):
 
     file_name = os.path.join(
         output, '{}'.format(label_file), '{}_{}.h5'.format(file, label_file)
-        # output, '{}_{}.h5'.format(file, label_file)
     )
+
+    if not os.path.isdir(os.path.dirname(file_name)):
+        file_name = os.path.join(output, '{}_{}.h5'.format(file, label_file))
 
     with h5py.File(file_name, 'a') as hf:
         hf.create_dataset("kmer",  data=np.stack(kmer), chunks=True, maxshape=(None,None))

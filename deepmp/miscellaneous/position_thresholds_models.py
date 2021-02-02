@@ -571,7 +571,7 @@ def plot_pos_accuracy_beta(deepmp, deepsignal, deepmod, output):
 def plot_pos_accuracy_around_0(deepmp, deepsignal, deepmod, output):
     fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
 
-    labels = ['Beta Model', '10{} Filter'.format('%'), '5{} Filter'.format('%'), '1{} Filter'.format('%')]
+    labels = ['Beta Model', '10{} Threshold'.format('%'), '5{} Threshold'.format('%'), '1{} Threshold'.format('%')]
     positions = [0.2, -0.2, -0.05, 0.05]
     custom_lines = []
     for pred in [deepmp]:
@@ -646,19 +646,19 @@ def plot_pos_barplot_around_0(deepmp, deepsignal, deepmod, output):
         )
 
         alg_df = pd.DataFrame(
-            [[pred[4], pred[5][0], 'Beta Model'],[pred[4], pred[7][0], '10% Filter'], \
-            [pred[4], pred[8][0], '5% Filter'], [pred[4], pred[9][0], '1% Filter']], \
-            columns=['Model', 'Accuracy', 'Filter']
+            [[pred[4], pred[5][0], 'Beta Model'],[pred[4], pred[7][0], '10% Threshold'], \
+            [pred[4], pred[8][0], '5% Threshold'], [pred[4], pred[9][0], '1% Threshold']], \
+            columns=['Model', 'Accuracy', 'Threshold']
         )
         df = pd.concat([df, alg_df])
 
 
-    sns.barplot(x="Filter", y="Accuracy", hue="Model", data=df, 
+    sns.barplot(x="Threshold", y="Accuracy", hue="Model", data=df, 
         palette=['#08519c', '#f03b20','#238443'])
 
-    ax.set_xlabel("Filters", fontsize=12)
+    ax.set_xlabel("", fontsize=12)
     ax.set_ylabel("Position Accuracy", fontsize=12)
-    plt.xticks(rotation=0)
+    plt.xticks(rotation=0, fontsize=9)
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
