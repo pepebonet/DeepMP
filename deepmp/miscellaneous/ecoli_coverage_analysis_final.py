@@ -4,9 +4,11 @@ import os
 import click
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from scipy.special import gamma
 from collections import Counter
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 from sklearn.metrics import precision_recall_fscore_support
 
 epsilon = 0.05
@@ -198,6 +200,70 @@ def plot_f_scores(deepmp, deepsignal, deepmod, output):
     plt.close()
 
 
+def plot_f_scores_barplot(deepmp, deepsignal, deepmod, output):
+
+    fig, (ax, ax2) = plt.subplots(2, 1, sharex=True, figsize=(5, 5), facecolor='white', gridspec_kw={'height_ratios':[7,1]})
+
+    ax.set_ylim(.76, 1.) 
+    ax2.set_ylim(0, .12)
+
+    cov = ['1x', '2x', '5x', '10x', '20x', '30x']
+    deepMP = pd.DataFrame([deepmp, ['DeepMP']*6, cov]).T
+    deepSignal = pd.DataFrame([deepsignal, ['DeepSignal']*6, cov]).T
+    deepMod = pd.DataFrame([deepmod, ['DeepMod']*6, cov]).T
+    df = pd.concat([deepMP, deepSignal, deepMod])
+
+    sns.barplot(x=2, y=0, hue=1, data=df, ax=ax, palette=['#08519c', '#f03b20', '#238443'], \
+        hue_order=['DeepMP', 'DeepSignal', 'DeepMod'])
+    sns.barplot(x=2, y=0, hue=1, data=df, ax=ax2, palette=['#08519c', '#f03b20', '#238443'], \
+        hue_order=['DeepMP', 'DeepSignal', 'DeepMod'])
+
+
+    custom_lines = []
+    for pred in [(deepmp, 'DeepMP'), (deepsignal, 'DeepSignal'), (deepmod, 'DeepMod')]:
+        custom_lines.append(
+            plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
+            mew=1, color=palette_dict[pred[1]], label=pred[1])[0] 
+        )
+
+    ax.set_ylabel("F-score", fontsize=12)
+    ax.set_xlabel("", fontsize=12)
+    ax2.set_ylabel("", fontsize=12)
+    ax2.set_xlabel("Coverage", fontsize=12)
+
+    plt.xticks(rotation=0)
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['right'].set_visible(False)
+    ax.tick_params(labeltop=False)  # don't put tick labels at the top
+    ax.tick_params(bottom = False)
+    ax.tick_params(labelbottom = False)
+
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax2.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+
+    d = .01  # how big to make the diagonal lines in axes coordinates
+    # arguments to pass to plot, just so we don't keep repeating them
+    kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
+    ax.plot((-d, +d), (-d, +d), **kwargs)  
+
+    ax.legend(
+        bbox_to_anchor=(0., 1.2, 1., .102),
+        handles=custom_lines, loc='upper center', 
+        facecolor='white', ncol=1, fontsize=8, frameon=False
+    )
+
+    ax2.get_legend().remove()
+
+    plt.tight_layout()
+    out_dir = os.path.join(output, 'coverage_analysis_20_barplot.pdf')
+    plt.savefig(out_dir)
+    plt.close()
+
+
 
 # ------------------------------------------------------------------------------
 # Click
@@ -245,7 +311,8 @@ def main(test_deepmp, test_deepsignal, test_deepmod, output):
     preds_deepmod, f_score_deepmod = extract_preds(deepmod)
     import pdb;pdb.set_trace()
 
-    plot_f_scores(f_score_deepmp, f_score_deepsignal, f_score_deepmod, output)
+    # plot_f_scores(f_score_deepmp, f_score_deepsignal, f_score_deepmod, output)
+    plot_f_scores_barplot(f_score_deepmp, f_score_deepsignal, f_score_deepmod, output)
     
     
 
