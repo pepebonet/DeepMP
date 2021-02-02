@@ -44,7 +44,7 @@ def get_data(treated, untreated, names='', nopos=False):
 
 def get_training_test_val(df):
     train, test = train_test_split(df, test_size=0.05, random_state=0)
-    train, val = train_test_split(train, test_size=0.05, random_state=0)
+    train, val = train_test_split(train, test_size=test.shape[0], random_state=0)
     return [(train, 'train'), (test, 'test'), (val, 'val')]
 
 
@@ -146,11 +146,13 @@ def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps, split_ty
 
     if split_type == 'read':
         data = get_training_test_val(df)
-    if split_type == 'chr':
+
+    elif split_type == 'chr':
         data = get_training_test_val_chr(df)
+
     else:
         data = get_training_test_val_pos(df)
-    
+
     if tsv_flag:
         for el in data:
             if counter == 0:
@@ -192,26 +194,25 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type, positio
     tmp_val = os.path.join(os.path.dirname(features), 'val/')
 
     print('Splitting original file...')
-    # os.mkdir(tmp_folder); 
-    # os.mkdir(tmp_train); os.mkdir(tmp_test); os.mkdir(tmp_val)
-    # cmd = 'split -l {} {} {}'.format(2000, features, tmp_folder)
-    # subprocess.call(cmd, shell=True)
+    os.mkdir(tmp_folder); 
+    os.mkdir(tmp_train); os.mkdir(tmp_test); os.mkdir(tmp_val)
+    cmd = 'split -l {} {} {}'.format(2000, features, tmp_folder)
+    subprocess.call(cmd, shell=True)
     
-    # if positions:
-    #     print('Getting position file...')
-    #     positions = pd.read_csv(positions, sep='\t')
+    if positions:
+        print('Getting position file...')
+        positions = pd.read_csv(positions, sep='\t')
 
-    # print('Extracting features to h5 and tsv files...')
-    # counter = 0
+    print('Extracting features to h5 and tsv files...')
+    counter = 0
     
-    # f = functools.partial(split_sets_files, tmp_folder=tmp_folder, \
-    #         counter=counter, tsv_flag=tsv_flag, output=output, \
-    #             tmps=os.path.dirname(features), split_type=split_type, \
-    #                 positions=positions)
-    # with Pool(cpus) as p:
-    #     for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
-    #         counter += 1
-
+    f = functools.partial(split_sets_files, tmp_folder=tmp_folder, \
+            counter=counter, tsv_flag=tsv_flag, output=output, \
+                tmps=os.path.dirname(features), split_type=split_type, \
+                    positions=positions)
+    with Pool(cpus) as p:
+        for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
+            counter += 1
     
     print('Concatenating features into h5s...')
     mh5.get_set(tmp_test, output, 'test')
@@ -219,7 +220,7 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type, positio
     mh5.get_set(tmp_train, output, 'train')
 
     print('Removing tmp folders and done')
-    # subprocess.call('rm -r {}'.format(tmp_folder), shell=True)
+    subprocess.call('rm -r {}'.format(tmp_folder), shell=True)
     subprocess.call('rm -r {}'.format(tmp_train), shell=True)
     subprocess.call('rm -r {}'.format(tmp_test), shell=True)
     subprocess.call('rm -r {}'.format(tmp_val), shell=True)
@@ -250,5 +251,5 @@ def no_split_combined_preprocess(features, output, tsv_flag, cpus, split_type):
     mh5.get_set(tmp_test, output, 'test')
 
     print('Removing tmp folders and done')
-    # subprocess.call('rm -r {}'.format(tmp_folder), shell=True)
+    subprocess.call('rm -r {}'.format(tmp_folder), shell=True)
     subprocess.call('rm -r {}'.format(tmp_test), shell=True)
