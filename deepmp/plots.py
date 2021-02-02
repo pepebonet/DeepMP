@@ -7,15 +7,14 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.metrics import roc_curve, auc
 from sklearn.preprocessing import StandardScaler
-from deepmp.call_modifications import get_accuracy_pos
+# from deepmp.call_modifications import get_accuracy_pos
 
 
 def plot_ROC (y_test, probas, fig_out, kn='Linear'):
     fpr, tpr, thresholds = roc_curve(y_test, probas)
 
     roc_auc = auc(fpr,tpr)
-    label = 'Acc model: {}'.format(round(roc_auc, 3))
-    plt.plot (fpr, tpr, label=label, linewidth=2)
+    label = 'Acc model: {}'.format(round(roc_auc, 3), label=label, linewidth=2)
     plt.plot([0, 1], [0, 1], 'k--')
     plt.xlim([-0.05, 1.05])
     plt.ylim([-0.05, 1.05])
