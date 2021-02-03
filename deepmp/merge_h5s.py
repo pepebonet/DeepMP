@@ -50,8 +50,7 @@ def load(filename):
 
     data = {}
     for key in f:
-        if key != 'central_signals':
-            data[key] = f[key][...]
+        data[key] = f[key][...]
     f.close()
     return data
 
@@ -72,7 +71,7 @@ def get_set(folder, output, label):
     for f in filelist:
         data[f] = load(f)
 
-    out_file = os.path.join(output, '{}_combined.h5'.format(label))
+    out_file = os.path.join(output, '{}_file.h5'.format(label))
     save(out_file, merge_data(data))
 
 
