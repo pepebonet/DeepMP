@@ -419,14 +419,8 @@ def preprocess_combined(df, output, label_file, file):
         for i in df['signal_stds'].values]
     base_median = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['signal_median'].values]
-    base_skew = [tf.strings.to_number(i.split(','), tf.float32) \
-        for i in df['signal_skew'].values]
-    base_kurt = [tf.strings.to_number(i.split(','), tf.float32) \
-        for i in df['signal_kurt'].values]
     base_diff = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['signal_diff'].values]
-    base_signal_len = [tf.strings.to_number(i.split(','), tf.float32) \
-        for i in df['signal_lens'].values]
     base_qual = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['qual'].values]
     base_mis = [tf.strings.to_number(i.split(','), tf.float32) \
@@ -454,10 +448,7 @@ def preprocess_combined(df, output, label_file, file):
         hf.create_dataset("signal_means",  data=np.stack(base_mean), chunks=True, maxshape=(None,None))
         hf.create_dataset("signal_stds",  data=np.stack(base_std), chunks=True, maxshape=(None,None))
         hf.create_dataset("signal_median",  data=np.stack(base_median), chunks=True, maxshape=(None,None))
-        hf.create_dataset("signal_skew",  data=np.stack(base_skew), chunks=True, maxshape=(None,None))
-        hf.create_dataset("signal_kurt",  data=np.stack(base_kurt), chunks=True, maxshape=(None,None))
         hf.create_dataset("signal_diff",  data=np.stack(base_diff), chunks=True, maxshape=(None,None))
-        hf.create_dataset("signal_lens",  data=np.stack(base_signal_len), chunks=True, maxshape=(None,None))
         hf.create_dataset('qual',  data=np.stack(base_qual), chunks=True, maxshape=(None,None))
         hf.create_dataset('mis',  data=np.stack(base_mis), chunks=True, maxshape=(None,None))
         hf.create_dataset('ins',  data=np.stack(base_ins), chunks=True, maxshape=(None,None))

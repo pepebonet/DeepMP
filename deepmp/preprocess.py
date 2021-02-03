@@ -18,14 +18,7 @@ import deepmp.merge_h5s as mh5
 
 names_all=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
             'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_median',
-            'signal_skew', 'signal_kurt', 'signal_diff', 'signal_lens',
-            'cent_signals', 'qual', 'mis', 'ins', 'del', 'methyl_label', 'flag']
-            # 'cent_min8', 'cent_min7', 'cent_min6', 'cent_min5', 'cent_min4', 
-            # 'cent_min3', 'cent_min2', 'cent_min1', 'cent', 'cent_plus1', 'cent_plus2',
-            # 'cent_plus3', 'cent_plus4', 'cent_plus5', 'cent_plus6', 'cent_plus7', 'cent_plus8', 
-            # 'cent_min8_nonorm', 'cent_min7_nonorm', 'cent_min6_nonorm', 'cent_min5_nonorm', 'cent_min4_nonorm', 
-            # 'cent_min3_nonorm', 'cent_min2_nonorm', 'cent_min1_nonorm', 'cent_nonorm', 'cent_plus1_nonorm', 'cent_plus2_nonorm',
-            # 'cent_plus3_nonorm', 'cent_plus4_nonorm', 'cent_plus5_nonorm', 'cent_plus6_nonorm', 'cent_plus7_nonorm', 'cent_plus8_nonorm']
+            'signal_diff', 'qual', 'mis', 'ins', 'del', 'methyl_label']
 
 
 def get_data(treated, untreated, names='', nopos=False):
@@ -96,24 +89,6 @@ def do_single_preprocess(feature_type, sequence_treated, sequence_untreated,
             ut.preprocess_sequence(el[0], output, el[1])
 
 
-def balanced_set(df):
-    label_counts = Counter(df['methyl_label'])
-    if len(labels_counts) == 2:
-        min_label = min(label_counts, key=label_counts.get)
-        zeros = df[df['methyl_label'] == 0]
-        ones = df[df['methyl_label'] == 1]
-
-        if min_label == 0:
-            ones = ones.sample(label_counts[0])
-        else:
-            zeros = zeros.sample(label_counts[1])
-        
-        return pd.concat([ones, zeros])
-    
-    else:
-        return df
-
-
 def save_tsv(df, output, file, mode='w'):
     file_name = os.path.join(output, '{}.tsv'.format(file))
     if mode == 'a':
@@ -139,8 +114,7 @@ def get_positions_only(df, positions):
 
 def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps, split_type, positions):
     df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
-    # df = balanced_set(df)
-    
+
     if isinstance(positions, pd.DataFrame):
         df = get_positions_only(df, positions)
 
@@ -165,14 +139,9 @@ def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps, split_ty
             ut.preprocess_combined(el[0], tmps, el[1], file)
 
 
-def split_sets_files_single(file, tmp_folder, counter, tsv_flag, output, tmps, split_type):
+def split_sets_files_single(file, tmp_folder, counter, tsv_flag, output, tmps):
     df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
-
-    if split_type == 'read':
-        data = [(df, 'test')]
-    else:
-        test = df[(df['pos_in_strand'] >= 1000000) & (df['pos_in_strand'] <= 2000000)]
-        data = [(test, 'test')]
+    data = [(df, 'test')]
     
     if data[0][0].shape[0] != 0:
         if tsv_flag:
@@ -196,7 +165,7 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type, positio
     print('Splitting original file...')
     os.mkdir(tmp_folder); 
     os.mkdir(tmp_train); os.mkdir(tmp_test); os.mkdir(tmp_val)
-    cmd = 'split -l {} {} {}'.format(2000, features, tmp_folder)
+    cmd = 'split -l {} {} {}'.format(20000, features, tmp_folder)
     subprocess.call(cmd, shell=True)
     
     if positions:
@@ -226,7 +195,7 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type, positio
     subprocess.call('rm -r {}'.format(tmp_val), shell=True)
 
 
-def no_split_combined_preprocess(features, output, tsv_flag, cpus, split_type):
+def no_split_combined_preprocess(features, output, tsv_flag, cpus):
 
     tmp_folder = os.path.join(os.path.dirname(features), 'tmp_all/')
     tmp_test = os.path.join(os.path.dirname(features), 'test/')
@@ -242,7 +211,7 @@ def no_split_combined_preprocess(features, output, tsv_flag, cpus, split_type):
 
     f = functools.partial(split_sets_files_single, tmp_folder=tmp_folder, \
             counter=counter, tsv_flag=tsv_flag, output=output, \
-                tmps=os.path.dirname(features), split_type=split_type)
+                tmps=os.path.dirname(features))
     with Pool(cpus) as p:
         for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
             counter += 1
