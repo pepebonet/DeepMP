@@ -16,9 +16,13 @@ import deepmp.utils as ut
 import deepmp.merge_h5s as mh5 
 
 
-names_all=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
+names_all = ['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
             'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_median',
             'signal_diff', 'qual', 'mis', 'ins', 'del', 'methyl_label']
+
+names_seq = ['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
+            'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_median',
+            'signal_diff', 'methyl_label']
 
 
 def get_data(treated, untreated, names='', nopos=False):
@@ -55,38 +59,19 @@ def get_training_test_val_pos(df):
     return [(train, 'train'), (test, 'test'), (val, 'val')]
 
 
-def preprocess_error(df, feat, output, file):
-    X = df[df.columns[:-1]].values
-    Y = df[df.columns[-1]].values
-    kmer = df['#Kmer'].apply(kmer2code)
-
-    file_name = os.path.join(output, '{}_err.h5'.format(file))
-
-    with h5py.File(file_name, 'a') as hf:
-        hf.create_dataset("kmer",  data=np.stack(kmer))
-        hf.create_dataset("err_X", data=X.reshape(X.shape[0], feat, 1))
-        hf.create_dataset("err_Y", data=Y)
-
-    return None
-
-
-def do_single_preprocess(feature_type, sequence_treated, sequence_untreated,
-    error_treated, error_untreated, output, num_err_feat):
+def do_single_preprocess(feature_type, sequence_features,
+    error_features, output):
     if feature_type == 'err':
+        import pdb;pdb.set_trace()
         treat, untreat = get_data(err_treated, err_untreated,
             names=['read_name', 'pos', 'chr', 'k_mer', 'qual', 'mis', 'ins', 'del', 'methyl_label'])
         for el in data:
             ut.preprocess_err_read(el[0], num_err_feat, output, el[1])
 
     else:
-        treat, untreat = get_data(sequence_treated, sequence_untreated,
-            names=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
-            'read_strand', 'kmer', 'signal_means', 'signal_stds', 'signal_median',
-            'signal_skew', 'signal_kurt', 'signal_diff',
-            'signal_lens', 'methyl_label', 'flag'])
-        data = get_training_test_val(pd.concat([treat, untreat]))
-        for el in data:
-            ut.preprocess_sequence(el[0], output, el[1])
+        data = pd.read_csv(sequence_features, sep='\t', header=None, names=names_seq)
+        import pdb;pdb.set_trace()
+        ut.preprocess_sequence(data, output, 'test')
 
 
 def save_tsv(df, output, file, mode='w'):
@@ -101,7 +86,6 @@ def get_positions_only(df, positions):
     df = pd.merge(
         df, positions, right_on=['chr', 'start', 'strand'], left_on=['chrom', 'pos', 'strand']
     )
-
     label = np.zeros(len(df), dtype=int)
     label[np.argwhere(df['status'].values == 'mod')] = 1
 
@@ -109,7 +93,6 @@ def get_positions_only(df, positions):
     df['methyl_label'] = label
 
     return df
-
 
 
 def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps, split_type, positions):
@@ -139,20 +122,21 @@ def split_sets_files(file, tmp_folder, counter, tsv_flag, output, tmps, split_ty
             ut.preprocess_combined(el[0], tmps, el[1], file)
 
 
-def split_sets_files_single(file, tmp_folder, counter, tsv_flag, output, tmps):
-    df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
-    data = [(df, 'test')]
-    
-    if data[0][0].shape[0] != 0:
-        if tsv_flag:
-            for el in data:
-                if counter == 0:
-                    mode = 'w'
-                else:
-                    mode = 'a'
-                save_tsv(el[0], output, el[1], 'a')
-        for el in data:
-            ut.preprocess_combined(el[0], tmps, el[1], file)
+def split_sets_files_single(file, tmp_folder, tmps, feature_type):
+
+    if feature_type == 'combined':
+        df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
+        if df.shape[0] != 0:
+            ut.preprocess_combined(df, tmps, 'test', file)
+    elif feature_type == 'seq':
+        df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_seq)
+        if df.shape[0] != 0:
+            ut.preprocess_sequence(df, tmps, 'test', file)
+    else:
+        pass
+        df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_err)
+        if df.shape[0] != 0:
+            ut.preprocess_errors(df, tmps, 'test', file)
 
 
 def do_combined_preprocess(features, output, tsv_flag, cpus, split_type, positions):
@@ -195,7 +179,7 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type, positio
     subprocess.call('rm -r {}'.format(tmp_val), shell=True)
 
 
-def no_split_combined_preprocess(features, output, tsv_flag, cpus):
+def no_split_preprocess(features, output, cpus, feature_type):
 
     tmp_folder = os.path.join(os.path.dirname(features), 'tmp_all/')
     tmp_test = os.path.join(os.path.dirname(features), 'test/')
@@ -205,13 +189,12 @@ def no_split_combined_preprocess(features, output, tsv_flag, cpus):
     os.mkdir(tmp_test)
     cmd = 'split -l {} {} {}'.format(20000, features, tmp_folder) 
     subprocess.call(cmd, shell=True)
-    
+    import pdb;pdb.set_trace()
     print('Extracting features to h5 and tsv files...')
     counter = 0
 
     f = functools.partial(split_sets_files_single, tmp_folder=tmp_folder, \
-            counter=counter, tsv_flag=tsv_flag, output=output, \
-                tmps=os.path.dirname(features))
+        tmps=os.path.dirname(features), feature_type=feature_type)
     with Pool(cpus) as p:
         for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
             counter += 1
