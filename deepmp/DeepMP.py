@@ -285,7 +285,7 @@ def merge_and_preprocess(feature_type, error_treated, error_untreated,
         )
     elif feature_type == 'combined_single':
         no_split_combined_preprocess(
-            combined_features, output, save_tsv, cpus, split_type
+            combined_features, output, save_tsv, cpus
         )
     else:
         do_single_preprocess(
