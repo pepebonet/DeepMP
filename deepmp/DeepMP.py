@@ -232,29 +232,13 @@ def train_nns(**kwargs):
 @cli.command(short_help='Merge features and preprocess data for NNs')
 @click.option(
     '-ft', '--feature_type', required=True,
-    type=click.Choice(['seq', 'err', 'combined', 'combined_single']),
+    type=click.Choice(['seq', 'err', 'combined', 'combined_split']),
     help='which features is the input corresponding to? To the sequence, '
     'to the errors or to both of them. If choice and files do not correlate '
     'errors will rise throughout the script'
 )
 @click.option(
-    '-et', '--error-treated', default='', help='extracted error features'
-)
-@click.option(
-    '-eu', '--error-untreated', default='', help='extracted error features'
-)
-@click.option(
-    '-st', '--sequence-treated', default='', help='extracted sequence features'
-)
-@click.option(
-    '-su', '--sequence-untreated', default='', help='extracted sequence features'
-)
-@click.option(
-    '-cf', '--combined-features', default='',
-    help='extracted single read combined features'
-)
-@click.option(
-    '-nef', '--num-err-feat', default=20, help='# Error features to select'
+    '-f', '--features', default='', help='extracted error features'
 )
 @click.option(
     '-stsv', '--save-tsv', is_flag=True, help='Whether to store tsv. Default = False'
@@ -275,22 +259,16 @@ def train_nns(**kwargs):
 @click.option(
     '-o', '--output', default='', help='Output file'
 )
-def merge_and_preprocess(feature_type, error_treated, error_untreated,
-    sequence_treated, sequence_untreated, combined_features,
-    num_err_feat, output, save_tsv, cpus, split_type, positions):
+def merge_and_preprocess(feature_type, features, output, save_tsv, cpus, 
+    split_type, positions):
 
-    if feature_type == 'combined':
+    if feature_type == 'combined_split':
         do_combined_preprocess(
-            combined_features, output, save_tsv, cpus, split_type, positions
-        )
-    elif feature_type == 'combined_single':
-        no_split_combined_preprocess(
-            combined_features, output, save_tsv, cpus
+            features, output, save_tsv, cpus, split_type, positions
         )
     else:
-        do_single_preprocess(
-            feature_type, sequence_treated, sequence_untreated,
-            error_treated, error_untreated, output, num_err_feat
+        no_split_preprocess(
+            features, output, cpus, feature_type 
         )
 
 
