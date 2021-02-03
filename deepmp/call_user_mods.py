@@ -11,7 +11,7 @@ import deepmp.utils as ut
 import deepmp.preprocess as pr
 
 read1_pos0 = 0.005  
-read0_pos1 = 0.90 
+read0_pos1 = 0.80 
 fp = 0.001  
 fn = 0.001  
 beta_a = 1
