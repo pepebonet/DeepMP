@@ -217,7 +217,7 @@ def get_error_read(errors, dict_names, readname):
 
 #Raw signal --> Normalization --> alignment --> methylated site --> features
 def _extract_features(fast5s, errors, corrected_group, basecall_subgroup, 
-    normalize_method, motif_seqs, methyloc, chrom2len, kmer_len, raw_signals_len,
+    normalize_method, motif_seqs, methyloc, chrom2len, kmer_len,
     methy_label, dict_names):
     features_list = []
 
@@ -301,14 +301,17 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
 
 def get_a_batch_features_str(fast5s_q, featurestr_q, errornum_q, err_path,
     corrected_group, basecall_subgroup, normalize_method, motif_seqs, methyloc, 
-    chrom2len, kmer_len, raw_signals_len, methy_label, dict_names):
+    chrom2len, kmer_len, methy_label, dict_names):
     #Obtain features from every read 
     while not fast5s_q.empty():
-        fast5s = fast5s_q.get()
+        try:
+            fast5s = fast5s_q.get()
+        except Exception:
+            break
 
         features_list, error_num = _extract_features(
             fast5s, err_path, corrected_group, basecall_subgroup, normalize_method, 
-            motif_seqs, methyloc, chrom2len, kmer_len, raw_signals_len, 
+            motif_seqs, methyloc, chrom2len, kmer_len, 
             methy_label, dict_names
         )
         features_str = []
@@ -363,7 +366,7 @@ def _extract_preprocess(fast5_dir, motifs, is_dna, reference_path,
 
 
 def combine_extraction(fast5_dir, read_errors, ref, cor_g, base_g, dna, motifs,
-    nproc, position_file, norm_me, methyloc, kmer_len, raw_sig_len, methy_lab, 
+    nproc, norm_me, methyloc, kmer_len, methy_lab, 
     write_fp, f5_batch_num, recursive, dict_names):
 
     start = time.time()
@@ -388,7 +391,7 @@ def combine_extraction(fast5_dir, read_errors, ref, cor_g, base_g, dna, motifs,
         p = mp.Process(
             target=get_a_batch_features_str, args=(fast5s_q, featurestr_q, 
             errornum_q, read_errors, cor_g, base_g, norm_me, motif_seqs, methyloc, 
-            chrom2len, kmer_len, raw_sig_len, methy_lab, dict_names)
+            chrom2len, kmer_len, methy_lab, dict_names)
         )
         p.daemon = True
         p.start()
