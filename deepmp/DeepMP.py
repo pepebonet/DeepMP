@@ -232,7 +232,7 @@ def train_nns(**kwargs):
 @cli.command(short_help='Merge features and preprocess data for NNs')
 @click.option(
     '-ft', '--feature_type', required=True,
-    type=click.Choice(['seq', 'err', 'both', 'combined', 'combined_single']),
+    type=click.Choice(['seq', 'err', 'combined', 'combined_single']),
     help='which features is the input corresponding to? To the sequence, '
     'to the errors or to both of them. If choice and files do not correlate '
     'errors will rise throughout the script'
@@ -428,15 +428,6 @@ def single_read_error_extraction(**kwargs):
     help='0-based location of the targeted base in the motif, default 0'
 )
 @click.option(
-    '--positions', '-p', default=None,
-    help='Tap delimited file with a list of positions. default None'
-)
-@click.option(
-    '--cent-signals-len', '-csl', default=360,
-    help='the number of signals to be used in deepsignal, '
-    'default 360'
-)
-@click.option(
     '--recursive', '-r', is_flag=True, help='Find reads recursively in subfolders'
 )
 @click.option(
@@ -449,8 +440,8 @@ def sequence_feature_extraction(**kwargs):
     se.extract_features(
         args.input, args.reference_path, args.corrected_group, \
         args.basecall_subgroup, args.is_dna, args.motifs, args.cpus, \
-        args.positions, args.normalize_method, args.mod_loc, args.kmer_len, \
-        args.cent_signals_len, args.methyl_label, args.write_path, \
+        args.normalize_method, args.mod_loc, args.kmer_len, \
+        args.methyl_label, args.write_path, \
         args.f5_batch_num, args.recursive
     )
 
@@ -514,15 +505,6 @@ def sequence_feature_extraction(**kwargs):
     help='0-based location of the targeted base in the motif, default 0'
 )
 @click.option(
-    '--positions', '-p', default=None,
-    help='Tap delimited file with a list of positions. default None'
-)
-@click.option(
-    '--cent-signals-len', '-csl', default=360,
-    help='the number of signals to be used in deepsignal, '
-    'default 360'
-)
-@click.option(
     '--recursive', '-r', is_flag=True, help='Find reads recursively in subfolders'
 )
 @click.option(
@@ -538,8 +520,8 @@ def combine_extraction(**kwargs):
     ce.combine_extraction(
         args.fast5_reads, args.read_errors, args.reference_path, args.corrected_group, \
         args.basecall_subgroup, args.is_dna, args.motifs, args.cpus, \
-        args.positions, args.normalize_method, args.mod_loc, args.kmer_len, \
-        args.cent_signals_len, args.methyl_label, args.write_path, \
+        args.normalize_method, args.mod_loc, args.kmer_len, \
+        args.methyl_label, args.write_path, \
         args.f5_batch_num, args.recursive, args.dict_names
     )
 
