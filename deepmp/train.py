@@ -7,7 +7,7 @@ from deepmp.model import *
 embedding_size = 5
 
 def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
-                                kmer, epochs, err_features = False, rnn = None, checkpoint_path = None):
+        kmer, epochs, err_features = False, rnn = None, checkpoint_path = None):
 
     input_train, label = ut.get_data_sequence(train_file, kmer, err_features)
     input_val, vy = ut.get_data_sequence(val_file, kmer, err_features)
@@ -61,7 +61,7 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
 
 
 def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
-    epochs, batch_size, checkpoint_path = None):
+        epochs, batch_size, checkpoint_path = None):
 
     input_train, label = ut.get_data_errors(train_file, kmer)
     input_val, vy = ut.get_data_errors(val_file, kmer)
@@ -100,7 +100,8 @@ def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
     return None
 
 
-def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs, checkpoint_path = None):
+def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, 
+        epochs, checkpoint_path = None):
 
     input_train_seq, input_train_err, label = ut.get_data_jm(train_file, kmer)
     input_val_seq, input_val_err, vy = ut.get_data_jm(val_file, kmer)
@@ -131,8 +132,8 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer, epochs,
                         ]
 
     model.fit([input_train_seq, input_train_err], label, batch_size=batch_size, epochs=epochs,
-                                                callbacks = callback_list,
-                                                validation_data = ([input_val_seq, input_val_err], vy))
+                        callbacks = callback_list,
+                        validation_data = ([input_val_seq, input_val_err], vy))
     model.save(model_dir)
 
     return None
