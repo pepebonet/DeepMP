@@ -210,10 +210,11 @@ def concat_features(tmp_dir, output):
 def single_read_errors(features_path, label, motifs, output, reads_per_file, 
     cpus, mod_loc, kmer_len, is_dna):
 
-    tmp_dir = get_tmp_dir(features_path)
-    
-    print("Splitting into several files...")
-    tmp_list = get_reads_in_tmp(features_path, reads_per_file, tmp_dir)
+    # tmp_dir = get_tmp_dir(features_path)
+
+    # print("Splitting into several files...")
+    # tmp_list = get_reads_in_tmp(features_path, reads_per_file, tmp_dir)
+    tmp_list = [os.path.join(features_path, i) for i in os.listdir(features_path)]
 
     print("Getting error features...")
     out_features = []
