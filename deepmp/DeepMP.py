@@ -273,38 +273,6 @@ def merge_and_preprocess(feature_type, features, output, save_tsv, cpus,
 
 
 # ------------------------------------------------------------------------------
-# ERROR FEATURE EXTRACTION
-# ------------------------------------------------------------------------------
-
-@cli.command(short_help='Extract error features after Epinano pipeline')
-@click.option(
-    '-ef', '--error-features', default='',
-    help='extracted error through epinano pipeline'
-)
-@click.option(
-    '-l', '--label', default='1', type=click.Choice(['1', '0']),
-)
-@click.option(
-    '-m', '--motif', default='CG', help='motif of interest'
-)
-@click.option(
-    '-me', '--memory_efficient', default=False,
-    help='If input features file is too large activate to demand less memory'
-)
-@click.option(
-    '-o', '--output', default='', help='Output file'
-)
-def error_extraction(**kwargs):
-    """Perform error feature extraction """
-
-    args = Namespace(**kwargs)
-    ee.process_error_features(
-        args.error_features, args.label, args.motif, args.output,
-        args.memory_efficient
-    )
-
-
-# ------------------------------------------------------------------------------
 # SINGLE READ ERROR FEATURE EXTRACTION
 # ------------------------------------------------------------------------------
 @cli.command(short_help='Extract error features per read')
