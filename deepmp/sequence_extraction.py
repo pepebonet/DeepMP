@@ -12,6 +12,7 @@ from scipy.stats import kurtosis, skew
 
 from deepmp import utils as ut
 from deepmp.fast5 import Fast5
+from deepmp import combined_extraction as ce
 
 queen_size_border = 2000
 time_wait = 5
@@ -47,23 +48,6 @@ def _features_to_str(features):
         diff_text, str(methy_label)])
 
 
-def _fill_files_queue(fast5s_q, fast5_files, batch_size):
-    for i in np.arange(0, len(fast5_files), batch_size):
-        fast5s_q.put(fast5_files[i:(i+batch_size)])
-    return
-
-
-def _normalize_signals(signals, normalize_method='mad'):
-    if normalize_method == 'zscore':
-        sshift, sscale = np.mean(signals), np.float(np.std(signals))
-    elif normalize_method == 'mad':
-        sshift, sscale = np.median(signals), np.float(robust.mad(signals))
-    else:
-        raise ValueError('')
-    norm_signals = (signals - sshift) / sscale
-    return np.around(norm_signals, decimals=6)
-
-
 #Raw signal --> Normalization --> alignment --> methylated site --> features
 def _extract_features(fast5s, corrected_group, basecall_subgroup, 
     normalize_method, motif_seqs, methyloc, chrom2len, kmer_len, methy_label):
@@ -73,7 +57,7 @@ def _extract_features(fast5s, corrected_group, basecall_subgroup,
     for fast5_fp in fast5s:
         try:
             raw_signal = fast5_fp.get_raw_signal()
-            norm_signals = _normalize_signals(raw_signal, normalize_method)
+            norm_signals = ce._normalize_signals(raw_signal, normalize_method)
             genomeseq, signal_list = "", []
 
             events = fast5_fp.get_events(corrected_group, basecall_subgroup)
@@ -194,7 +178,7 @@ def _extract_preprocess(fast5_dir, motifs, is_dna, reference_path,
 
     #Distribute reads into processes
     fast5s_q = mp.Queue()
-    _fill_files_queue(fast5s_q, fast5_files, f5_batch_num)
+    ce._fill_files_queue(fast5s_q, fast5_files, f5_batch_num)
 
     return motif_seqs, chrom2len, fast5s_q, len(fast5_files)
 
