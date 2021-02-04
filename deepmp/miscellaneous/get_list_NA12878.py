@@ -49,14 +49,19 @@ def get_mods(rep1, rep2, status, cov=1):
     '-o', '--output', help='output folder'
 )
 def main(replicate_1, replicate_2, coverage, output):
-    rep1 = pd.read_csv(replicate_1, header=None, sep='\t').drop(columns=[3, 4, 6, 7, 8])
-    rep2 = pd.read_csv(replicate_2, header=None, sep='\t').drop(columns=[3, 4, 6, 7, 8])
+    rep1 = pd.read_csv(
+        replicate_1, header=None, sep='\t').drop(columns=[3, 4, 6, 7, 8]
+    )
+    rep2 = pd.read_csv(
+        replicate_2, header=None, sep='\t').drop(columns=[3, 4, 6, 7, 8]
+    )
 
     mod_poss = get_mods(rep1, rep2, 'mod', coverage)
     unmod_poss = get_mods(rep1, rep2, 'unm', coverage)
 
     positions = pd.concat([mod_poss, unmod_poss])
     print(positions.shape)
+    
     outfile = os.path.join(output, 'NA12878_positions_{}x.tsv'.format(coverage))
     positions.to_csv(outfile, sep='\t', index=None)
     

@@ -7,7 +7,7 @@ from tensorflow.keras.models import load_model
 from sklearn.metrics import precision_recall_fscore_support
 from deepmp.model import *
 import deepmp.utils as ut
-import deepmp.plots as pl #this script needs to debug
+# import deepmp.plots as pl #this script needs to debug
 import deepmp.preprocess as pr
 
 
@@ -138,7 +138,7 @@ def do_per_position_analysis(df, pred_vec ,inferred_vec ,output, pred_type):
         meth_label, pred_label, average='binary'
     )
 
-    pl.accuracy_cov(pred_label, meth_label, cov, output)
+    # pl.accuracy_cov(pred_label, meth_label, cov, output)
     # TODO generalize for test with no label
     # TODO improve calling of a methylation
     # TODO Add to the joint analysis
