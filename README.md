@@ -1,5 +1,7 @@
 # DeepMP
-DeepMP is a deeplearning algorithm to detect DNA modifications of Nanopore sequenced samples.
+DeepMP is a convolutional neural network (CNN)-based model that takes information from Nanopore signals and basecalling errors to detect whether a read is methylated or not. The model introduces a threshold-free position modification calling model sensitive to sites methylated at low frequency across cells.
+
+
 
 # Contents
 - [Installation](#Installation)
@@ -10,49 +12,41 @@ DeepMP is a deeplearning algorithm to detect DNA modifications of Nanopore seque
 ## Clone repository
 First download BnpC from the github repository:
 
-        git clone add/final/github/path
+        git clone https://github.com/pepebonet/DeepMP.git
 
 ## Install dependencies
 We highly recommend to use a virtual environment for the installation and employment of DeepMP:
 
 `Option 1:`
 
-        conda create --name environment_name --file requirements.txt
-
-`Option 2:`
-
+        conda create --name deepmp_2021 python=3.6
+        conda activate deepmp_2021
         pip install -e .
 
 # Usage
-### Merge and preprocess:
-Sequence and error features need to be combined so that the validation, test and train sets are obtained
-
-        DeepMP merge-and-preprocess -et path/to/treated_error_features.csv -eu path/to/untreated_error_features.csv -st path/to/treated_sequence_features.tsv -su path/to/untreated_sequence_features.tsv -o output/ -ft both
 
 ### Feature extraction:
+Features for the model need to be extracted. We present 3 different options: 
 
-`Option 1:` Extract sequence features
+`Option 1:` Extract combined features
 ```
-    DeepMP sequence-feature-extraction path/to/fast5/files/ -rp path/to/reference/file/ -m CG -o extraction_outputs/ -ml 1
-```
-
-`Option 2:` Extract error features
-```
-    DeepMP error-extraction -ef path/to/errors/extracted/by/epinano -rp path/to/reference/file/ -m CG -o output/error_features/ -l 1
+    DeepMP combined-extraction -fr path/to/fast5/files/ -re path/to/error/folder/ -rp path/to/reference/file/ -dn path/to/dict_read_names -m CG -o CpG_methylated_combined.tsv -ml 1 -cpu 56
 ```
 
-### Call modifications
-
-Example
-
+`Option 2:` Extract sequence features
 ```
-    DeepMP call-modifications -m joint -tf path/to/test/data -md model/directory -o output/
+    DeepMP sequence-feature-extraction path/to/fast5/files/ -rp path/to/reference/file/ -m CG -o CpG_methylated.tsv -ml 1 -cpu 56
 ```
 
-- Specify model type with flag `-m`, choose from `seq, err, joint`(required).
-- Add `-ef` for sequence model with both seq and error features.
-- Add  `-pos` for test on positions.
-- Specify prediction type for test on positions with flag `-pt`,  choose from `min_max` and `threshold`, `min_max` by default.
+`Option 3:` Extract error features
+```
+    DeepMP single-read-error-extraction -ef path/to/error/folder/ -m CG -o output/error_features/ -l 1 -cpu 56
+```
+
+### Preprocess:
+Extracted features are processed to get the information into h5 format which is the desired input for training, validation and testing. 
+
+        DeepMP preprocess -f path/to/features.tsv  -ft combined -o output/folder/ -cpu 56
 
 
 ### Train models
@@ -74,7 +68,20 @@ Train joint model from binary files.
 ```
 - Use `-cp` to specify the checkpoint file while training model from checkpoints.
 
-### Plotting Arguments
-### Other Arguments
+
+### Call modifications
+
+Finally modifications for a given test set are obtained: 
+
+```
+    DeepMP call-modifications -m joint -tf path/to/test/data -md model/directory -o output/
+```
+
+- Specify model type with flag `-m`, choose from `seq, err, joint`(required).
+- Add `-ef` for sequence model with both seq and error features.
+- Add  `-pos` for test on positions.
+- Specify prediction type for test on positions with flag `-pt`,  choose from `min_max` and `threshold`, `min_max` by default.
+
 
 # Example data
+Step by step process to detect modifications employing DeepMP. 
