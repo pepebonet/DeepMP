@@ -310,17 +310,13 @@ def error_extraction(**kwargs):
 @cli.command(short_help='Extract error features per read')
 @click.option(
     '-ef', '--error-features', default='',
-    help='extracted error through epinano pipeline'
+    help='extracted errors. Folder containing one file for each read'
 )
 @click.option(
     '-l', '--label', default='1', type=click.Choice(['1', '0']),
 )
 @click.option(
     '-m', '--motif', default='CG', help='motif of interest'
-)
-@click.option(
-    '-rpf', '--reads_per_file', default=1500,
-    help='number of reads per file for parallel computing'
 )
 @click.option(
     '-kl', '--kmer_len', default=17, help='len of kmer. default 17'
@@ -347,7 +343,7 @@ def single_read_error_extraction(**kwargs):
 
     sre.single_read_errors(
         args.error_features, args.label, args.motif, args.output,
-        args.reads_per_file, args.cpus, args.mod_loc,
+        args.cpus, args.mod_loc,
         args.kmer_len, args.is_dna
     )
 
