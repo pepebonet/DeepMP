@@ -93,7 +93,7 @@ def single_read_errors(features_path, label, motifs, output,
     f = functools.partial(get_error_features, kmer_len=kmer_len, \
             motif=motif_seqs, mod_loc=mod_loc, label=label, tmp_dir=tmp_dir)
     with Pool(cpus) as p:
-        for i, rval in enumerate(p.imap_unordered(f, tmp_list[1:200])):
+        for i, rval in enumerate(p.imap_unordered(f, tmp_list)):
             pass
 
     print("Concating output...")
