@@ -204,13 +204,6 @@ def get_data_jm(file, kmer, get_id=False):
         return data_sequence, data_errors, label
 
 
-def get_data_incep(file, get_id=False):
-    ## preprocess data
-    central_signals, label = load_incep_data(file)
-
-    return tf.reshape(central_signals, [-1, 1, 360]), label
-
-
 def concat_tensors_seq(bases, signal_means, signal_stds, signal_medians,
                         signal_range, kmer):
     return tf.concat([bases,
@@ -343,7 +336,7 @@ def select_columns(df, columns):
 #  PREPROCESS
 # ------------------------------------------------------------------------------
 
-def preprocess_sequence(df, output, file):
+def preprocess_sequence(df, output, label_file, file):
 
     kmer = df['kmer'].apply(kmer2code)
     base_mean = [tf.strings.to_number(i.split(','), tf.float32) \
@@ -356,7 +349,12 @@ def preprocess_sequence(df, output, file):
         for i in df['signal_diff'].values]
     label = df['methyl_label']
 
-    file_name = os.path.join(output, '{}_seq.h5'.format(file))
+    # file_name = os.path.join(output, '{}_seq.h5'.format(file))
+    file_name = os.path.join(
+        output, '{}'.format(label_file), '{}_{}.h5'.format(file, label_file)
+    )
+    if not os.path.isdir(os.path.dirname(file_name)):
+        file_name = os.path.join(output, '{}_{}.h5'.format(file, label_file))
 
     with h5py.File(file_name, 'a') as hf:
         hf.create_dataset("kmer",  data=np.stack(kmer))
@@ -369,31 +367,33 @@ def preprocess_sequence(df, output, file):
     return None
 
 
-def preprocess_err_read(err_treated, err_untreated, output):
+def preprocess_err_read(df, output, label_file, file):
 
-    for el in data:
-        df = el[0]
-        file = el[1]
-        kmer = df['k_mer'].apply(kmer2code)
-        base_qual = [tf.strings.to_number(i.split(','), tf.float32) \
-            for i in df['qual'].values]
-        base_mis = [tf.strings.to_number(i.split(','), tf.float32) \
-            for i in df['mis'].values]
-        base_ins = [tf.strings.to_number(i.split(','), tf.float32) \
-            for i in df['ins'].values]
-        base_del = [tf.strings.to_number(i.split(','), tf.float32) \
-            for i in df['del'].values]
-        label = df['methyl_label']
+    kmer = df['k_mer'].apply(kmer2code)
+    base_qual = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['qual'].values]
+    base_mis = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['mis'].values]
+    base_ins = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['ins'].values]
+    base_del = [tf.strings.to_number(i.split(','), tf.float32) \
+        for i in df['del'].values]
+    label = df['methyl_label']
 
-        file_name = os.path.join(output, '{}_err_read.h5'.format(file))
+    # file_name = os.path.join(output, '{}_err_read.h5'.format(file))
+    file_name = os.path.join(
+        output, '{}'.format(label_file), '{}_{}.h5'.format(file, label_file)
+    )
+    if not os.path.isdir(os.path.dirname(file_name)):
+        file_name = os.path.join(output, '{}_{}.h5'.format(file, label_file))
 
-        with h5py.File(file_name, 'a') as hf:
-            hf.create_dataset("kmer",  data=np.stack(kmer))
-            hf.create_dataset('qual',  data=np.stack(base_qual))
-            hf.create_dataset('mis',  data=np.stack(base_mis))
-            hf.create_dataset('ins',  data=np.stack(base_ins))
-            hf.create_dataset('del',  data=np.stack(base_del))
-            hf.create_dataset('methyl_label',  data=label)
+    with h5py.File(file_name, 'a') as hf:
+        hf.create_dataset("kmer",  data=np.stack(kmer))
+        hf.create_dataset('qual',  data=np.stack(base_qual))
+        hf.create_dataset('mis',  data=np.stack(base_mis))
+        hf.create_dataset('ins',  data=np.stack(base_ins))
+        hf.create_dataset('del',  data=np.stack(base_del))
+        hf.create_dataset('methyl_label',  data=label)
 
     return None
 
@@ -427,7 +427,6 @@ def preprocess_combined(df, output, label_file, file):
     file_name = os.path.join(
         output, '{}'.format(label_file), '{}_{}.h5'.format(file, label_file)
     )
-    
     if not os.path.isdir(os.path.dirname(file_name)):
         file_name = os.path.join(output, '{}_{}.h5'.format(file, label_file))
 
@@ -449,6 +448,21 @@ def preprocess_combined(df, output, label_file, file):
         hf.create_dataset('pos_in_strand',  data=pos_in_strand, chunks=True, maxshape=(None,))
 
     return None
+
+
+# ------------------------------------------------------------------------------
+# INPUT FUNCTIONS
+# ------------------------------------------------------------------------------
+
+
+def openfile(f):
+    if f.endswith ('.gz'):
+        fh = gzip.open (f,'rt')
+    elif f.endswith ('bz') or f.endswith ('bz2'):
+        fh = bz2.open(f,'rt')
+    else:
+        fh = open(f,'rt')
+    return fh
 
 
 # ------------------------------------------------------------------------------
