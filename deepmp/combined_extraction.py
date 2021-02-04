@@ -114,19 +114,9 @@ def get_kmer_set(features, kmer_len, motif, mod_loc):
     return lines
 
 
-def openfile(f):
-    if f.endswith ('.gz'):
-        fh = gzip.open (f,'rt')
-    elif f.endswith ('bz') or f.endswith ('bz2'):
-        fh = bz2.open(f,'rt')
-    else:
-        fh = open(f,'rt')
-    return fh
-
-
 def get_error_features(feat_path, kmer_len, motif, mod_loc):
     lines = [];
-    with openfile(feat_path) as fh:
+    with ut.openfile(feat_path) as fh:
         for l in fh:
             if l.startswith('#'):
                 continue
