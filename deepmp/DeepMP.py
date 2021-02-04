@@ -9,7 +9,6 @@ from .train import *
 from .preprocess import *
 from .call_user_mods import *
 from .call_modifications import *
-import deepmp.error_extraction as ee
 import deepmp.single_read_errors as sre
 import deepmp.sequence_extraction as se
 import deepmp.combined_extraction as ce
@@ -37,6 +36,7 @@ def cli(debug):
 # ------------------------------------------------------------------------------
 # CALL USER MODIFICATIONS
 # ------------------------------------------------------------------------------
+
 @cli.command(short_help='Calling modifications from user end')
 @click.option(
     '-m', '--model_type', required=True,
@@ -45,11 +45,11 @@ def cli(debug):
 )
 @click.option(
     '-tf', '--test_file', required=True,
-    help='path to training set'
+    help='path to test set'
 )
 @click.option(
     '-k', '--kmer', default=17,
-    help='kmer length for sequence training'
+    help='kmer length of the sequence'
 )
 @click.option(
     '-md', '--model_dir', default='',
@@ -81,11 +81,12 @@ def call_user_mods(**kwargs):
         args.kmer, args.output, args.err_features,
         args.position_test, args.prediction_type
     )
+
+
 # ------------------------------------------------------------------------------
 # CALL MODIFICATIONS
 # ------------------------------------------------------------------------------
 
-#TODO <JB, MC> improve way to combine both methods
 @cli.command(short_help='Calling modifications')
 @click.option(
     '-m', '--model_type', required=True,
@@ -94,11 +95,11 @@ def call_user_mods(**kwargs):
 )
 @click.option(
     '-tf', '--test_file', required=True,
-    help='path to training set'
+    help='path to test set'
 )
 @click.option(
     '-k', '--kmer', default=17,
-    help='kmer length for sequence training'
+    help='kmer length of the sequence'
 )
 @click.option(
     '-md', '--model_dir', default='',
@@ -136,11 +137,10 @@ def call_modifications(**kwargs):
 # TRAIN NEURAL NETWORKS
 # ------------------------------------------------------------------------------
 
-#TODO <MC,PB> An additional parser might be needed in train.py
 @cli.command(short_help='Trainining neural networks')
 @click.option(
     '-m', '--model_type', required=True,
-    type=click.Choice(['seq', 'err', 'joint', 'incep', 'central_cnn']),
+    type=click.Choice(['seq', 'err', 'joint']),
     help='choose model to train'
 )
 @click.option(
@@ -209,27 +209,12 @@ def train_nns(**kwargs):
                 args.kmer, args.epochs, args.checkpoint
                 )
 
-    elif args.model_type == 'incep':
-        train_inception(
-                args.train_file, args.val_file,
-                args.log_dir, args.model_dir, args.batch_size,
-                args.epochs
-                )
-
-    elif args.model_type == 'central_cnn':
-        train_central_cnn(
-                args.train_file, args.val_file,
-                args.log_dir, args.model_dir, args.batch_size,
-                args.epochs
-                )
-
-
 
 # ------------------------------------------------------------------------------
-# MERGE & PREPROCESS DATA
+# PREPROCESS DATA
 # ------------------------------------------------------------------------------
 
-@cli.command(short_help='Merge features and preprocess data for NNs')
+@cli.command(short_help='Preprocess data for NNs')
 @click.option(
     '-ft', '--feature_type', required=True,
     type=click.Choice(['seq', 'err', 'combined', 'combined_split']),
@@ -247,8 +232,7 @@ def train_nns(**kwargs):
     '-pos', '--positions', default='', help='Pass a position list to filter features'
 )
 @click.option(
-    '-st', '--split_type', required=True,
-    type=click.Choice(['pos', 'read', 'chr']),
+    '-st', '--split_type', type=click.Choice(['pos', 'read', 'chr']),
     help='Type of train-test-val split to select. Positions or read'
     'pos option creates and independent test set with positions never seen'
     'read option creates and independent test set with reads never seen '
@@ -259,22 +243,26 @@ def train_nns(**kwargs):
 @click.option(
     '-o', '--output', default='', help='Output file'
 )
-def merge_and_preprocess(feature_type, features, output, save_tsv, cpus, 
-    split_type, positions):
+def preprocess(**kwargs):
+    """Preprocess data for training"""
 
-    if feature_type == 'combined_split':
+    args = Namespace(**kwargs)
+
+    if args.feature_type == 'combined_split':
         do_combined_preprocess(
-            features, output, save_tsv, cpus, split_type, positions
+            args.features, args.output, args.save_tsv, args.cpus, 
+            args.split_type, args.positions
         )
     else:
         no_split_preprocess(
-            features, output, cpus, feature_type 
+            args.features, args.output, args.cpus, args.feature_type 
         )
 
 
 # ------------------------------------------------------------------------------
 # SINGLE READ ERROR FEATURE EXTRACTION
 # ------------------------------------------------------------------------------
+
 @cli.command(short_help='Extract error features per read')
 @click.option(
     '-ef', '--error-features', default='',
@@ -305,7 +293,7 @@ def merge_and_preprocess(feature_type, features, output, save_tsv, cpus,
     '-o', '--output', default='', help='Output file'
 )
 def single_read_error_extraction(**kwargs):
-    """Perform per read error feature extraction """
+    """Perform error feature extraction """
 
     args = Namespace(**kwargs)
 
@@ -456,7 +444,7 @@ def sequence_feature_extraction(**kwargs):
     '-o', '--write_path', required=True, help='file path to save the features'
 )
 def combine_extraction(**kwargs):
-    """Perform sequence feature extraction"""
+    """Perform sequence and error feature extraction"""
 
     args = Namespace(**kwargs)
     ce.combine_extraction(
