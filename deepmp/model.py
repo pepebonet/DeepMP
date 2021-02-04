@@ -141,10 +141,12 @@ class SequenceBRNN(Model):
         super(SequenceBRNN, self).__init__()
         if rnn_cell == "gru":
             self.brnn = Bidirectional(RNN([GRUCell(units, dropout=dropout_rate), \
-                                GRUCell(units, dropout=dropout_rate),GRUCell(units, dropout=dropout_rate)]))
+                GRUCell(units, dropout=dropout_rate),GRUCell(units, \
+                    dropout=dropout_rate)]))
         else:
             self.brnn = Bidirectional(RNN([LSTMCell(units, dropout=dropout_rate), \
-                    LSTMCell(units, dropout=dropout_rate),LSTMCell(units, dropout=dropout_rate)]))
+                LSTMCell(units, dropout=dropout_rate), \
+                    LSTMCell(units, dropout=dropout_rate)]))
         self.fc1 = Dense(512, activation='relu', use_bias=False)
         self.dropout = Dropout(0.2)
         self.fc2 = Dense(1, activation='sigmoid', use_bias=False)

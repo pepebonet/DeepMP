@@ -131,7 +131,8 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer,
                                                             save_weights_only= False)
                         ]
 
-    model.fit([input_train_seq, input_train_err], label, batch_size=batch_size, epochs=epochs,
+    model.fit([input_train_seq, input_train_err], label, batch_size=batch_size, 
+                        epochs=epochs,
                         callbacks = callback_list,
                         validation_data = ([input_val_seq, input_val_err], vy))
     model.save(model_dir)
