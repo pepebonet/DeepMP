@@ -348,8 +348,12 @@ def preprocess_sequence(df, output, label_file, file):
     base_diff = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['signal_diff'].values]
     label = df['methyl_label']
+    chrom = df['chrom'].values.astype('S')
+    strand = df['strand'].values.astype('S')
+    readname = df['readname'].values.astype('S')
+    pos = df['pos'].values
+    pos_in_strand = df['pos_in_strand'].values
 
-    # file_name = os.path.join(output, '{}_seq.h5'.format(file))
     file_name = os.path.join(
         output, '{}'.format(label_file), '{}_{}.h5'.format(file, label_file)
     )
@@ -363,13 +367,18 @@ def preprocess_sequence(df, output, label_file, file):
         hf.create_dataset("signal_median",  data=np.stack(base_median))
         hf.create_dataset("signal_diff",  data=np.stack(base_diff))
         hf.create_dataset("methyl_label",  data=label)
+        hf.create_dataset('chrom',  data=chrom, chunks=True, maxshape=(None,), dtype='S10')
+        hf.create_dataset('strand',  data=strand, chunks=True, maxshape=(None,), dtype='S1')
+        hf.create_dataset('readname',  data=readname, chunks=True, maxshape=(None,), dtype='S200')
+        hf.create_dataset('pos',  data=pos, chunks=True, maxshape=(None,))
+        hf.create_dataset('pos_in_strand',  data=pos_in_strand, chunks=True, maxshape=(None,))
 
     return None
 
 
-def preprocess_err_read(df, output, label_file, file):
+def preprocess_errors(df, output, label_file, file):
 
-    kmer = df['k_mer'].apply(kmer2code)
+    kmer = df['kmer'].apply(kmer2code)
     base_qual = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['qual'].values]
     base_mis = [tf.strings.to_number(i.split(','), tf.float32) \
@@ -379,8 +388,10 @@ def preprocess_err_read(df, output, label_file, file):
     base_del = [tf.strings.to_number(i.split(','), tf.float32) \
         for i in df['del'].values]
     label = df['methyl_label']
+    chrom = df['chrom'].values.astype('S')
+    readname = df['readname'].values.astype('S')
+    pos = df['pos'].values
 
-    # file_name = os.path.join(output, '{}_err_read.h5'.format(file))
     file_name = os.path.join(
         output, '{}'.format(label_file), '{}_{}.h5'.format(file, label_file)
     )
@@ -394,6 +405,9 @@ def preprocess_err_read(df, output, label_file, file):
         hf.create_dataset('ins',  data=np.stack(base_ins))
         hf.create_dataset('del',  data=np.stack(base_del))
         hf.create_dataset('methyl_label',  data=label)
+        hf.create_dataset('chrom',  data=chrom, chunks=True, maxshape=(None,), dtype='S10')
+        hf.create_dataset('readname',  data=readname, chunks=True, maxshape=(None,), dtype='S200')
+        hf.create_dataset('pos',  data=pos, chunks=True, maxshape=(None,))
 
     return None
 
