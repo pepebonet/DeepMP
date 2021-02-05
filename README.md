@@ -1,5 +1,6 @@
 # DeepMP
-DeepMP is a convolutional neural network (CNN)-based model that takes information from Nanopore signals and basecalling errors to detect whether a read is methylated or not. The model introduces a threshold-free position modification calling model sensitive to sites methylated at low frequency across cells.
+DeepMP is a convolutional neural network (CNN)-based model that takes information from Nanopore signals and basecalling errors to detect whether a read is methylated or not.  DeepMP's architecture consists of two different modules. First, the sequence module involves 6 1D convolutional layers with 256 1x4 filters. On hte other hand, the error module comprises 3 1D convolutional layers and 3 locally connected layers both with 128 1x3 filters. Outputs are finally concatenated and inputted into a fully connected layer with 512 units.
+Furthermore, DeepMP introduces a threshold-free position modification calling model sensitive to sites methylated at low frequency across cells. These novelties allow DeepMP to accurately detect methylated sites at read and position levels. 
 
 ![DeepMP_1](docs/images/Figure_1_DeepMP.png)
 
