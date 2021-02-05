@@ -1,4 +1,5 @@
 *.pdf
+*.tsv
 *.png
 *.pyc
 *.sh
