@@ -7,7 +7,6 @@ import click
 
 from .train import *
 from .preprocess import *
-from .call_user_mods import *
 from .call_modifications import *
 import deepmp.single_read_errors as sre
 import deepmp.sequence_extraction as se
@@ -34,7 +33,7 @@ def cli(debug):
 
 
 # ------------------------------------------------------------------------------
-# CALL USER MODIFICATIONS
+# CALL MODIFICATIONS
 # ------------------------------------------------------------------------------
 
 @cli.command(short_help='Calling modifications from user end')
@@ -75,7 +74,7 @@ def cli(debug):
     '-pos', '--position_test' , is_flag=True,
     help='position analysis'
 )
-def call_user_mods(**kwargs):
+def call_modifications(**kwargs):
     """Call modifications"""
     args = Namespace(**kwargs)
 
@@ -83,56 +82,6 @@ def call_user_mods(**kwargs):
         args.model_type, args.test_file, args.model_dir,
         args.kmer, args.output, args.err_features,
         args.position_test, args.use_threshold, args.threshold
-    )
-
-
-# ------------------------------------------------------------------------------
-# CALL MODIFICATIONS
-# ------------------------------------------------------------------------------
-
-@cli.command(short_help='Calling modifications')
-@click.option(
-    '-m', '--model_type', required=True,
-    type=click.Choice(['seq', 'err', 'joint']),
-    help='choose model to test'
-)
-@click.option(
-    '-tf', '--test_file', required=True,
-    help='path to test set'
-)
-@click.option(
-    '-k', '--kmer', default=17,
-    help='kmer length of the sequence'
-)
-@click.option(
-    '-md', '--model_dir', default='',
-    help='directory to trained error model'
-)
-@click.option(
-    '-o', '--output',
-    help='output path to save files'
-)
-@click.option(
-    '-ef', '--err_features' , is_flag=True,
-    help='use error features in sequence model'
-)
-@click.option(
-    '-pos', '--position_test' , is_flag=True,
-    help='position analysis'
-)
-@click.option(
-    '-pt', '--prediction_type',
-    type=click.Choice(['min_max', 'threshold']),
-    help='choose prediction type for position-based test'
-)
-def call_modifications(**kwargs):
-    """Call modifications"""
-    args = Namespace(**kwargs)
-
-    call_mods(
-        args.model_type, args.test_file, args.model_dir,
-        args.kmer, args.output, args.err_features,
-        args.position_test, args.prediction_type
     )
 
 
