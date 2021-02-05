@@ -1,7 +1,8 @@
 # DeepMP
 DeepMP is a convolutional neural network (CNN)-based model that takes information from Nanopore signals and basecalling errors to detect whether a read is methylated or not. The model introduces a threshold-free position modification calling model sensitive to sites methylated at low frequency across cells.
 
-![alt text](https://github.com/pepebonet/DeepMP/tree/release/docs/images/Figure_1_DeepMP.png)
+![DeepMP_1](docs/images/Figure_1_DeepMP.png)
+
 
 # Contents
 - [Installation](#Installation)
