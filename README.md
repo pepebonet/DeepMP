@@ -1,7 +1,7 @@
 # DeepMP
 DeepMP is a convolutional neural network (CNN)-based model that takes information from Nanopore signals and basecalling errors to detect whether a read is methylated or not. The model introduces a threshold-free position modification calling model sensitive to sites methylated at low frequency across cells.
 
-
+![alt text](https://github.com/pepebonet/DeepMP/tree/release/docs/images/Figure_1_DeepMP.png)
 
 # Contents
 - [Installation](#Installation)
@@ -19,7 +19,7 @@ We highly recommend to use a virtual environment for the installation and employ
 
 `Option 1:`
 
-        conda create --name deepmp_2021 python=3.6
+        conda create --name deepmp_2021 python>=3.6
         conda activate deepmp_2021
         pip install -e .
 
@@ -74,13 +74,12 @@ Train joint model from binary files.
 Finally modifications for a given test set are obtained: 
 
 ```
-    DeepMP call-modifications -m joint -tf path/to/test/data -md model/directory -o output/
+    DeepMP call-modifications -m joint -tf path/to/test/data -md model/directory -o output/ -pos
 ```
 
 - Specify model type with flag `-m`, choose from `seq, err, joint`(required).
 - Add `-ef` for sequence model with both seq and error features.
 - Add  `-pos` for test on positions.
-- Specify prediction type for test on positions with flag `-pt`,  choose from `min_max` and `threshold`, `min_max` by default.
 
 
 # Example data
