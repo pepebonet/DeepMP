@@ -187,7 +187,7 @@ def get_data_errors(file, kmer, get_id=False):
     data = concat_tensors_err(embedded_bases, base_qual, base_mis, base_ins, base_del, kmer)
 
     if get_id:
-        data, label, (chrom, readname, pos)
+        return data, label, (chrom, readname, pos)
     else:
         return data, label
 
