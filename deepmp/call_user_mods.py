@@ -7,6 +7,7 @@ from scipy.special import gamma
 from tensorflow.keras.models import load_model
 
 import deepmp.utils as ut
+from deepmp.model import *
 import deepmp.preprocess as pr
 
 epsilon = 0.05
@@ -28,26 +29,55 @@ beta_c = 14.5
 
 def do_read_calling(model_type, test_file, trained_model, kmer, err_feat):
     if model_type == 'seq':
-        data_seq, labels, data_id = ut.get_data_sequence(
-            test_file, kmer, err_feat, get_id=True
+        pred, inferred, data_id = seq_read_calling(
+            test_file, kmer, err_feat, trained_model, model_type
         )
-        pred, inferred = test_single_read(data_seq, trained_model)
 
     elif model_type == 'err':
-        data_err, labels, data_id = ut.get_data_errors(test_file, kmer, get_id=True)
-        pred, inferred = test_single_read(data_err, trained_model)
+        pred, inferred, data_id = err_read_calling(
+            test_file, kmer, trained_model, model_type
+        )
 
     elif model_type == 'joint':
-        data_seq, data_err, labels, data_id = ut.get_data_jm(
-            test_file, kmer, get_id=True
+        pred, inferred, data_id = joint_read_calling(
+            test_file, kmer, trained_model, model_type
         )
-        pred, inferred = test_single_read([data_seq, data_err], trained_model)
-    
+
     return build_test_df(data_id, pred, inferred, model_type)
 
 
-def test_single_read(data, model_file):
-    model = load_model(model_file)
+def seq_read_calling(test_file, kmer, err_feat, trained_model, model_type):
+    data_seq, labels, data_id = ut.get_data_sequence(
+            test_file, kmer, err_feat, get_id=True
+        )
+    pred, inferred = test_single_read(data_seq, trained_model, model_type, kmer)
+
+    return pred, inferred, data_id
+
+
+def err_read_calling(test_file, kmer, trained_model, model_type):
+    data_err, labels, data_id = ut.get_data_errors(test_file, kmer, get_id=True)
+    pred, inferred = test_single_read(data_err, trained_model, model_type, kmer)
+
+    return pred, inferred, data_id
+
+
+def joint_read_calling(test_file, kmer, trained_model, model_type):
+    data_seq, data_err, labels, data_id = ut.get_data_jm(
+        test_file, kmer, get_id=True
+    )
+    pred, inferred = test_single_read(
+        [data_seq, data_err], trained_model, model_type, kmer
+    )
+    return pred, inferred, data_id
+
+
+def test_single_read(data, model_file, model_type, kmer):
+    try:
+        
+        model = load_model(model_file)
+    except:
+        model = load_model_weights(model_file, model_type, kmer)
 
     pred =  model.predict(data).flatten()
     inferred = np.zeros(len(pred), dtype=int)
@@ -55,6 +85,52 @@ def test_single_read(data, model_file):
 
     return pred, inferred
 
+
+def load_model_weights(trained_model, model_type, kmer):
+    if model_type == 'seq':
+        return load_sequence_weights(trained_model, kmer)
+
+    elif model_type == 'err':
+        return load_error_weights(trained_model, kmer)
+
+    else:
+        return load_joint_weights(trained_model, kmer)
+
+
+def load_sequence_weights(trained_model, kmer):
+    model = SequenceCNN('conv', 6, 256, 4)
+    input_shape = (None, kmer, 9)
+    model.compile(loss='binary_crossentropy',
+                            optimizer=tf.keras.optimizers.Adam(),
+                            metrics=['accuracy'])
+    model.build(input_shape)
+    model.load_weights(trained_model)
+
+    return model
+
+
+def load_error_weights(trained_model, kmer):
+    model = BCErrorCNN(3, 3, 128, 3)
+    model.compile(loss='binary_crossentropy',
+                optimizer=tf.keras.optimizers.Adam(),
+                metrics=['accuracy'])
+    input_shape = (None, kmer, 9)
+    model.build(input_shape)
+    model.load_weights(trained_model)
+
+    return model
+
+
+def load_joint_weights(trained_model, kmer):
+    model = JointNN()
+    model.compile(loss='binary_crossentropy',
+                    optimizer=tf.keras.optimizers.Adam(learning_rate=0.00125),
+                    metrics=['accuracy'])
+    input_shape = ([(None, kmer, 9), (None, kmer, 9)])
+    model.build(input_shape)
+    model.load_weights(trained_model)
+
+    return model
 
 
 def build_test_df(data, pred_vec, inferred_vec, model_type):
@@ -77,6 +153,7 @@ def build_test_df(data, pred_vec, inferred_vec, model_type):
 # POSITION CALLING FUNCTIONS
 # ------------------------------------------------------------------------------
 
+## beta model prediction
 def beta_fct(a, b):
         return gamma(a) * gamma(b) / gamma(a + b)
 
@@ -185,12 +262,13 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
     if test_file.rsplit('.')[-1] != 'h5':
         raise Exception('Use .h5 format instead. DeepMP preprocess will get it done')
     
+    ## read calling and store
     test = do_read_calling(
         model_type, test_file, trained_model, kmer, err_features
     )
-    test.to_csv(os.path.join(
-        output, 'read_predictions_DeepMP.tsv'), sep='\t', index=None
-    )
+    reads_output = os.path.join(
+        output, 'read_predictions_{}_DeepMP.tsv').format(model_type)
+    test.to_csv(reads_output, sep='\t', index=None)
     
     ## position-based calling and store
     if pos_based:
@@ -199,12 +277,10 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
             all_preds = do_per_position_theshold(test, threshold)
         
         else:
-            import pdb; pdb.set_trace()
             all_preds = do_per_position_beta(test)
-            import pdb; pdb.set_trace()
 
-        all_preds.to_csv(os.path.join(
-            output, 'position_calling_DeepMP.tsv'), sep='\t', index=None
-        )
-        import pdb;pdb.set_trace()
+        pos_output = os.path.join(
+            output, 'position_calling_{}_DeepMP.tsv'.format(model_type))
+        all_preds.to_csv(pos_output, sep='\t', index=None)
+
 
