@@ -64,6 +64,14 @@ def cli(debug):
     help='use error features in sequence model'
 )
 @click.option(
+    '-ut', '--use_threshold' , is_flag=True,
+    help='use threshold instead of beta model to call positions'
+)
+@click.option(
+    '-th', '--threshold' , default=0.1,
+    help='give a value to the threshold'
+)
+@click.option(
     '-pos', '--position_test' , is_flag=True,
     help='position analysis'
 )
@@ -74,7 +82,7 @@ def call_user_mods(**kwargs):
     call_mods_user(
         args.model_type, args.test_file, args.model_dir,
         args.kmer, args.output, args.err_features,
-        args.position_test
+        args.position_test, args.use_threshold, args.threshold
     )
 
 

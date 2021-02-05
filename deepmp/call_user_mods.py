@@ -111,7 +111,7 @@ def beta_stats(obs_reads, pred_beta, prob_beta_mod, prob_beta_unmod):
     return pred_beta, prob_beta_mod, prob_beta_unmod
 
 
-def do_per_position_analysis(df):
+def do_per_position_beta(df):
     df['id'] = df['chrom'] + '_' + df['pos'].astype(str)
 
     cov, meth_label, ids, pred_beta = [], [], [], []
@@ -137,13 +137,49 @@ def do_per_position_analysis(df):
 
     return preds
 
+## threshold prediction
+def pred_site_threshold(inferred, pred_threshold, threshold):
+
+    if np.sum(inferred) / len(inferred) >= threshold:
+        pred_threshold.append(1)
+    else:
+        pred_threshold.append(0)
+    
+    return pred_threshold
+
+
+def do_per_position_theshold(df, threshold):
+    df['id'] = df['chrom'] + '_' + df['pos'].astype(str)
+
+    cov, meth_label, ids, pred_threshold = [], [], [], []
+    chromosome, pos = [], []
+
+    for i, j in df.groupby('id'):
+
+        pred_threshold = pred_site_threshold(
+            j['pred_prob'].values, pred_threshold, threshold
+        )
+
+        cov.append(len(j)); ids.append(i)
+        chromosome.append(i.split('_')[0])
+        pos.append(i.split('_')[1])
+
+    preds = pd.DataFrame()
+    preds['chrom'] = chromosome
+    preds['pos'] = pos
+    preds['id'] = ids
+    preds['cov'] = cov  
+    preds['pred_threshold'] = pred_threshold
+
+    return preds
+
 
 # ------------------------------------------------------------------------------
 # MAIN
 # ------------------------------------------------------------------------------
 
 def call_mods_user(model_type, test_file, trained_model, kmer, output,
-    err_features=False, pos_based=False):
+    err_features, pos_based, use_threshold, threshold):
 
     ## Raise exception for other file formats that are not .h5
     if test_file.rsplit('.')[-1] != 'h5':
@@ -158,8 +194,14 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
     
     ## position-based calling and store
     if pos_based:
-        import pdb;pdb.set_trace()
-        all_preds = do_per_position_analysis(test)
+
+        if use_threshold:
+            all_preds = do_per_position_theshold(test, threshold)
+        
+        else:
+            import pdb; pdb.set_trace()
+            all_preds = do_per_position_beta(test)
+            import pdb; pdb.set_trace()
 
         all_preds.to_csv(os.path.join(
             output, 'position_calling_DeepMP.tsv'), sep='\t', index=None
