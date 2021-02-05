@@ -56,7 +56,7 @@ def cli(debug):
     help='directory to trained error model'
 )
 @click.option(
-    '-o', '--output',
+    '-o', '--output', default='',
     help='output path to save files'
 )
 @click.option(
@@ -67,11 +67,6 @@ def cli(debug):
     '-pos', '--position_test' , is_flag=True,
     help='position analysis'
 )
-@click.option(
-    '-pt', '--prediction_type',
-    type=click.Choice(['min_max', 'threshold']),
-    help='choose prediction type for position-based test'
-)
 def call_user_mods(**kwargs):
     """Call modifications"""
     args = Namespace(**kwargs)
@@ -79,7 +74,7 @@ def call_user_mods(**kwargs):
     call_mods_user(
         args.model_type, args.test_file, args.model_dir,
         args.kmer, args.output, args.err_features,
-        args.position_test, args.prediction_type
+        args.position_test
     )
 
 
