@@ -17,7 +17,7 @@ def save_obj(path, obj):
 def main(data_type, fastq, output):
     read_names = defaultdict()
     for record in SeqIO.parse(fastq, "fastq"):
-        import pdb;pdb.set_trace()
+        
         if data_type == 'Ecoli':
             names = record.description.split(' ')
             read_names[names[0]] = names[1]
