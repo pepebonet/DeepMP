@@ -19,13 +19,24 @@ First download BnpC from the github repository:
 ## Install dependencies
 We highly recommend to use a virtual environment for the installation and employment of DeepMP:
 
-`Option 1:`
+`Create environment and install DeepMP:`
 
         conda create --name deepmp_2021 python=3.8
         conda activate deepmp_2021
         pip install -e .
 
+`Install additional dependencies:`
+
+        pip install ont-tombo
+        conda install -c bioconda samtools
+        conda install -c bioconda minimap2
+        conda install -c anaconda openjdk
+        pip install biopython
+        
+
 # Usage
+
+This section highlights the main functionalities of DeepMP and the commands to run them. For a detailed insight into the whole process of predicting modifications go to the [Example data](#Example-data) section. 
 
 ### Feature extraction:
 Features for the model need to be extracted. We present 3 different options: 
