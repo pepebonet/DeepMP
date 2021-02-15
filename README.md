@@ -28,12 +28,12 @@ We highly recommend to use a virtual environment for the installation and employ
 `Install additional dependencies:`
 
         pip install ont-tombo
+        pip install biopython
         conda install -c bioconda samtools
         conda install -c bioconda minimap2
         conda install -c anaconda openjdk
-        pip install biopython
+        conda install -c anaconda bottleneck
         
-
 # Usage
 
 This section highlights the main functionalities of DeepMP and the commands to run them. For a detailed insight into the whole process of predicting modifications go to the [Example data](#Example-data) section. 
