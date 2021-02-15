@@ -2,6 +2,7 @@
 import os
 import numpy as np
 import pandas as pd
+import bottleneck as bn
 import tensorflow as tf
 from scipy.special import gamma
 from tensorflow.keras.models import load_model
@@ -22,6 +23,10 @@ beta_c = 14.5
 # beta_a = 1
 # beta_b = 6.5
 # beta_c = 10.43
+
+EPSILON = np.finfo(np.float64).resolution
+log_EPSILON = np.log(EPSILON)
+
 
 # ------------------------------------------------------------------------------
 # READ PREDICTION FUNCTIONS
@@ -158,28 +163,48 @@ def beta_fct(a, b):
         return gamma(a) * gamma(b) / gamma(a + b)
 
 
-def likelihood_nomod_beta(obs_reads):
-    return np.prod(obs_reads ** (beta_a - 1) * (1 - obs_reads) ** (beta_b - 1) \
+def log_likelihood_nomod_beta(obs_reads):
+    return np.sum(np.log(obs_reads ** (beta_a - 1) * (1 - obs_reads) ** (beta_b - 1) \
         * (1 - epsilon) / beta_fct(beta_a, beta_b) \
         + obs_reads ** (beta_c - 1) * (1 - obs_reads) ** (beta_a - 1) \
-        * epsilon / beta_fct(beta_c, beta_a))
+        * epsilon / beta_fct(beta_c, beta_a)))
 
 
-def likelihood_mod_beta(obs_reads):
-    return np.prod(obs_reads ** (beta_a - 1) * (1 - obs_reads) ** (beta_b - 1) \
+def log_likelihood_mod_beta(obs_reads):
+    return np.sum(np.log(obs_reads ** (beta_a - 1) * (1 - obs_reads) ** (beta_b - 1) \
         * gamma_val / beta_fct(beta_a, beta_b) \
         + obs_reads ** (beta_c - 1) * (1 - obs_reads) ** (beta_a - 1) \
-        * (1 - gamma_val) / beta_fct(beta_c, beta_a))
+        * (1 - gamma_val) / beta_fct(beta_c, beta_a)))
+
+
+def _normalize_log_probs(probs):
+    max_i = bn.nanargmax(probs)
+    try:
+        exp_probs = np.exp(probs[np.arange(probs.size) != max_i] \
+            - probs[max_i])
+    except FloatingPointError:
+        exp_probs = np.exp(
+            np.clip(probs[np.arange(probs.size) != max_i] - probs[max_i],
+                log_EPSILON, 0)
+        )
+    probs_norm = probs - probs[max_i] - np.log1p(bn.nansum(exp_probs))
+
+    return np.exp(np.clip(probs_norm, log_EPSILON, 0))
 
 
 #Assuming prior to be 0.5
 def beta_stats(obs_reads, pred_beta, prob_beta_mod, prob_beta_unmod):
-    prob_pos_0 = likelihood_nomod_beta(obs_reads)
-    prob_pos_1 = likelihood_mod_beta(obs_reads)
-    
-    prob_beta_mod.append(prob_pos_1 / (prob_pos_0 + prob_pos_1))
-    prob_beta_unmod.append(prob_pos_0 / (prob_pos_0 + prob_pos_1))
 
+    log_prob_pos_0 = log_likelihood_nomod_beta(obs_reads)
+    log_prob_pos_1 = log_likelihood_mod_beta(obs_reads)
+
+    norm_log_probs = _normalize_log_probs(
+        np.array([log_prob_pos_0, log_prob_pos_1])
+    )
+
+    prob_beta_mod.append(norm_log_probs[1])
+    prob_beta_unmod.append(norm_log_probs[0])
+    
     if prob_beta_mod[-1] >= prob_beta_unmod[-1]:
         pred_beta.append(1)
     else:
@@ -272,7 +297,8 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
     
     ## position-based calling and store
     if pos_based:
-
+        
+        # test = pd.read_csv(test_file, sep='\t')
         if use_threshold:
             all_preds = do_per_position_theshold(test, threshold)
         
