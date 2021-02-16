@@ -214,10 +214,10 @@ def beta_stats(obs_reads, pred_beta, prob_beta_mod, prob_beta_unmod):
 
 
 def do_per_position_beta(df):
-    df['id'] = df['chrom'] + '_' + df['pos'].astype(str)
+    df['id'] = df['chrom'] + '_' + df['pos'].astype(str) + '_' + df['strand']
 
     cov, meth_label, ids, pred_beta = [], [], [], []
-    prob_beta_mod, prob_beta_unmod, chromosome, pos = [], [], [], []
+    prob_beta_mod, prob_beta_unmod, chromosome, pos, strand = [], [], [], [], []
 
     for i, j in df.groupby('id'):
         pred_beta, prob_beta_mod, prob_beta_unmod = beta_stats(
@@ -226,11 +226,13 @@ def do_per_position_beta(df):
 
         cov.append(len(j)); ids.append(i)
         chromosome.append(i.split('_')[0])
+        strand.append(i.split('_')[2])
         pos.append(i.split('_')[1])
 
     preds = pd.DataFrame()
     preds['chrom'] = chromosome
     preds['pos'] = pos
+    preds['strand'] = strand
     preds['id'] = ids
     preds['cov'] = cov  
     preds['pred_beta'] = pred_beta
@@ -251,10 +253,10 @@ def pred_site_threshold(inferred, pred_threshold, threshold):
 
 
 def do_per_position_theshold(df, threshold):
-    df['id'] = df['chrom'] + '_' + df['pos'].astype(str)
+    df['id'] = df['chrom'] + '_' + df['pos'].astype(str) + '_' + df['strand']
 
     cov, meth_label, ids, pred_threshold = [], [], [], []
-    chromosome, pos = [], []
+    chromosome, pos, strand = [], [], []
 
     for i, j in df.groupby('id'):
 
@@ -263,12 +265,14 @@ def do_per_position_theshold(df, threshold):
         )
 
         cov.append(len(j)); ids.append(i)
+        strand.append(i.split('_')[2])
         chromosome.append(i.split('_')[0])
         pos.append(i.split('_')[1])
 
     preds = pd.DataFrame()
     preds['chrom'] = chromosome
     preds['pos'] = pos
+    preds['strand'] = strand
     preds['id'] = ids
     preds['cov'] = cov  
     preds['pred_threshold'] = pred_threshold
