@@ -249,6 +249,7 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                 raise ValueError("kmer_len must be odd")
             num_bases = (kmer_len - 1) // 2
 
+             
             for loc_in_read in tsite_locs:
                 if num_bases <= loc_in_read < len(genomeseq) - num_bases:
                     loc_in_ref = loc_in_read + chrom_start_in_alignstrand
@@ -267,8 +268,12 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                     signal_stds = [np.std(x) for x in k_signals]
                     signal_median = [np.median(x) for x in k_signals]
                     signal_diff = [np.abs(np.max(x) - np.min(x)) for x in k_signals]
+                    
+                    if alignstrand == '-':
+                        pos_err = [item[0] for item in error_features]
+                    else:
+                        pos_err = [item[0] - 1 for item in error_features]
 
-                    pos_err = [item[0] - 1 for item in error_features]
                     comb_err = error_features[np.argwhere(np.asarray(pos_err) == pos)[0][0]]
 
                     qual = comb_err[-4]
@@ -304,12 +309,14 @@ def get_a_batch_features_str(fast5s_q, featurestr_q, errornum_q, err_path,
             motif_seqs, methyloc, chrom2len, kmer_len, 
             methy_label, dict_names
         )
+
         features_str = []
         for features in features_list:
             features_str.append(_features_to_str(features))
 
         errornum_q.put(error_num)
         featurestr_q.put(features_str)
+
         while featurestr_q.qsize() > queen_size_border:
             time.sleep(time_wait)
 
@@ -352,7 +359,7 @@ def _extract_preprocess(fast5_dir, motifs, is_dna, reference_path,
     fast5s_q = mp.Queue()
     _fill_files_queue(fast5s_q, fast5_files, f5_batch_num)
 
-    return motif_seqs, chrom2len, fast5s_q, len(fast5_files)
+    return motif_seqs, chrom2len, fast5s_q, len(fast5_files), fast5_files
 
 
 def combine_extraction(fast5_dir, read_errors, ref, cor_g, base_g, dna, motifs,
@@ -360,7 +367,7 @@ def combine_extraction(fast5_dir, read_errors, ref, cor_g, base_g, dna, motifs,
     write_fp, f5_batch_num, recursive, dict_names):
 
     start = time.time()
-    motif_seqs, chrom2len, fast5s_q, len_fast5s = \
+    motif_seqs, chrom2len, fast5s_q, len_fast5s, list_fast_files = \
         _extract_preprocess(
             fast5_dir, motifs, dna, ref, f5_batch_num, recursive
     )
