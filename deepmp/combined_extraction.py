@@ -249,7 +249,6 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                 raise ValueError("kmer_len must be odd")
             num_bases = (kmer_len - 1) // 2
 
-             
             for loc_in_read in tsite_locs:
                 if num_bases <= loc_in_read < len(genomeseq) - num_bases:
                     loc_in_ref = loc_in_read + chrom_start_in_alignstrand
@@ -359,7 +358,7 @@ def _extract_preprocess(fast5_dir, motifs, is_dna, reference_path,
     fast5s_q = mp.Queue()
     _fill_files_queue(fast5s_q, fast5_files, f5_batch_num)
 
-    return motif_seqs, chrom2len, fast5s_q, len(fast5_files), fast5_files
+    return motif_seqs, chrom2len, fast5s_q, len(fast5_files)
 
 
 def combine_extraction(fast5_dir, read_errors, ref, cor_g, base_g, dna, motifs,
@@ -367,7 +366,7 @@ def combine_extraction(fast5_dir, read_errors, ref, cor_g, base_g, dna, motifs,
     write_fp, f5_batch_num, recursive, dict_names):
 
     start = time.time()
-    motif_seqs, chrom2len, fast5s_q, len_fast5s, list_fast_files = \
+    motif_seqs, chrom2len, fast5s_q, len_fast5s = \
         _extract_preprocess(
             fast5_dir, motifs, dna, ref, f5_batch_num, recursive
     )
