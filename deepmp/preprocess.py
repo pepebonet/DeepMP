@@ -187,4 +187,3 @@ def no_split_preprocess(features, output, cpus, feature_type):
 
     print('Removing tmp folders and done')
     subprocess.call('rm -r {}'.format(tmp_folder), shell=True)
-    subprocess.call('rm -r {}'.format(tmp_test), shell=True)
