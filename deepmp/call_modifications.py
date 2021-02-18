@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 import os
+import functools
 import numpy as np
 import pandas as pd
 import bottleneck as bn
 import tensorflow as tf
 from scipy.special import gamma
+from multiprocessing import Pool
 from tensorflow.keras.models import load_model
 
 import deepmp.utils as ut
@@ -27,12 +29,14 @@ beta_c = 14.5
 EPSILON = np.finfo(np.float64).resolution
 log_EPSILON = np.log(EPSILON)
 
+read_names = ['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 'pred_prob',
+       'inferred_label']
 
 # ------------------------------------------------------------------------------
 # READ PREDICTION FUNCTIONS
 # ------------------------------------------------------------------------------
 
-def do_read_calling(model_type, test_file, trained_model, kmer, err_feat):
+def do_read_calling(test_file, model_type, trained_model, kmer, err_feat, out_file):
     if model_type == 'seq':
         pred, inferred, data_id = seq_read_calling(
             test_file, kmer, err_feat, trained_model, model_type
@@ -48,7 +52,8 @@ def do_read_calling(model_type, test_file, trained_model, kmer, err_feat):
             test_file, kmer, trained_model, model_type
         )
 
-    return build_test_df(data_id, pred, inferred, model_type)
+    test =  build_test_df(data_id, pred, inferred, model_type)
+    test.to_csv(out_file, sep='\t', index=None, mode='a', header=None)
 
 
 def seq_read_calling(test_file, kmer, err_feat, trained_model, model_type):
@@ -78,8 +83,7 @@ def joint_read_calling(test_file, kmer, trained_model, model_type):
 
 
 def test_single_read(data, model_file, model_type, kmer):
-    try:
-        
+    try:  
         model = load_model(model_file)
     except:
         model = load_model_weights(model_file, model_type, kmer)
@@ -284,25 +288,57 @@ def do_per_position_theshold(df, threshold):
 # MAIN
 # ------------------------------------------------------------------------------
 
-def call_mods_user(model_type, test_file, trained_model, kmer, output,
-    err_features, pos_based, use_threshold, threshold):
+def do_multiprocessing_reads(test_file, model_type, trained_model, kmer, 
+    err_features, reads_output, cpus):
 
+    aa = [os.path.join(test_file, f) for f in os.listdir(test_file)]
+
+    f = functools.partial(do_read_calling, model_type=model_type, \
+        trained_model=trained_model, kmer=kmer, err_feat=err_features, \
+            out_file=reads_output)
+        
+    with Pool(cpus) as p:
+        for i, rval in enumerate(p.imap_unordered(f, aa)):
+            pass
+
+
+def do_single_reads(test_file, model_type, trained_model, kmer, 
+    err_features, reads_output):
     ## Raise exception for other file formats that are not .h5
     if test_file.rsplit('.')[-1] != 'h5':
         raise Exception('Use .h5 format instead. DeepMP preprocess will get it done')
     
     ## read calling and store
     test = do_read_calling(
-        model_type, test_file, trained_model, kmer, err_features
+        test_file, model_type, trained_model, kmer, err_features
     )
+    
+    test.to_csv(reads_output, sep='\t', index=None, header=None)
+
+
+def call_mods_user(model_type, test_file, trained_model, kmer, output,
+    err_features, pos_based, use_threshold, threshold, cpus):
+
     reads_output = os.path.join(
-        output, 'read_predictions_{}_DeepMP.tsv').format(model_type)
-    test.to_csv(reads_output, sep='\t', index=None)
+            output, 'read_predictions_{}_DeepMP.tsv').format(model_type)
+
+    if os.path.isdir(test_file):
+        do_multiprocessing_reads(
+            test_file, model_type, trained_model, kmer, err_features, 
+            reads_output, cpus
+        )
+
+    else:
+        do_single_reads(
+            test_file, model_type, trained_model, kmer, err_features,
+            reads_output
+        )
     
     ## position-based calling and store
     if pos_based:
         
-        # test = pd.read_csv(test_file, sep='\t')
+        test = pd.read_csv(reads_output, sep='\t', names=read_names)
+        
         if use_threshold:
             all_preds = do_per_position_theshold(test, threshold)
         
