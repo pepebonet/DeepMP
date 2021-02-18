@@ -74,6 +74,9 @@ def cli(debug):
     '-pos', '--position_test' , is_flag=True,
     help='position analysis'
 )
+@click.option(
+    '-cpu', '--cpus', default=1, help='number of processes to be used, default 1'
+)
 def call_modifications(**kwargs):
     """Call modifications"""
     args = Namespace(**kwargs)
@@ -81,7 +84,7 @@ def call_modifications(**kwargs):
     call_mods_user(
         args.model_type, args.test_file, args.model_dir,
         args.kmer, args.output, args.err_features,
-        args.position_test, args.use_threshold, args.threshold
+        args.position_test, args.use_threshold, args.threshold, args.cpus
     )
 
 
