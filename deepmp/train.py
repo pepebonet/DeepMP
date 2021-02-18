@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import datetime
+import tensorflow as tf
 import deepmp.utils as ut
 from deepmp.model import *
 
@@ -18,42 +19,45 @@ def train_sequence(train_file, val_file, log_dir, model_dir, batch_size,
         features = 4
 
     ## train model
+    strategy = tf.distribute.MirroredStrategy()
+
     depth = embedding_size + features
     input_shape = (None, kmer, depth)
 
-    if rnn:
-        model = SequenceBRNN(256, 0.2, rnn_cell = rnn)
-    else:
-        model = SequenceCNN('conv', 6, 256, 4)
+    with strategy.scope():
+        if rnn:
+            model = SequenceBRNN(256, 0.2, rnn_cell = rnn)
+        else:
+            model = SequenceCNN('conv', 6, 256, 4)
 
-    model.compile(loss='binary_crossentropy',
-                          optimizer=tf.keras.optimizers.Adam(),
-                          metrics=['accuracy'])
-    model.build(input_shape)
-    print(model.summary())
-    if checkpoint_path:
-        model.load_weights(checkpoint_path)
+        model.compile(loss='binary_crossentropy',
+                            optimizer=tf.keras.optimizers.Adam(),
+                            metrics=['accuracy'])
+        model.build(input_shape)
+        print(model.summary())
+        if checkpoint_path:
+            model.load_weights(checkpoint_path)
 
-    log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq")
+        log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq")
 
-    ## save checkpoints
-    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq_model")
+        ## save checkpoints
+        model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_seq_model")
 
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(
-                                            log_dir = log_dir, histogram_freq=1)
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(
+                                                log_dir = log_dir, histogram_freq=1)
 
-    callback_list = [
-                        tensorboard_callback,
-                        tf.keras.callbacks.ModelCheckpoint(filepath= model_dir,
-                                                            monitor='val_accuracy',
-                                                            mode='max',
-                                                            save_best_only=True,
-                                                            save_weights_only= False)
-                        ]
+        callback_list = [
+                            tensorboard_callback,
+                            tf.keras.callbacks.ModelCheckpoint(filepath= model_dir,
+                                                                monitor='val_accuracy',
+                                                                mode='max',
+                                                                save_best_only=True,
+                                                                save_weights_only= False)
+                            ]
 
-    model.fit(input_train, label, batch_size=batch_size, epochs=epochs,
-                                                callbacks = callback_list,
-                                                validation_data = (input_val, vy))
+        model.fit(input_train, label, batch_size=batch_size, epochs=epochs,
+                                                    callbacks = callback_list,
+                                                    validation_data = (input_val, vy))
     model.save(model_dir)
 
     return None
@@ -68,33 +72,37 @@ def train_single_error(train_file, val_file, log_dir, model_dir, kmer,
 
     depth = 9
     input_shape = (None, kmer, depth)
-    model = BCErrorCNN(3, 3, 128, 3)
-    model.compile(loss='binary_crossentropy',
-              optimizer=tf.keras.optimizers.Adam(),
-              metrics=['accuracy'])
-    model.build(input_shape)
-    print(model.summary())
-    if checkpoint_path:
-        model.load_weights(checkpoint_path)
 
-    ## save checkpoints
-    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_err_model")
-    log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_err_read")
+    strategy = tf.distribute.MirroredStrategy()
 
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(
-                                                log_dir = log_dir, histogram_freq=1)
-    callback_list = [
-                        tensorboard_callback,
-                        tf.keras.callbacks.ModelCheckpoint(filepath= model_dir,
-                                                            monitor='val_accuracy',
-                                                            mode='max',
-                                                            save_best_only=True,
-                                                            save_weights_only= False)
-                        ]
+    with strategy.scope():
+        model = BCErrorCNN(3, 3, 128, 3)
+        model.compile(loss='binary_crossentropy',
+                optimizer=tf.keras.optimizers.Adam(),
+                metrics=['accuracy'])
+        model.build(input_shape)
+        print(model.summary())
+        if checkpoint_path:
+            model.load_weights(checkpoint_path)
 
-    model.fit(input_train, label, batch_size=batch_size, epochs=epochs,
-                                                callbacks = callback_list,
-                                                validation_data = (input_val, vy))
+        ## save checkpoints
+        model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_err_model")
+        log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_err_read")
+
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(
+                                                    log_dir = log_dir, histogram_freq=1)
+        callback_list = [
+                            tensorboard_callback,
+                            tf.keras.callbacks.ModelCheckpoint(filepath= model_dir,
+                                                                monitor='val_accuracy',
+                                                                mode='max',
+                                                                save_best_only=True,
+                                                                save_weights_only= False)
+                            ]
+
+        model.fit(input_train, label, batch_size=batch_size, epochs=epochs,
+                                                    callbacks = callback_list,
+                                                    validation_data = (input_val, vy))
     model.save(model_dir)
 
     return None
@@ -107,34 +115,37 @@ def train_jm(train_file, val_file, log_dir, model_dir, batch_size, kmer,
     input_val_seq, input_val_err, vy = ut.get_data_jm(val_file, kmer)
 
     ## train model
-    model = JointNN()
-    model.compile(loss='binary_crossentropy',
-                   optimizer=tf.keras.optimizers.Adam(learning_rate=0.00125),
-                   metrics=['accuracy'])
-    input_shape = ([(None, kmer, 9), (None, kmer, 9)])
-    model.build(input_shape)
-    print(model.summary())
-    if checkpoint_path:
-        model.load_weights(checkpoint_path)
+    strategy = tf.distribute.MirroredStrategy()
 
-    log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm")
-    model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm_model")
+    with strategy.scope():
+        model = JointNN()
+        model.compile(loss='binary_crossentropy',
+                    optimizer=tf.keras.optimizers.Adam(learning_rate=0.00125),
+                    metrics=['accuracy'])
+        input_shape = ([(None, kmer, 9), (None, kmer, 9)])
+        model.build(input_shape)
+        print(model.summary())
+        if checkpoint_path:
+            model.load_weights(checkpoint_path)
 
-    tensorboard_callback = tf.keras.callbacks.TensorBoard(
-                                            log_dir = log_dir, histogram_freq=1)
-    callback_list = [
-                        tensorboard_callback,
-                        tf.keras.callbacks.ModelCheckpoint(filepath= model_dir,
-                                                            monitor='val_accuracy',
-                                                            mode='max',
-                                                            save_best_only=True,
-                                                            save_weights_only= False)
-                        ]
+        log_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm")
+        model_dir += datetime.datetime.now().strftime("%Y%m%d-%H%M%S_jm_model")
 
-    model.fit([input_train_seq, input_train_err], label, batch_size=batch_size, 
-                        epochs=epochs,
-                        callbacks = callback_list,
-                        validation_data = ([input_val_seq, input_val_err], vy))
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(
+                                                log_dir = log_dir, histogram_freq=1)
+        callback_list = [
+                            tensorboard_callback,
+                            tf.keras.callbacks.ModelCheckpoint(filepath= model_dir,
+                                                                monitor='val_accuracy',
+                                                                mode='max',
+                                                                save_best_only=True,
+                                                                save_weights_only= False)
+                            ]
+
+        model.fit([input_train_seq, input_train_err], label, batch_size=batch_size, 
+                            epochs=epochs,
+                            callbacks = callback_list,
+                            validation_data = ([input_val_seq, input_val_err], vy))
     model.save(model_dir)
 
     return None
