@@ -36,7 +36,8 @@ read_names = ['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 'pred_prob'
 # READ PREDICTION FUNCTIONS
 # ------------------------------------------------------------------------------
 
-def do_read_calling(test_file, model_type, trained_model, kmer, err_feat, out_file):
+def do_read_calling(test_file, model_type, trained_model, kmer, err_feat, 
+    out_file, flag='a'):
     if model_type == 'seq':
         pred, inferred, data_id = seq_read_calling(
             test_file, kmer, err_feat, trained_model, model_type
@@ -53,7 +54,7 @@ def do_read_calling(test_file, model_type, trained_model, kmer, err_feat, out_fi
         )
 
     test =  build_test_df(data_id, pred, inferred, model_type)
-    test.to_csv(out_file, sep='\t', index=None, mode='a', header=None)
+    test.to_csv(out_file, sep='\t', index=None, mode=flag, header=None)
 
 
 def seq_read_calling(test_file, kmer, err_feat, trained_model, model_type):
@@ -309,11 +310,10 @@ def do_single_reads(test_file, model_type, trained_model, kmer,
         raise Exception('Use .h5 format instead. DeepMP preprocess will get it done')
     
     ## read calling and store
-    test = do_read_calling(
-        test_file, model_type, trained_model, kmer, err_features
+    do_read_calling(
+        test_file, model_type, trained_model, kmer, err_features, 
+        reads_output, 'w'
     )
-    
-    test.to_csv(reads_output, sep='\t', index=None, header=None)
 
 
 def call_mods_user(model_type, test_file, trained_model, kmer, output,
@@ -338,7 +338,7 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
     if pos_based:
         
         test = pd.read_csv(reads_output, sep='\t', names=read_names)
-        
+
         if use_threshold:
             all_preds = do_per_position_theshold(test, threshold)
         
