@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import functools
+import subprocess
 import numpy as np
 import pandas as pd
 import bottleneck as bn
@@ -37,7 +38,7 @@ read_names = ['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 'pred_prob'
 # ------------------------------------------------------------------------------
 
 def do_read_calling(test_file, model_type, trained_model, kmer, err_feat, 
-    out_file, flag='a'):
+    out_file, tmp_folder='', flag='multi'):
     if model_type == 'seq':
         pred, inferred, data_id = seq_read_calling(
             test_file, kmer, err_feat, trained_model, model_type
@@ -53,8 +54,8 @@ def do_read_calling(test_file, model_type, trained_model, kmer, err_feat,
             test_file, kmer, trained_model, model_type
         )
 
-    test =  build_test_df(data_id, pred, inferred, model_type)
-    test.to_csv(out_file, sep='\t', index=None, mode=flag, header=None)
+    test = build_test_df(data_id, pred, inferred, model_type)
+    save_test(test, out_file, tmp_folder, test_file, flag)
 
 
 def seq_read_calling(test_file, kmer, err_feat, trained_model, model_type):
@@ -157,6 +158,16 @@ def build_test_df(data, pred_vec, inferred_vec, model_type):
     df['inferred_label'] = inferred_vec
 
     return df
+
+
+def save_test(test, out_file, tmp_folder, test_file, flag):
+    if flag == 'multi':
+        tmp_file = os.path.join(
+            tmp_folder, test_file.rsplit('.', 1)[0].rsplit('/', 1)[1] + '.tsv'
+        )
+        test.to_csv(tmp_file, sep='\t', index=None, header=None)
+    else:
+        test.to_csv(out_file, sep='\t', index=None, header=None)
 
 
 # ------------------------------------------------------------------------------
@@ -290,17 +301,25 @@ def do_per_position_theshold(df, threshold):
 # ------------------------------------------------------------------------------
 
 def do_multiprocessing_reads(test_file, model_type, trained_model, kmer, 
-    err_features, reads_output, cpus):
+    err_features, reads_output, cpus, output):
 
     aa = [os.path.join(test_file, f) for f in os.listdir(test_file)]
 
+    tmp_dir = os.path.join(output, 'test_tsvs')
+    os.mkdir(tmp_dir)
+    
     f = functools.partial(do_read_calling, model_type=model_type, \
         trained_model=trained_model, kmer=kmer, err_feat=err_features, \
-            out_file=reads_output)
+            out_file=reads_output, tmp_folder=tmp_dir)
         
     with Pool(cpus) as p:
         for i, rval in enumerate(p.imap_unordered(f, aa)):
             pass
+
+    subprocess.call(
+        'cat {} > {}'.format(os.path.join(tmp_dir, '*.tsv'), reads_output)
+    )
+    subprocess.call('rm -r {}'.format(tmp_dir), shell=True)
 
 
 def do_single_reads(test_file, model_type, trained_model, kmer, 
@@ -312,7 +331,7 @@ def do_single_reads(test_file, model_type, trained_model, kmer,
     ## read calling and store
     do_read_calling(
         test_file, model_type, trained_model, kmer, err_features, 
-        reads_output, 'w'
+        reads_output, 'single'
     )
 
 
@@ -325,7 +344,7 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
     if os.path.isdir(test_file):
         do_multiprocessing_reads(
             test_file, model_type, trained_model, kmer, err_features, 
-            reads_output, cpus
+            reads_output, cpus, output
         )
 
     else:
