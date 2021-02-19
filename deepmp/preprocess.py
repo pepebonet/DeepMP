@@ -74,7 +74,7 @@ def get_positions_only(df, positions):
 
 
 def split_sets_files(file, tmp_folder, counter, tsv_flag, output, 
-    tmps, split_type, positions):
+    tmps, split_type, positions, feature_type):
     df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
 
     if isinstance(positions, pd.DataFrame):
@@ -96,12 +96,21 @@ def split_sets_files(file, tmp_folder, counter, tsv_flag, output,
             else:
                 mode = 'a'
             save_tsv(el[0], output, el[1], 'a')
+    
     for el in data:
         if el[0].shape[0] > 0:
-            ut.preprocess_combined(el[0], tmps, el[1], file)
+            if feature_type == 'combined':
+                ut.preprocess_combined(el[0], tmps, el[1], file)
+            
+            elif feature_type == 'seq':
+                ut.preprocess_sequence(el[0], tmps, el[1], file)
+
+            else: 
+                ut.preprocess_errors(el[0], tmps, el[1], file)
 
 
-def do_combined_preprocess(features, output, tsv_flag, cpus, split_type, positions):
+def split_preprocess(features, output, tsv_flag, cpus, split_type, 
+    positions, feature_type):
 
     tmp_folder = os.path.join(os.path.dirname(features), 'tmp_all/')
     tmp_train = os.path.join(os.path.dirname(features), 'train/')
@@ -124,7 +133,7 @@ def do_combined_preprocess(features, output, tsv_flag, cpus, split_type, positio
     f = functools.partial(split_sets_files, tmp_folder=tmp_folder, \
             counter=counter, tsv_flag=tsv_flag, output=output, \
                 tmps=os.path.dirname(features), split_type=split_type, \
-                    positions=positions)
+                    positions=positions, feature_type=feature_type)
     with Pool(cpus) as p:
         for i, rval in enumerate(p.imap_unordered(f, os.listdir(tmp_folder))):
             counter += 1
@@ -150,10 +159,13 @@ def split_sets_files_single(file, tmp_folder, tmps, feature_type):
 
     if feature_type == 'combined':
         df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
+        df.head()
         if df.shape[0] != 0:
             ut.preprocess_combined(df, tmps, 'test', file)
     elif feature_type == 'seq':
+        
         df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_seq)
+        df.head()
         if df.shape[0] != 0:
             ut.preprocess_sequence(df, tmps, 'test', file)
     else:
