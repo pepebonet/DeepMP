@@ -234,12 +234,14 @@ def do_per_position_beta(df):
 
     cov, meth_label, ids, pred_beta = [], [], [], []
     prob_beta_mod, prob_beta_unmod, chromosome, pos, strand = [], [], [], [], []
+    meth_freq = []
 
     for i, j in df.groupby('id'):
         pred_beta, prob_beta_mod, prob_beta_unmod = beta_stats(
             j['pred_prob'].values, pred_beta, prob_beta_mod, prob_beta_unmod
         )
 
+        meth_freq.append(round(j['inferred_label'].sum() / j.shape[0], 5))
         cov.append(len(j)); ids.append(i)
         chromosome.append(i.split('_')[0])
         strand.append(i.split('_')[2])
@@ -254,6 +256,7 @@ def do_per_position_beta(df):
     preds['pred_beta'] = pred_beta
     preds['prob_beta_mod'] = prob_beta_mod
     preds['prob_beta_unmod'] = prob_beta_unmod 
+    preds['meth_freq'] = meth_freq
 
     return preds
 
@@ -273,6 +276,7 @@ def do_per_position_theshold(df, threshold):
 
     cov, meth_label, ids, pred_threshold = [], [], [], []
     chromosome, pos, strand = [], [], []
+    meth_freq = []
 
     for i, j in df.groupby('id'):
 
@@ -280,6 +284,7 @@ def do_per_position_theshold(df, threshold):
             j['pred_prob'].values, pred_threshold, threshold
         )
 
+        meth_freq.append(round(j['inferred_label'].sum() / j.shape[0], 5))
         cov.append(len(j)); ids.append(i)
         strand.append(i.split('_')[2])
         chromosome.append(i.split('_')[0])
@@ -292,6 +297,7 @@ def do_per_position_theshold(df, threshold):
     preds['id'] = ids
     preds['cov'] = cov  
     preds['pred_threshold'] = pred_threshold
+    preds['meth_freq'] = meth_freq
 
     return preds
 
