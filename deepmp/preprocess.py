@@ -73,30 +73,19 @@ def get_positions_only(df, positions):
     return df
 
 
-def split_sets_files(file, tmp_folder, counter, tsv_flag, output, 
-    tmps, split_type, positions, feature_type):
-    df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
-
-    if isinstance(positions, pd.DataFrame):
-        df = get_positions_only(df, positions)
+def get_data(df, split_type):
 
     if split_type == 'read':
-        data = get_training_test_val(df)
+        return get_training_test_val(df)
 
     elif split_type == 'chr':
-        data = get_training_test_val_chr(df)
+        return get_training_test_val_chr(df)
 
     else:
-        data = get_training_test_val_pos(df)
+        return get_training_test_val_pos(df)
 
-    if tsv_flag:
-        for el in data:
-            if counter == 0:
-                mode = 'w'
-            else:
-                mode = 'a'
-            save_tsv(el[0], output, el[1], 'a')
-    
+
+def save_data_in_h5(data, feature_type, tmps, file):
     for el in data:
         if el[0].shape[0] > 0:
             if feature_type == 'combined':
@@ -107,6 +96,26 @@ def split_sets_files(file, tmp_folder, counter, tsv_flag, output,
 
             else: 
                 ut.preprocess_errors(el[0], tmps, el[1], file)
+
+
+def split_sets_files(file, tmp_folder, counter, tsv_flag, output, 
+    tmps, split_type, positions, feature_type):
+    df = pd.read_csv(os.path.join(tmp_folder, file), sep='\t', names=names_all)
+
+    if isinstance(positions, pd.DataFrame):
+        df = get_positions_only(df, positions)
+
+    data = get_data(df, split_type)
+    
+    if tsv_flag:
+        for el in data:
+            if counter == 0:
+                mode = 'w'
+            else:
+                mode = 'a'
+            save_tsv(el[0], output, el[1], 'a')
+    
+    save_data_in_h5(data, feature_type, tmps, file)
 
 
 def split_preprocess(features, output, tsv_flag, cpus, split_type, 
