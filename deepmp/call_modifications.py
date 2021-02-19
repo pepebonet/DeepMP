@@ -336,7 +336,7 @@ def do_single_reads(test_file, model_type, trained_model, kmer,
     ## read calling and store
     do_read_calling(
         test_file, model_type, trained_model, kmer, err_features, 
-        reads_output, 'single'
+        reads_output, '', 'single'
     )
 
 
