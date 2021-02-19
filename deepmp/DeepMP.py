@@ -172,10 +172,14 @@ def train_nns(**kwargs):
 @cli.command(short_help='Preprocess data for NNs')
 @click.option(
     '-ft', '--feature_type', required=True,
-    type=click.Choice(['seq', 'err', 'combined', 'combined_split']),
+    type=click.Choice(['seq', 'err', 'combined']),
     help='which features is the input corresponding to? To the sequence, '
-    'to the errors or to both of them. If choice and files do not correlate '
-    'errors will rise throughout the script'
+    'to the errors or to both of them (based on the feature extraction). '
+    'If choice and files do not correlate errors will rise throughout the script'
+)
+@click.option(
+    '-sf', '--split_features', is_flag=True,
+    help='whether to split the features into train test and validation'
 )
 @click.option(
     '-f', '--features', default='', help='extracted error features'
@@ -187,7 +191,7 @@ def train_nns(**kwargs):
     '-pos', '--positions', default='', help='Pass a position list to filter features'
 )
 @click.option(
-    '-st', '--split_type', type=click.Choice(['pos', 'read', 'chr']),
+    '-st', '--split_type', type=click.Choice(['pos', 'read', 'chr']), default='pos',
     help='Type of train-test-val split to select. Positions or read'
     'pos option creates and independent test set with positions never seen'
     'read option creates and independent test set with reads never seen '
@@ -203,10 +207,10 @@ def preprocess(**kwargs):
 
     args = Namespace(**kwargs)
 
-    if args.feature_type == 'combined_split':
-        do_combined_preprocess(
+    if args.split_features:
+        split_preprocess(
             args.features, args.output, args.save_tsv, args.cpus, 
-            args.split_type, args.positions
+            args.split_type, args.positions, args.feature_type
         )
     else:
         no_split_preprocess(
