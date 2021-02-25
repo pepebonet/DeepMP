@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 import os
+import time
 import functools
 import subprocess
 import numpy as np
 import pandas as pd
 import bottleneck as bn
 import tensorflow as tf
+import multiprocessing as mp
 from scipy.special import gamma
 from multiprocessing import Pool
 from tensorflow.keras.models import load_model
@@ -32,8 +34,97 @@ log_EPSILON = np.log(EPSILON)
 read_names = ['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 'pred_prob',
        'inferred_label']
 
+
+queen_size_border = 2000
+time_wait = 5
+
 # ------------------------------------------------------------------------------
-# READ PREDICTION FUNCTIONS
+# READ PREDICTION MULTIPROCESSING
+# ------------------------------------------------------------------------------
+
+def _write_predictions_to_file(write_fp, featurestr_q):
+    while True:
+        if featurestr_q.empty():
+            time.sleep(time_wait)
+            continue
+        features_str = featurestr_q.get()
+        try:
+            features_str.to_csv(
+                write_fp, sep='\t', mode='a', index=None, header=None
+            )
+
+        except: 
+            if features_str == 'kill':
+                break
+            else: 
+                print(features_str)
+                break
+
+
+def _fill_files_queue(h5s_q, h5s_files, batch_size):
+    for i in np.arange(0, len(h5s_files), batch_size):
+        h5s_q.put(h5s_files[i:(i+batch_size)])
+    return
+
+
+def do_multiprocessing_main(h5s_q, featurestr_q, errornum_q, model_type, 
+    trained_model, kmer, err_feat):
+    #Obtain features from every read 
+    while not h5s_q.empty():
+        try:
+            h5s = h5s_q.get()
+        except Exception:
+            break
+
+        predictions, error_num = do_read_calling_multiprocessing(
+            h5s, model_type, trained_model, kmer, err_feat
+        )
+        # print(predictions, error_num)
+        # features_str = []
+        # for features in features_list:
+        #     features_str.append(_features_to_str(features))
+
+        errornum_q.put(error_num)
+        featurestr_q.put(predictions)
+
+        while featurestr_q.qsize() > queen_size_border:
+            time.sleep(time_wait)
+
+
+def do_read_calling_multiprocessing(h5s, model_type, trained_model, kmer, err_feat):
+    predictions = pd.DataFrame()
+
+    error = 0
+    for h5_fp in h5s:
+        try:
+            if model_type == 'seq':
+                pred, inferred, data_id = seq_read_calling(
+                    h5_fp, kmer, err_feat, trained_model, model_type
+                )
+
+            elif model_type == 'err':
+                pred, inferred, data_id = err_read_calling(
+                    h5_fp, kmer, trained_model, model_type
+                )
+
+            elif model_type == 'joint':
+                pred, inferred, data_id = joint_read_calling(
+                    h5_fp, kmer, trained_model, model_type
+                )
+
+            test = build_test_df(data_id, pred, inferred, model_type)
+            predictions = pd.concat([predictions, test])
+
+        except Exception:
+            error += 1
+            print(error)
+            continue
+        
+    return predictions, error
+
+
+# ------------------------------------------------------------------------------
+# READ PREDICTION SINGLE
 # ------------------------------------------------------------------------------
 
 def do_read_calling(test_file, model_type, trained_model, kmer, err_feat, 
@@ -306,24 +397,57 @@ def do_per_position_theshold(df, threshold):
 # ------------------------------------------------------------------------------
 
 def do_multiprocessing_reads(test_file, model_type, trained_model, kmer, 
-    err_features, reads_output, cpus, output):
+    err_features, reads_output, nproc, output):
+    start = time.time()
+    h5s_files = [os.path.join(test_file, f) for f in os.listdir(test_file)]
 
-    aa = [os.path.join(test_file, f) for f in os.listdir(test_file)]
+    h5s_q = mp.Queue()
+    featurestr_q = mp.Queue()
+    errornum_q = mp.Queue()
 
-    tmp_dir = os.path.join(output, 'test_tsvs')
-    os.mkdir(tmp_dir)
-    
-    f = functools.partial(do_read_calling, model_type=model_type, \
-        trained_model=trained_model, kmer=kmer, err_feat=err_features, \
-            out_file=reads_output, tmp_folder=tmp_dir)
-        
-    with Pool(cpus) as p:
-        for i, rval in enumerate(p.imap_unordered(f, aa)):
-            pass
-    
-    cmd = 'cat {} > {}'.format(os.path.join(tmp_dir, '*.tsv'), reads_output)
-    subprocess.call(cmd, shell=True)
-    subprocess.call('rm -r {}'.format(tmp_dir), shell=True)
+    _fill_files_queue(h5s_q, h5s_files, 5)
+    import pdb;pdb.set_trace()
+
+    print('Getting fread predictions from h5s...')
+    #Start process for feature extraction in every core
+    featurestr_procs = []
+    if nproc > 1:
+        nproc -= 1
+    for _ in range(nproc):
+        p = mp.Process(
+            target=do_multiprocessing_main, args=(h5s_q, featurestr_q, 
+            errornum_q, model_type, trained_model, kmer, err_features)
+        )
+        p.daemon = True
+        p.start()
+        featurestr_procs.append(p)
+
+    print("Writing predictions to file...")
+    p_w = mp.Process(
+        target=_write_predictions_to_file, args=(reads_output, featurestr_q)
+    )
+    p_w.daemon = True 
+    p_w.start()
+
+    errornum_sum = 0
+    while True:
+        running = any(p.is_alive() for p in featurestr_procs)
+        while not errornum_q.empty():
+            errornum_sum += errornum_q.get()
+        if not running:
+            break
+
+    for p in featurestr_procs:
+        p.join() 
+
+    print("finishing the writing process..")
+    featurestr_q.put("kill")
+
+    p_w.join()
+
+    print("%d of %d h5 files failed..\n"
+          "read predictions costs %.1f seconds.." % (errornum_sum, len(h5s_files),
+                                                     time.time() - start))
 
 
 def do_single_reads(test_file, model_type, trained_model, kmer, 
@@ -374,6 +498,8 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
     
     ## position-based calling
     if pos_based:
+        print('Performing position analysis...')
+
         do_position_calling(
             reads_output, use_threshold, threshold, output, model_type
         )
