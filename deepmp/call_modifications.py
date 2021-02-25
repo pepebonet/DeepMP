@@ -70,9 +70,10 @@ def do_multiprocessing_main(h5s_q, predictions_q, errornum_q, model_type,
             h5s = h5s_q.get()
         except Exception:
             break
-
+        
+        model = load_model_or_weights(trained_model, model_type, kmer)
         predictions, error_num = do_read_calling_multiprocessing(
-            h5s, model_type, trained_model, kmer, err_feat
+            h5s, model_type, model, kmer, err_feat
         )
 
         errornum_q.put(error_num)
@@ -108,7 +109,6 @@ def do_read_calling_multiprocessing(h5s, model_type, trained_model, kmer, err_fe
 
         except Exception:
             error += 1
-            print(error)
             continue
         
     return predictions, error
@@ -120,19 +120,21 @@ def do_read_calling_multiprocessing(h5s, model_type, trained_model, kmer, err_fe
 
 def do_read_calling(test_file, model_type, trained_model, kmer, err_feat, 
     out_file, tmp_folder='', flag='multi'):
+    model = load_model_or_weights(trained_model, model_type, kmer)
+
     if model_type == 'seq':
         pred, inferred, data_id = seq_read_calling(
-            test_file, kmer, err_feat, trained_model, model_type
+            test_file, kmer, err_feat, model, model_type
         )
 
     elif model_type == 'err':
         pred, inferred, data_id = err_read_calling(
-            test_file, kmer, trained_model, model_type
+            test_file, kmer, model, model_type
         )
 
     elif model_type == 'joint':
         pred, inferred, data_id = joint_read_calling(
-            test_file, kmer, trained_model, model_type
+            test_file, kmer, model, model_type
         )
 
     test = build_test_df(data_id, pred, inferred, model_type)
@@ -165,11 +167,14 @@ def joint_read_calling(test_file, kmer, trained_model, model_type):
     return pred, inferred, data_id
 
 
-def test_single_read(data, model_file, model_type, kmer):
+def load_model_or_weights(model_file, model_type, kmer):
     try:  
-        model = load_model(model_file)
+        return load_model(model_file)
     except:
-        model = load_model_weights(model_file, model_type, kmer)
+        return load_model_weights(model_file, model_type, kmer)
+
+
+def test_single_read(data, model, model_type, kmer):
 
     pred =  model.predict(data).flatten()
     inferred = np.zeros(len(pred), dtype=int)
