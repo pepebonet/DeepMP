@@ -52,13 +52,8 @@ def _write_predictions_to_file(write_fp, predictions_q):
             predictions_to_file.to_csv(
                 write_fp, sep='\t', mode='a', index=None, header=None
             )
-
         except: 
-            if predictions_to_file == 'kill':
-                break
-            else: 
-                print(predictions_to_file)
-                break
+            break
 
 
 def _fill_files_queue(h5s_q, h5s_files, batch_size):
