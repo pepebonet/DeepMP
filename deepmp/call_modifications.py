@@ -42,22 +42,22 @@ time_wait = 5
 # READ PREDICTION MULTIPROCESSING
 # ------------------------------------------------------------------------------
 
-def _write_predictions_to_file(write_fp, featurestr_q):
+def _write_predictions_to_file(write_fp, predictions_q):
     while True:
-        if featurestr_q.empty():
+        if predictions_q.empty():
             time.sleep(time_wait)
             continue
-        features_str = featurestr_q.get()
+        predictions_to_file = predictions_q.get()
         try:
-            features_str.to_csv(
+            predictions_to_file.to_csv(
                 write_fp, sep='\t', mode='a', index=None, header=None
             )
 
         except: 
-            if features_str == 'kill':
+            if predictions_to_file == 'kill':
                 break
             else: 
-                print(features_str)
+                print(predictions_to_file)
                 break
 
 
@@ -67,9 +67,9 @@ def _fill_files_queue(h5s_q, h5s_files, batch_size):
     return
 
 
-def do_multiprocessing_main(h5s_q, featurestr_q, errornum_q, model_type, 
+def do_multiprocessing_main(h5s_q, predictions_q, errornum_q, model_type, 
     trained_model, kmer, err_feat):
-    #Obtain features from every read 
+    #Obtain predictions from every h5 
     while not h5s_q.empty():
         try:
             h5s = h5s_q.get()
@@ -79,15 +79,11 @@ def do_multiprocessing_main(h5s_q, featurestr_q, errornum_q, model_type,
         predictions, error_num = do_read_calling_multiprocessing(
             h5s, model_type, trained_model, kmer, err_feat
         )
-        # print(predictions, error_num)
-        # features_str = []
-        # for features in features_list:
-        #     features_str.append(_features_to_str(features))
 
         errornum_q.put(error_num)
-        featurestr_q.put(predictions)
+        predictions_q.put(predictions)
 
-        while featurestr_q.qsize() > queen_size_border:
+        while predictions_q.qsize() > queen_size_border:
             time.sleep(time_wait)
 
 
@@ -402,51 +398,50 @@ def do_multiprocessing_reads(test_file, model_type, trained_model, kmer,
     h5s_files = [os.path.join(test_file, f) for f in os.listdir(test_file)]
 
     h5s_q = mp.Queue()
-    featurestr_q = mp.Queue()
+    predictions_q = mp.Queue()
     errornum_q = mp.Queue()
 
     _fill_files_queue(h5s_q, h5s_files, 5)
-    import pdb;pdb.set_trace()
 
-    print('Getting fread predictions from h5s...')
-    #Start process for feature extraction in every core
-    featurestr_procs = []
+    print('Getting read predictions from h5s...')
+    #Start process for read prediction in every core
+    predictions_procs = []
     if nproc > 1:
         nproc -= 1
     for _ in range(nproc):
         p = mp.Process(
-            target=do_multiprocessing_main, args=(h5s_q, featurestr_q, 
+            target=do_multiprocessing_main, args=(h5s_q, predictions_q, 
             errornum_q, model_type, trained_model, kmer, err_features)
         )
         p.daemon = True
         p.start()
-        featurestr_procs.append(p)
+        predictions_procs.append(p)
 
     print("Writing predictions to file...")
     p_w = mp.Process(
-        target=_write_predictions_to_file, args=(reads_output, featurestr_q)
+        target=_write_predictions_to_file, args=(reads_output, predictions_q)
     )
     p_w.daemon = True 
     p_w.start()
 
     errornum_sum = 0
     while True:
-        running = any(p.is_alive() for p in featurestr_procs)
+        running = any(p.is_alive() for p in predictions_procs)
         while not errornum_q.empty():
             errornum_sum += errornum_q.get()
         if not running:
             break
 
-    for p in featurestr_procs:
+    for p in predictions_procs:
         p.join() 
 
     print("finishing the writing process..")
-    featurestr_q.put("kill")
+    predictions_q.put("kill")
 
     p_w.join()
 
     print("%d of %d h5 files failed..\n"
-          "read predictions costs %.1f seconds.." % (errornum_sum, len(h5s_files),
+          "Read predictions costs %.1f seconds.." % (errornum_sum, len(h5s_files),
                                                      time.time() - start))
 
 
