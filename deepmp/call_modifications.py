@@ -320,10 +320,9 @@ def do_multiprocessing_reads(test_file, model_type, trained_model, kmer,
     with Pool(cpus) as p:
         for i, rval in enumerate(p.imap_unordered(f, aa)):
             pass
-
-    subprocess.call(
-        'cat {} > {}'.format(os.path.join(tmp_dir, '*.tsv'), reads_output)
-    )
+    
+    cmd = 'cat {} > {}'.format(os.path.join(tmp_dir, '*.tsv'), reads_output)
+    subprocess.call(cmd, shell=True)
     subprocess.call('rm -r {}'.format(tmp_dir), shell=True)
 
 
@@ -342,13 +341,13 @@ def do_single_reads(test_file, model_type, trained_model, kmer,
 
 def do_position_calling(reads_output, use_threshold, threshold, output, model_type):
     test = pd.read_csv(reads_output, sep='\t', names=read_names)
-
+    
     if use_threshold:
         all_preds = do_per_position_theshold(test, threshold)
     
     else:
         all_preds = do_per_position_beta(test)
-
+    
     pos_output = os.path.join(
         output, 'position_calling_{}_DeepMP.tsv'.format(model_type))
     all_preds.to_csv(pos_output, sep='\t', index=None)
@@ -360,7 +359,7 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
     reads_output = os.path.join(
             output, 'read_predictions_{}_DeepMP.tsv').format(model_type)
 
-    ## read-based calling
+    # read-based calling
     if os.path.isdir(test_file):
         do_multiprocessing_reads(
             test_file, model_type, trained_model, kmer, err_features, 
