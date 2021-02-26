@@ -182,7 +182,15 @@ def _normalize_signals(signals, normalize_method='mad'):
 
 #TODO <JB> Could be armonize prior to extraction
 def get_error_read(errors, dict_names, readname):
-    if dict_names:
+
+    error_read = os.path.join(
+        errors, '{}.txt'.format(readname.rsplit('.', 1)[0])
+    )
+
+    if os.path.isfile(error_read):
+        return error_read
+
+    else:
         try:
             error_read = os.path.join(
                 errors, '{}.txt'.format(dict_names[readname.split('.')[0]])
@@ -196,13 +204,7 @@ def get_error_read(errors, dict_names, readname):
                 error_read = os.path.join(
                     errors, '{}.txt'.format(dict_names[readname.split('.')[0].rsplit('_', 1)[0]])
                 )
-        
-    else:
-        error_read = os.path.join(
-            errors, '{}.txt'.format(readname.rsplit('.', 1)[0])
-        )
-
-    return error_read
+        return error_read
 
 
 #Raw signal --> Normalization --> alignment --> methylated site --> features
