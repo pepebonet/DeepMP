@@ -8,6 +8,7 @@ import click
 from .train import *
 from .preprocess import *
 from .call_modifications import *
+from .pipeline import fast_call
 import deepmp.single_read_errors as sre
 import deepmp.sequence_extraction as se
 import deepmp.combined_extraction as ce
@@ -87,6 +88,35 @@ def call_modifications(**kwargs):
         args.position_test, args.use_threshold, args.threshold, args.cpus
     )
 
+# ------------------------------------------------------------------------------
+# FAST CALL FOR JOINT MODEL
+# ------------------------------------------------------------------------------
+@cli.command(short_help='Fast call modifications pipeline')
+@click.option(
+    '-f', '--files', required=True,
+    help='path to fast5s'
+)
+@click.option(
+    '-ref', '--reference', required=True,
+    help='path to test set'
+)
+@click.option(
+    '-md', '--model_dir', required=True,
+    help='path to trained model'
+)
+@click.option(
+    '-j', '--jar', required=True,
+    help='path to sam2tsv.jar'
+)
+
+def fast_call_joint(**kwargs):
+    """fast call modifications"""
+    args = Namespace(**kwargs)
+
+    fast_call(
+        args.files, args.reference, args.model_dir,
+        args.jar
+    )
 
 # ------------------------------------------------------------------------------
 # TRAIN NEURAL NETWORKS
@@ -209,12 +239,12 @@ def preprocess(**kwargs):
 
     if args.split_features:
         split_preprocess(
-            args.features, args.output, args.save_tsv, args.cpus, 
+            args.features, args.output, args.save_tsv, args.cpus,
             args.split_type, args.positions, args.feature_type
         )
     else:
         no_split_preprocess(
-            args.features, args.output, args.cpus, args.feature_type 
+            args.features, args.output, args.cpus, args.feature_type
         )
 
 
