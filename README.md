@@ -94,6 +94,15 @@ Finally modifications for a given test set are obtained:
 - Add `-ef` for sequence model with both seq and error features.
 - Add  `-pos` for test on positions.
 
+#### Fast call modifications from fast5 files (under test)
+
+DeepMP can call modifications from re-squiggled fast5 files in one step:
+
+```
+    DeepMP fast-call-joint -f path/to/fast5s/ -ref path/to/reference/genome -md path/to/trained_model -j path/to/sam2tsv.jar
+```
+
+Note that this function is currently under test, stepwise process is recommanded. Please see the following example for details.
 
 # Example data
 Step by step process to detect modifications employing DeepMP on a sample (20 reads) of the E. coli dataset. Data is located in: 
