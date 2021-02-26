@@ -12,12 +12,10 @@ from scipy.stats import kurtosis, skew
 
 from deepmp import utils as ut
 from deepmp.fast5 import Fast5
+from deepmp import combined_extraction as ce
 
-#TODO <JB, MC> add to parser and delete
-reads_group = 'Raw/Reads'
 queen_size_border = 2000
 time_wait = 5
-key_sep = "||"
 
 # ------------------------------------------------------------------------------
 # FUNCTIONS
@@ -39,99 +37,27 @@ def _write_featurestr_to_file(write_fp, featurestr_q):
 
 def _features_to_str(features):
     chrom, pos, alignstrand, loc_in_ref, readname, strand, k_mer, signal_means, \
-        signal_stds, signal_median, signal_skew, signal_kurt, signal_diff, \
-            signal_lens, methy_label, flag = features
+        signal_stds, signal_median, signal_diff, methy_label = features
     means_text = ','.join([str(x) for x in np.around(signal_means, decimals=6)])
     stds_text = ','.join([str(x) for x in np.around(signal_stds, decimals=6)])
     median_text = ','.join([str(x) for x in np.around(signal_median, decimals=6)])
-    skew_text = ','.join([str(x) for x in np.around(signal_skew, decimals=6)])
-    kurt_text = ','.join([str(x) for x in np.around(signal_kurt, decimals=6)])
     diff_text = ','.join([str(x) for x in np.around(signal_diff, decimals=6)])
-    signal_len_text = ','.join([str(x) for x in signal_lens])
-
+    
     return "\t".join([chrom, str(pos), alignstrand, str(loc_in_ref), readname, \
-        strand, k_mer, means_text, stds_text, median_text, skew_text, \
-        kurt_text, diff_text, signal_len_text, str(methy_label), str(flag)])
-
-
-def _read_position_file(position_file):
-    postions = set()
-    with open(position_file, 'r') as rf:
-        for line in rf:
-            words = line.strip().split("\t")
-            postions.add(key_sep.join(words[:3]))
-    return postions
-
-
-def _fill_files_queue(fast5s_q, fast5_files, batch_size):
-    for i in np.arange(0, len(fast5_files), batch_size):
-        fast5s_q.put(fast5_files[i:(i+batch_size)])
-    return
-
-
-def _normalize_signals(signals, normalize_method='mad'):
-    if normalize_method == 'zscore':
-        sshift, sscale = np.mean(signals), np.float(np.std(signals))
-    elif normalize_method == 'mad':
-        sshift, sscale = np.median(signals), np.float(robust.mad(signals))
-    else:
-        raise ValueError('')
-    norm_signals = (signals - sshift) / sscale
-    return np.around(norm_signals, decimals=6)
-
-
-#Extract signals around methylated base --> Signal Feature Module
-def _get_central_signals(signals_list, rawsignal_num=360):
-    signal_lens = [len(x) for x in signals_list]
-
-    if sum(signal_lens) < rawsignal_num:
-        real_signals = np.concatenate(signals_list)
-        cent_signals = np.append(
-            real_signals, np.array([0] * (rawsignal_num - len(real_signals)))
-        )
-    else:
-        mid_loc = int((len(signals_list) - 1) / 2)
-        mid_base_len = len(signals_list[mid_loc])
-
-        if mid_base_len >= rawsignal_num:
-            allcentsignals = signals_list[mid_loc]
-            cent_signals = [allcentsignals[x] for x in sorted(
-                random.sample(range(len(allcentsignals)), rawsignal_num))]
-        else:
-            left_len = (rawsignal_num - mid_base_len) // 2
-            right_len = rawsignal_num - left_len
-
-            left_signals = np.concatenate(signals_list[:mid_loc])
-            right_signals = np.concatenate(signals_list[mid_loc:])
-
-            if left_len > len(left_signals):
-                right_len = right_len + left_len - len(left_signals)
-                left_len = len(left_signals)
-            elif right_len > len(right_signals):
-                left_len = left_len + right_len - len(right_signals)
-                right_len = len(right_signals)
-
-            assert (right_len + left_len == rawsignal_num)
-            if left_len == 0:
-                cent_signals = right_signals[:right_len]
-            else:
-                cent_signals = np.append(
-                    left_signals[-left_len:], right_signals[:right_len])
-
-    return cent_signals
+        strand, k_mer, means_text, stds_text, median_text, \
+        diff_text, str(methy_label)])
 
 
 #Raw signal --> Normalization --> alignment --> methylated site --> features
 def _extract_features(fast5s, corrected_group, basecall_subgroup, 
-    normalize_method, motif_seqs, methyloc, chrom2len, kmer_len, raw_signals_len,
-    methy_label, positions):
+    normalize_method, motif_seqs, methyloc, chrom2len, kmer_len, methy_label):
     features_list = []
 
     error = 0
     for fast5_fp in fast5s:
         try:
             raw_signal = fast5_fp.get_raw_signal()
-            norm_signals = _normalize_signals(raw_signal, normalize_method)
+            norm_signals = ce._normalize_signals(raw_signal, normalize_method)
             genomeseq, signal_list = "", []
 
             events = fast5_fp.get_events(corrected_group, basecall_subgroup)
@@ -168,40 +94,22 @@ def _extract_features(fast5s, corrected_group, basecall_subgroup,
                     else:
                         pos = loc_in_ref
 
-                    if (positions is not None) and (key_sep.join([chrom, \
-                        str(pos), alignstrand]) not in positions):
-                        continue
-
                     k_mer = genomeseq[(
                         loc_in_read - num_bases):(loc_in_read + num_bases + 1)]
                     k_signals = signal_list[(
                         loc_in_read - num_bases):(loc_in_read + num_bases + 1)]
 
-
-                    signal_lens = [len(x) for x in k_signals]
                     signal_means = [np.mean(x) for x in k_signals]
                     signal_stds = [np.std(x) for x in k_signals]
                     signal_median = [np.median(x) for x in k_signals]
                     signal_diff = [np.abs(np.max(x) - np.min(x)) for x in k_signals]
-                    signal_skew = [skew(x) for x in k_signals]
-                    signal_kurtosis = [kurtosis(x) for x in k_signals]
-
-                    cent_signals = _get_central_signals(
-                        k_signals, raw_signals_len
-                    )
-
-                    if np.mean(signal_lens) > 7:
-                        flag = 0
-                    else:
-                        flag = 1
-
+                    
                     features_list.append(
                         (chrom, pos, alignstrand, loc_in_ref, readname, strand,
                         k_mer, signal_means, signal_stds, signal_median,  
-                        signal_skew, signal_kurtosis, signal_diff, signal_lens, 
-                        methy_label, flag)
+                        signal_diff, methy_label)
                     )
-
+                    
         except Exception:
             error += 1
             continue
@@ -211,7 +119,7 @@ def _extract_features(fast5s, corrected_group, basecall_subgroup,
 
 def get_a_batch_features_str(fast5s_q, featurestr_q, errornum_q,
     corrected_group, basecall_subgroup, normalize_method, motif_seqs, methyloc, 
-    chrom2len, kmer_len, raw_signals_len, methy_label, positions):
+    chrom2len, kmer_len, methy_label):
     #Obtain features from every read 
     while not fast5s_q.empty():
         try:
@@ -221,13 +129,13 @@ def get_a_batch_features_str(fast5s_q, featurestr_q, errornum_q,
 
         features_list, error_num = _extract_features(
             fast5s, corrected_group, basecall_subgroup,normalize_method, 
-            motif_seqs, methyloc,chrom2len, kmer_len, raw_signals_len, 
-            methy_label, positions
+            motif_seqs, methyloc,chrom2len, kmer_len, 
+            methy_label
         )
         features_str = []
         for features in features_list:
             features_str.append(_features_to_str(features))
-
+        
         errornum_q.put(error_num)
         featurestr_q.put(features_str)
         while featurestr_q.qsize() > queen_size_border:
@@ -257,7 +165,7 @@ def find_fast5_files(fast5s_dir, recursive, file_list=None):
 
 
 def _extract_preprocess(fast5_dir, motifs, is_dna, reference_path, 
-        f5_batch_num, position_file, recursive):
+        f5_batch_num, recursive):
     #Extract list of reads, target motifs and chrom lenghts of the ref genome
     fast5_files = find_fast5_files(fast5_dir, recursive)
     print("{} fast5 files in total".format(len(fast5_files)))
@@ -268,30 +176,25 @@ def _extract_preprocess(fast5_dir, motifs, is_dna, reference_path,
     print("Reading genome reference file...")
     chrom2len = ut.get_contig2len(reference_path)
 
-    positions = None
-    if position_file is not None:
-        print("Reading position file...")
-        positions = _read_position_file(position_file)
-
     #Distribute reads into processes
     fast5s_q = mp.Queue()
-    _fill_files_queue(fast5s_q, fast5_files, f5_batch_num)
+    ce._fill_files_queue(fast5s_q, fast5_files, f5_batch_num)
 
-    return motif_seqs, chrom2len, fast5s_q, len(fast5_files), positions
+    return motif_seqs, chrom2len, fast5s_q, len(fast5_files)
 
 
 def extract_features(fast5_dir, ref, cor_g, base_g, dna, motifs,
-    nproc, position_file, norm_me, methyloc, kmer_len, raw_sig_len, methy_lab, 
+    nproc, norm_me, methyloc, kmer_len, methy_lab, 
     write_fp, f5_batch_num, recursive):
     start = time.time()
-    motif_seqs, chrom2len, fast5s_q, len_fast5s, positions = \
+    motif_seqs, chrom2len, fast5s_q, len_fast5s = \
         _extract_preprocess(fast5_dir, motifs, dna, ref, f5_batch_num, 
-            position_file, recursive
+            recursive
     )
     
     featurestr_q = mp.Queue()
     errornum_q = mp.Queue()
-
+    
     print('Getting features from nanopore reads...')
     #Start process for feature extraction in every core
     featurestr_procs = []
@@ -301,7 +204,7 @@ def extract_features(fast5_dir, ref, cor_g, base_g, dna, motifs,
         p = mp.Process(
             target=get_a_batch_features_str, args=(fast5s_q, featurestr_q, 
             errornum_q, cor_g, base_g, norm_me, motif_seqs, methyloc, chrom2len, 
-            kmer_len, raw_sig_len, methy_lab, positions)
+            kmer_len, methy_lab)
         )
         p.daemon = True
         p.start()

@@ -1,236 +1,500 @@
 #!/usr/bin/env python3
 import os
+import time
+import functools
+import subprocess
 import numpy as np
 import pandas as pd
+import bottleneck as bn
 import tensorflow as tf
+import multiprocessing as mp
+from scipy.special import gamma
+from multiprocessing import Pool
 from tensorflow.keras.models import load_model
-from sklearn.metrics import precision_recall_fscore_support
-from deepmp.model import *
+
 import deepmp.utils as ut
-import deepmp.plots as pl #this script needs to debug
-import deepmp.preprocess as pr
+from deepmp.model import *
+
+epsilon = 0.05
+gamma_val = 0.8
+
+#E. coli
+beta_a = 1
+beta_b = 22
+beta_c = 14.5
+
+# Human
+# beta_a = 1
+# beta_b = 6.5
+# beta_c = 10.43
+
+EPSILON = np.finfo(np.float64).resolution
+log_EPSILON = np.log(EPSILON)
+
+read_names = ['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 'pred_prob',
+       'inferred_label']
 
 
-def acc_test_single(data, labels, model, score_av='binary'):
-    #model = load_model(model_file)
-    test_loss, test_acc = model.evaluate(data, tf.convert_to_tensor(labels))
+queen_size_border = 2000
+time_wait = 5
+
+# ------------------------------------------------------------------------------
+# READ PREDICTION MULTIPROCESSING
+# ------------------------------------------------------------------------------
+
+def _write_predictions_to_file(write_fp, predictions_q):
+    while True:
+        if predictions_q.empty():
+            time.sleep(time_wait)
+            continue
+        predictions_to_file = predictions_q.get()
+        try:
+            predictions_to_file.to_csv(
+                write_fp, sep='\t', mode='a', index=None, header=None
+            )
+        except: 
+            break
+
+
+def _fill_files_queue(h5s_q, h5s_files, batch_size):
+    for i in np.arange(0, len(h5s_files), batch_size):
+        h5s_q.put(h5s_files[i:(i+batch_size)])
+    return
+
+
+def do_multiprocessing_main(h5s_q, predictions_q, errornum_q, model_type, 
+    trained_model, kmer, err_feat):
+    #Obtain predictions from every h5 
+    while not h5s_q.empty():
+        try:
+            h5s = h5s_q.get()
+        except Exception:
+            break
+        
+        model = load_model_or_weights(trained_model, model_type, kmer)
+        predictions, error_num = do_read_calling_multiprocessing(
+            h5s, model_type, model, kmer, err_feat
+        )
+
+        errornum_q.put(error_num)
+        predictions_q.put(predictions)
+
+        while predictions_q.qsize() > queen_size_border:
+            time.sleep(time_wait)
+
+
+def do_read_calling_multiprocessing(h5s, model_type, trained_model, kmer, err_feat):
+    predictions = pd.DataFrame()
+
+    error = 0
+    for h5_fp in h5s:
+        try:
+            if model_type == 'seq':
+                pred, inferred, data_id = seq_read_calling(
+                    h5_fp, kmer, err_feat, trained_model, model_type
+                )
+
+            elif model_type == 'err':
+                pred, inferred, data_id = err_read_calling(
+                    h5_fp, kmer, trained_model, model_type
+                )
+
+            elif model_type == 'joint':
+                pred, inferred, data_id = joint_read_calling(
+                    h5_fp, kmer, trained_model, model_type
+                )
+
+            test = build_test_df(data_id, pred, inferred, model_type)
+            predictions = pd.concat([predictions, test])
+
+        except Exception:
+            error += 1
+            continue
+        
+    return predictions, error
+
+
+# ------------------------------------------------------------------------------
+# READ PREDICTION SINGLE
+# ------------------------------------------------------------------------------
+
+def do_read_calling(test_file, model_type, trained_model, kmer, err_feat, 
+    out_file, tmp_folder='', flag='multi'):
+    model = load_model_or_weights(trained_model, model_type, kmer)
+
+    if model_type == 'seq':
+        pred, inferred, data_id = seq_read_calling(
+            test_file, kmer, err_feat, model, model_type
+        )
+
+    elif model_type == 'err':
+        pred, inferred, data_id = err_read_calling(
+            test_file, kmer, model, model_type
+        )
+
+    elif model_type == 'joint':
+        pred, inferred, data_id = joint_read_calling(
+            test_file, kmer, model, model_type
+        )
+
+    test = build_test_df(data_id, pred, inferred, model_type)
+    save_test(test, out_file, tmp_folder, test_file, flag)
+
+
+def seq_read_calling(test_file, kmer, err_feat, trained_model, model_type):
+    data_seq, labels, data_id = ut.get_data_sequence(
+            test_file, kmer, err_feat, get_id=True
+        )
+    pred, inferred = test_single_read(data_seq, trained_model, model_type, kmer)
+
+    return pred, inferred, data_id
+
+
+def err_read_calling(test_file, kmer, trained_model, model_type):
+    data_err, labels, data_id = ut.get_data_errors(test_file, kmer, get_id=True)
+    pred, inferred = test_single_read(data_err, trained_model, model_type, kmer)
+
+    return pred, inferred, data_id
+
+
+def joint_read_calling(test_file, kmer, trained_model, model_type):
+    data_seq, data_err, labels, data_id = ut.get_data_jm(
+        test_file, kmer, get_id=True
+    )
+    pred, inferred = test_single_read(
+        [data_seq, data_err], trained_model, model_type, kmer
+    )
+    return pred, inferred, data_id
+
+
+def load_model_or_weights(model_file, model_type, kmer):
+    try:  
+        return load_model(model_file)
+    except:
+        return load_model_weights(model_file, model_type, kmer)
+
+
+def test_single_read(data, model, model_type, kmer):
 
     pred =  model.predict(data).flatten()
     inferred = np.zeros(len(pred), dtype=int)
     inferred[np.argwhere(pred >= 0.5)] = 1
 
-    precision, recall, f_score, _ = precision_recall_fscore_support(
-        labels, inferred, average=score_av
-    )
-
-    return [test_acc, precision, recall, f_score], pred, inferred
+    return pred, inferred
 
 
-def get_accuracy_joint(inferred, err_pred, seq_pred, labels, score_av='binary'):
-    probs = np.zeros(len(labels))
-    for i in range(len(labels)):
-        if err_pred[i] > 0.5 and seq_pred[i] > 0.5:
-            inferred[i] = 1
-            probs[i] = max(seq_pred[i], err_pred[i])
-        elif err_pred[i] < 0.5 and seq_pred[i] < 0.5:
-            inferred[i] = 0
-            probs[i] = min(seq_pred[i], err_pred[i])
-        else:
-            val = (err_pred[i] + seq_pred[i]) / 2
-            if val > 0.5:
-                inferred[i] = 1
-                probs[i] = max(seq_pred[i], err_pred[i])
-            else:
-                inferred[i] = 0
-                probs[i] = min(seq_pred[i], err_pred[i])
-
-    test_acc = round(1 - np.argwhere(labels != inferred).shape[0] / len(labels), 5)
-
-    precision, recall, f_score, _ = precision_recall_fscore_support(
-        labels, inferred, average=score_av
-    )
-
-    return [test_acc, precision, recall, f_score], probs
-
-
-def acc_test_joint(data_seq, labels_seq, model_seq,
-    data_err, labels_err, model_err):
-
-    assert labels_err.all() == labels_seq.all()
-    labels = labels_seq
-
-    model_seq = load_model(model_seq)
-    model_err = load_model(model_err)
-
-    seq_pred = model_seq.predict(data_seq).flatten()
-    err_pred = model_err.predict(data_err).flatten()
-
-    inferred = np.zeros(len(seq_pred))
-
-    return get_accuracy_joint(inferred, err_pred, seq_pred, labels)
-
-# TODO remove predifined threshold
-def pred_site(df, pred_label, meth_label,
-                pred_type, threshold=0.3):
-
-    ## min+max prediction
-    if pred_type == 'min_max':
-        comb_pred = df.pred_prob.min() + df.pred_prob.max()
-        if comb_pred >= 1:
-            pred_label.append(1)
-        else:
-            pred_label.append(0)
-        meth_label.append(df.methyl_label.unique()[0])
-
-    ## threshold prediction
-    elif pred_type =='threshold':
-        inferred = df['inferred_label'].values
-        if np.sum(inferred) / len(inferred) >= threshold:
-            pred_label.append(1)
-        else:
-            pred_label.append(0)
-        meth_label.append(df.methyl_label.unique()[0])
-
-    return pred_label, meth_label
-
-
-def pred_site_deepmod(df, pred_label, meth_label, threshold=0.3):
-    inferred = df['inferred_label'].values
-    if np.sum(inferred) / len(inferred) >= threshold:
-        pred_label.append(1)
-    else:
-        pred_label.append(0)
-    meth_label.append(df.methyl_label.unique()[0])
-
-    return pred_label, meth_label
-
-
-def get_accuracy_pos(meth_label, pred_label):
-    pos = np.argwhere(np.asarray(meth_label) == 1)
-    neg = np.argwhere(np.asarray(meth_label) == 0)
-
-    pred_pos = np.asarray(pred_label)[pos]
-    pred_neg = np.asarray(pred_label)[neg]
-
-    accuracy = (sum(pred_pos) + len(pred_neg) - sum(pred_neg)) / \
-        (len(pred_pos) + len(pred_neg))
-    return accuracy[0]
-
-
-def do_per_position_analysis(df, pred_vec ,inferred_vec ,output, pred_type):
-    df['id'] = df['chrom'] + '_' + df['pos'].astype(str)
-    df['pred_prob'] = pred_vec
-    df['inferred_label'] = inferred_vec
-    meth_label = []; pred_label = []; cov = []; new_df = pd.DataFrame()
-    pred_label_cov = []
-    for i, j in df.groupby('id'):
-        if len(j.methyl_label.unique()) > 1:
-            for k, l in j.groupby('methyl_label'):
-                if len(l) > 0:
-                    pred_label, meth_label = pred_site(l, pred_label, meth_label, pred_type)
-                    cov.append(len(l))
-        else:
-            if len(j) > 0:
-                pred_label, meth_label = pred_site(j, pred_label, meth_label, pred_type)
-                cov.append(len(j))
-
-    precision, recall, f_score, _ = precision_recall_fscore_support(
-        meth_label, pred_label, average='binary'
-    )
-
-    pl.accuracy_cov(pred_label, meth_label, cov, output)
-    # TODO generalize for test with no label
-    # TODO improve calling of a methylation
-    # TODO Add to the joint analysis
-    # TODO delete all unnecessary functions
-    accuracy = get_accuracy_pos(meth_label, pred_label)
-    ut.save_output(
-        [accuracy, precision, recall, f_score], output, 'position_accuracy.txt'
-    )
-
-
-def preprocess_error(data, bases):
-    data = tf.convert_to_tensor(data, dtype=tf.float32)
-
-    embedding_size = 5
-    embedded_bases = tf.one_hot(bases, embedding_size)
-
-    size_feat = int(data.shape[1] / 5)
-
-    return tf.concat([embedded_bases, tf.reshape(data, [-1, 5, size_feat])], axis=2)
-
-
-def call_mods(model_type, test_file, trained_model, kmer, output,
-                    err_features = False, pos_based = False ,
-                    pred_type = 'min_max', figures=False):
-
-    ## process text file input
-    if test_file.rsplit('.')[-1] == 'tsv':
-        print("processing tsv file, this might take a while...")
-        test = pd.read_csv(test_file, sep='\t', names=pr.names_all)
-        ut.preprocess_combined(test, os.path.dirname(test_file), 'all', 'test')
-        test_file = os.path.join(os.path.dirname(test_file), 'test_all.h5')
-
-    ## read-based calling
+def load_model_weights(trained_model, model_type, kmer):
     if model_type == 'seq':
-
-        data_seq, labels = ut.get_data_sequence(test_file, kmer, err_features)
-        try:
-            model = load_model(trained_model)
-        except:
-            model = SequenceCNN('conv', 6, 256, 4)
-            input_shape = (None, kmer, 9)
-            model.compile(loss='binary_crossentropy',
-                                  optimizer=tf.keras.optimizers.Adam(),
-                                  metrics=['accuracy'])
-            model.build(input_shape)
-            model.load_weights(trained_model)
-        acc, pred, inferred = acc_test_single(data_seq, labels, model)
+        return load_sequence_weights(trained_model, kmer)
 
     elif model_type == 'err':
-
-        data_err, labels = ut.get_data_errors(test_file, kmer)
-        try:
-            model = load_model(trained_model)
-        except:
-            model = BCErrorCNN(3, 3, 128, 3)
-            model.compile(loss='binary_crossentropy',
-                      optimizer=tf.keras.optimizers.Adam(),
-                      metrics=['accuracy'])
-            input_shape = (None, kmer, 9)
-            model.build(input_shape)
-            model.load_weights(trained_model)
-        acc, pred, inferred = acc_test_single(data_err, labels, model)
-
-    elif model_type == 'joint':
-        data_seq, data_err, labels = ut.get_data_jm(test_file, kmer)
-        try:
-            model = load_model(trained_model)
-        except:
-            model = JointNN()
-            model.compile(loss='binary_crossentropy',
-                           optimizer=tf.keras.optimizers.Adam(learning_rate=0.00125),
-                           metrics=['accuracy'])
-            input_shape = ([(None, kmer, 9), (None, kmer, 9)])
-            model.build(input_shape)
-            model.load_weights(trained_model)
-        acc, pred, inferred = acc_test_single([data_seq, data_err], labels, model)
+        return load_error_weights(trained_model, kmer)
 
     else:
-        print("unrecognized model type")
-        return None
+        return load_joint_weights(trained_model, kmer)
 
-    ut.save_probs(pred, labels, output)
-    ut.save_output(acc, output, 'accuracy_measurements.txt')
 
+def load_sequence_weights(trained_model, kmer):
+    model = SequenceCNN('conv', 6, 256, 4)
+    input_shape = (None, kmer, 9)
+    model.compile(loss='binary_crossentropy',
+                            optimizer=tf.keras.optimizers.Adam(),
+                            metrics=['accuracy'])
+    model.build(input_shape)
+    model.load_weights(trained_model)
+
+    return model
+
+
+def load_error_weights(trained_model, kmer):
+    model = BCErrorCNN(3, 3, 128, 3)
+    model.compile(loss='binary_crossentropy',
+                optimizer=tf.keras.optimizers.Adam(),
+                metrics=['accuracy'])
+    input_shape = (None, kmer, 9)
+    model.build(input_shape)
+    model.load_weights(trained_model)
+
+    return model
+
+
+def load_joint_weights(trained_model, kmer):
+    model = JointNN()
+    model.compile(loss='binary_crossentropy',
+                    optimizer=tf.keras.optimizers.Adam(learning_rate=0.00125),
+                    metrics=['accuracy'])
+    input_shape = ([(None, kmer, 9), (None, kmer, 9)])
+    model.build(input_shape)
+    model.load_weights(trained_model)
+
+    return model
+
+
+def build_test_df(data, pred_vec, inferred_vec, model_type):
+    df = pd.DataFrame()
+    df['chrom'] = data[0].astype(str)
+    df['pos'] = data[2]
+
+    if model_type != 'err':
+        df['strand'] = data[3].astype(str)
+        df['pos_in_strand'] = data[4]
+        df['readname'] = data[1].astype(str)
+    
+    df['pred_prob'] = pred_vec
+    df['inferred_label'] = inferred_vec
+
+    return df
+
+
+def save_test(test, out_file, tmp_folder, test_file, flag):
+    if flag == 'multi':
+        tmp_file = os.path.join(
+            tmp_folder, test_file.rsplit('.', 1)[0].rsplit('/', 1)[1] + '.tsv'
+        )
+        test.to_csv(tmp_file, sep='\t', index=None, header=None)
+    else:
+        test.to_csv(out_file, sep='\t', index=None, header=None)
+
+
+# ------------------------------------------------------------------------------
+# POSITION CALLING FUNCTIONS
+# ------------------------------------------------------------------------------
+
+## beta model prediction
+def beta_fct(a, b):
+        return gamma(a) * gamma(b) / gamma(a + b)
+
+
+def log_likelihood_nomod_beta(obs_reads):
+    return np.sum(np.log(obs_reads ** (beta_a - 1) * (1 - obs_reads) ** (beta_b - 1) \
+        * (1 - epsilon) / beta_fct(beta_a, beta_b) \
+        + obs_reads ** (beta_c - 1) * (1 - obs_reads) ** (beta_a - 1) \
+        * epsilon / beta_fct(beta_c, beta_a)))
+
+
+def log_likelihood_mod_beta(obs_reads):
+    return np.sum(np.log(obs_reads ** (beta_a - 1) * (1 - obs_reads) ** (beta_b - 1) \
+        * gamma_val / beta_fct(beta_a, beta_b) \
+        + obs_reads ** (beta_c - 1) * (1 - obs_reads) ** (beta_a - 1) \
+        * (1 - gamma_val) / beta_fct(beta_c, beta_a)))
+
+
+def _normalize_log_probs(probs):
+    max_i = bn.nanargmax(probs)
+    try:
+        exp_probs = np.exp(probs[np.arange(probs.size) != max_i] \
+            - probs[max_i])
+    except FloatingPointError:
+        exp_probs = np.exp(
+            np.clip(probs[np.arange(probs.size) != max_i] - probs[max_i],
+                log_EPSILON, 0)
+        )
+    probs_norm = probs - probs[max_i] - np.log1p(bn.nansum(exp_probs))
+
+    return np.exp(np.clip(probs_norm, log_EPSILON, 0))
+
+
+#Assuming prior to be 0.5
+def beta_stats(obs_reads, pred_beta, prob_beta_mod, prob_beta_unmod):
+
+    log_prob_pos_0 = log_likelihood_nomod_beta(obs_reads)
+    log_prob_pos_1 = log_likelihood_mod_beta(obs_reads)
+
+    norm_log_probs = _normalize_log_probs(
+        np.array([log_prob_pos_0, log_prob_pos_1])
+    )
+
+    prob_beta_mod.append(norm_log_probs[1])
+    prob_beta_unmod.append(norm_log_probs[0])
+    
+    if prob_beta_mod[-1] >= prob_beta_unmod[-1]:
+        pred_beta.append(1)
+    else:
+        pred_beta.append(0)
+
+    return pred_beta, prob_beta_mod, prob_beta_unmod
+
+
+def do_per_position_beta(df):
+    df['id'] = df['chrom'] + '_' + df['pos'].astype(str) + '_' + df['strand']
+
+    cov, meth_label, ids, pred_beta = [], [], [], []
+    prob_beta_mod, prob_beta_unmod, chromosome, pos, strand = [], [], [], [], []
+    meth_freq = []
+
+    for i, j in df.groupby('id'):
+        pred_beta, prob_beta_mod, prob_beta_unmod = beta_stats(
+            j['pred_prob'].values, pred_beta, prob_beta_mod, prob_beta_unmod
+        )
+
+        meth_freq.append(round(j['inferred_label'].sum() / j.shape[0], 5))
+        cov.append(len(j)); ids.append(i)
+        chromosome.append(i.split('_')[0])
+        strand.append(i.split('_')[2])
+        pos.append(i.split('_')[1])
+
+    preds = pd.DataFrame()
+    preds['chrom'] = chromosome
+    preds['pos'] = pos
+    preds['strand'] = strand
+    preds['id'] = ids
+    preds['cov'] = cov  
+    preds['pred_beta'] = pred_beta
+    preds['prob_beta_mod'] = prob_beta_mod
+    preds['prob_beta_unmod'] = prob_beta_unmod 
+    preds['meth_freq'] = meth_freq
+
+    return preds
+
+## threshold prediction
+def pred_site_threshold(inferred, pred_threshold, threshold):
+
+    if np.sum(inferred) / len(inferred) >= threshold:
+        pred_threshold.append(1)
+    else:
+        pred_threshold.append(0)
+    
+    return pred_threshold
+
+
+def do_per_position_theshold(df, threshold):
+    df['id'] = df['chrom'] + '_' + df['pos'].astype(str) + '_' + df['strand']
+
+    cov, meth_label, ids, pred_threshold = [], [], [], []
+    chromosome, pos, strand = [], [], []
+    meth_freq = []
+
+    for i, j in df.groupby('id'):
+
+        pred_threshold = pred_site_threshold(
+            j['pred_prob'].values, pred_threshold, threshold
+        )
+
+        meth_freq.append(round(j['inferred_label'].sum() / j.shape[0], 5))
+        cov.append(len(j)); ids.append(i)
+        strand.append(i.split('_')[2])
+        chromosome.append(i.split('_')[0])
+        pos.append(i.split('_')[1])
+
+    preds = pd.DataFrame()
+    preds['chrom'] = chromosome
+    preds['pos'] = pos
+    preds['strand'] = strand
+    preds['id'] = ids
+    preds['cov'] = cov  
+    preds['pred_threshold'] = pred_threshold
+    preds['meth_freq'] = meth_freq
+
+    return preds
+
+
+# ------------------------------------------------------------------------------
+# MAIN
+# ------------------------------------------------------------------------------
+
+def do_multiprocessing_reads(test_file, model_type, trained_model, kmer, 
+    err_features, reads_output, nproc, output):
+    start = time.time()
+    h5s_files = [os.path.join(test_file, f) for f in os.listdir(test_file)]
+
+    h5s_q = mp.Queue()
+    predictions_q = mp.Queue()
+    errornum_q = mp.Queue()
+
+    _fill_files_queue(h5s_q, h5s_files, 5)
+
+    print('Getting read predictions from h5s...')
+    #Start process for read prediction in every core
+    predictions_procs = []
+    if nproc > 1:
+        nproc -= 1
+    for _ in range(nproc):
+        p = mp.Process(
+            target=do_multiprocessing_main, args=(h5s_q, predictions_q, 
+            errornum_q, model_type, trained_model, kmer, err_features)
+        )
+        p.daemon = True
+        p.start()
+        predictions_procs.append(p)
+
+    print("Writing predictions to file...")
+    p_w = mp.Process(
+        target=_write_predictions_to_file, args=(reads_output, predictions_q)
+    )
+    p_w.daemon = True 
+    p_w.start()
+
+    errornum_sum = 0
+    while True:
+        running = any(p.is_alive() for p in predictions_procs)
+        while not errornum_q.empty():
+            errornum_sum += errornum_q.get()
+        if not running:
+            break
+
+    for p in predictions_procs:
+        p.join() 
+
+    print("finishing the writing process..")
+    predictions_q.put("kill")
+
+    p_w.join()
+
+    print("%d of %d h5 files failed..\n"
+          "Read predictions costs %.1f seconds.." % (errornum_sum, len(h5s_files),
+                                                     time.time() - start))
+
+
+def do_single_reads(test_file, model_type, trained_model, kmer, 
+    err_features, reads_output):
+    ## Raise exception for other file formats that are not .h5
+    if test_file.rsplit('.')[-1] != 'h5':
+        raise Exception('Use .h5 format instead. DeepMP preprocess will get it done')
+    
+    ## read calling and store
+    do_read_calling(
+        test_file, model_type, trained_model, kmer, err_features, 
+        reads_output, '', 'single'
+    )
+
+
+def do_position_calling(reads_output, use_threshold, threshold, output, model_type):
+    test = pd.read_csv(reads_output, sep='\t', names=read_names)
+    
+    if use_threshold:
+        all_preds = do_per_position_theshold(test, threshold)
+    
+    else:
+        all_preds = do_per_position_beta(test)
+    
+    pos_output = os.path.join(
+        output, 'position_calling_{}_DeepMP.tsv'.format(model_type))
+    all_preds.to_csv(pos_output, sep='\t', index=None)
+
+
+def call_mods_user(model_type, test_file, trained_model, kmer, output,
+    err_features, pos_based, use_threshold, threshold, cpus):
+
+    reads_output = os.path.join(
+            output, 'read_predictions_{}_DeepMP.tsv').format(model_type)
+
+    # read-based calling
+    if os.path.isdir(test_file):
+        do_multiprocessing_reads(
+            test_file, model_type, trained_model, kmer, err_features, 
+            reads_output, cpus, output
+        )
+
+    else:
+        do_single_reads(
+            test_file, model_type, trained_model, kmer, err_features,
+            reads_output
+        )
+    
     ## position-based calling
-    # TODO store position info in test file
     if pos_based:
-        #pl.plot_distributions(test, output)
-        do_per_position_analysis(test, pred, inferred, output, pred_type)
+        print('Performing position analysis...')
 
-    #if figures:
-    #    out_fig = os.path.join(output, 'ROC_curve.png')
-    #    pl.plot_ROC(labels, probs, out_fig)
-
-    return None
+        do_position_calling(
+            reads_output, use_threshold, threshold, output, model_type
+        )
