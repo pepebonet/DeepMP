@@ -12,7 +12,7 @@ Furthermore, DeepMP introduces a threshold-free position modification calling mo
 
 # Installation
 ## Clone repository
-First download BnpC from the github repository:
+First download DeepMP from the github repository:
 
         git clone https://github.com/pepebonet/DeepMP.git
 
