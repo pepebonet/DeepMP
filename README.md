@@ -43,41 +43,41 @@ Features for the model need to be extracted. We present 3 different options:
 
 `Option 1:` Extract combined features
 ```
-    DeepMP combined-extraction -fr path/to/fast5/files/ -re path/to/error/folder/ -rp path/to/reference/file/ -dn path/to/dict_read_names -m CG -o CpG_methylated_combined.tsv -ml 1 -cpu 56
+DeepMP combined-extraction -fr path/to/fast5/files/ -re path/to/error/folder/ -rp path/to/reference/file/ -dn path/to/dict_read_names -m CG -o CpG_methylated_combined.tsv -ml 1 -cpu 56
 ```
 
 `Option 2:` Extract sequence features
 ```
-    DeepMP sequence-feature-extraction path/to/fast5/files/ -rp path/to/reference/file/ -m CG -o CpG_methylated.tsv -ml 1 -cpu 56
+DeepMP sequence-feature-extraction path/to/fast5/files/ -rp path/to/reference/file/ -m CG -o CpG_methylated.tsv -ml 1 -cpu 56
 ```
 
 `Option 3:` Extract error features
 ```
-    DeepMP single-read-error-extraction -ef path/to/error/folder/ -m CG -o output/error_features/ -l 1 -cpu 56
+DeepMP single-read-error-extraction -ef path/to/error/folder/ -m CG -o output/error_features/ -l 1 -cpu 56
 ```
 
 ### Preprocess:
 Extracted features are processed to get the information into h5 format which is the desired input for training, validation and testing. 
-
-        DeepMP preprocess -f path/to/features.tsv  -ft combined -o output/folder/ -cpu 56
-
+```
+DeepMP preprocess -f path/to/features.tsv  -ft combined -o output/folder/ -cpu 56
+```
 
 ### Train models
 Preprocessing is needed before training. Use `--model_type` flag to specify model for data preparation, choose between `seq` and `err`.
 ```
-    DeepMP preprocess path/to/csv_file --model_type seq
+DeepMP preprocess path/to/csv_file --model_type seq
 ```
 Train sequence model from binary files.
 ```
-    DeepMP train-nns -m seq -tf path/to/train/data -vf path/to/validation/data -md save/model/to/directory -ld save/log/to/directory
+DeepMP train-nns -m seq -tf path/to/train/data -vf path/to/validation/data -md save/model/to/directory -ld save/log/to/directory
 ```
 Train errors model from binary files.
 ```
-    DeepMP train-nns -m err -tf path/to/train/data -vf path/to/validation/data -md save/model/to/directory -ld save/log/to/directory
+DeepMP train-nns -m err -tf path/to/train/data -vf path/to/validation/data -md save/model/to/directory -ld save/log/to/directory
 ```
 Train joint model from binary files.
 ```
-    DeepMP train-nns -m joint -tf path/to/train/data -vf path/to/validation/data -md save/model/to/directory -ld save/log/to/directory
+DeepMP train-nns -m joint -tf path/to/train/data -vf path/to/validation/data -md save/model/to/directory -ld save/log/to/directory
 ```
 - Use `-cp` to specify the checkpoint file while training model from checkpoints.
 
@@ -87,19 +87,19 @@ Train joint model from binary files.
 Finally modifications for a given test set are obtained: 
 
 ```
-    DeepMP call-modifications -m joint -tf path/to/test/data -md model/directory -o output/ -pos
+DeepMP call-modifications -m joint -tf path/to/test/data -md model/directory -o output/ -pos
 ```
 
 - Specify model type with flag `-m`, choose from `seq, err, joint`(required).
 - Add `-ef` for sequence model with both seq and error features.
 - Add  `-pos` for test on positions.
 
-#### Fast call modifications from fast5 files (under test)
+### Fast call modifications from fast5 files (under test)
 
 DeepMP can call modifications from re-squiggled fast5 files in one step:
 
 ```
-    DeepMP fast-call-joint -f path/to/fast5s/ -ref path/to/reference/genome -md path/to/trained_model -j path/to/sam2tsv.jar
+DeepMP fast-call-joint -f path/to/fast5s/ -ref path/to/reference/genome -md path/to/trained_model -j path/to/sam2tsv.jar
 ```
 
 Note that this function is currently under test, stepwise process is recommanded. Please see the following example for details.
