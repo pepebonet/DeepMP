@@ -84,10 +84,17 @@ DeepMP train-nns -m joint -tf path/to/train/data -vf path/to/validation/data -md
 
 ### Call modifications
 
-Finally modifications for a given test set are obtained: 
+Finally modifications are called for a given test data. Call modifications can be employed to be run in parallel or in a single CPU. 
+
+Running call-modifications in parallel (faster and memory efficient):
 
 ```
-DeepMP call-modifications -m joint -tf path/to/test/data -md model/directory -o output/ -pos
+DeepMP call-modifications -m joint -tf test/folder/preprocess/output/ -md model/directory -o output/ -pos -cpu 56
+```
+
+Running call-modifications in single CPU (deprecated):
+```
+DeepMP call-modifications -m joint -tf path/to/test/data/test_file.h5 -md model/directory -o output/ -pos
 ```
 
 - Specify model type with flag `-m`, choose from `seq, err, joint`(required).
@@ -105,18 +112,21 @@ DeepMP fast-call-joint -f path/to/fast5s/ -ref path/to/reference/genome -md path
 Note that this function is currently under test, stepwise process is recommanded. Please see the following example for details.
 
 # Example data
-Step by step process to detect modifications employing DeepMP on a sample (20 reads) of the E. coli dataset. Data is located in: 
+
+Step by step process to detect modifications employing DeepMP on a sample (10 reads) of the E. coli dataset. Copy paste of all the commnads starting from the DeepMP folder will output the results on the read and position predictions. E. coli reads are located in: 
 
 ```
     docs/reads/
-```
+``` 
+
+## Data Preparation
 
 First, extract the fastqs from the reads (output paths need to be generated and updated for the following commands): 
 
 ```
-python deepmp/miscellaneous/parse_fast5.py docs/reads/treated/ -ff5 True -o output/path/treated/ -cpu 56
+python deepmp/miscellaneous/parse_fast5.py docs/reads/treated/ -ff5 True -o docs/output_example/error_features/treated/ -cpu 56
 
-python deepmp/miscellaneous/parse_fast5.py docs/reads/untreated/ -ff5 True -o output/path/untreated/ -cpu 56
+python deepmp/miscellaneous/parse_fast5.py docs/reads/untreated/ -ff5 True -o docs/output_example/error_features/untreated/ -cpu 56
 ```
 
 Next, for both fastqs extracted, the reads are mapped to the reference genome. For that to be done, first load the following packages in your environment if you do not have them already. 
@@ -129,54 +139,90 @@ conda install -c anaconda openjdk
 
 Then, map reads to the genome with the reference genome available in /docs/ref/ : 
 ```
-cd output/path/treated/ or output/path/untreated/
+cd docs/output_example/error_features/treated/
 
-minimap2 -ax map-ont ~/DeepMP/docs/ref/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.toplevel.fa Basecall_1D_000_BaseCalled_template.fastq | samtools view -hSb | samtools sort -@ 56 -o sample.bam 
+ minimap2 -ax map-ont ../../../ref/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.toplevel.fa Basecall_1D_000_BaseCalled_template.fastq | samtools view -hSb | samtools sort -@ 56 -o sample.bam
 
 samtools index sample.bam
 ```
 
-The following step is to call the variants: 
+Repeat for the untreated folder:
 
 ```
-samtools view -h -F 3844 sample.bam |  java -jar ~/DeepMP/docs/jvarkit/sam2tsv.jar -r ~/DeepMP/docs/ref/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.toplevel.fa > sample.tsv
+cd ../untreated/
+
+ minimap2 -ax map-ont ../../../ref/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.toplevel.fa Basecall_1D_000_BaseCalled_template.fastq | samtools view -hSb | samtools sort -@ 56 -o sample.bam
+
+samtools index sample.bam
 ```
 
-To allow downstream parallelisation of the feature extraction and further steps, the generated sample.tsv is split into the different reads in a tmp folder. 
+The following step is to call the variants in both treated and untreated folders: 
+
+```
+samtools view -h -F 3844 sample.bam |  java -jar ../../../jvarkit/sam2tsv.jar -r ../../../ref/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.toplevel.fa > sample.tsv
+
+cd ../treated/
+
+samtools view -h -F 3844 sample.bam |  java -jar ../../../jvarkit/sam2tsv.jar -r ../../../ref/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.toplevel.fa > sample.tsv
+```
+
+To allow downstream parallelisation of the feature extraction, the generated sample.tsv is split into the different reads in a tmp folder. 
 
 ```
 mkdir tmp
 awk 'NR==1{ h=$0 }NR>1{ print (!a[$2]++? h ORS $0 : $0) > "tmp/"$1".txt" }' sample.tsv
 ```
 
-As in  some scenarios the readnames of the fastqs do not match the fast5 readnames, a dictionary to parse each read pair needs to be generated: 
+Then go back to the untreated and repeat: 
+
+```
+cd ../untreated/
+mkdir tmp
+awk 'NR==1{ h=$0 }NR>1{ print (!a[$2]++? h ORS $0 : $0) > "tmp/"$1".txt" }' sample.tsv
+```
+
+As in  some scenarios the readnames of the fastqs do not match the fast5 readnames, a dictionary to parse each read pair may be needed. That is the case of E. coli: 
 
 ```
 pip install biopython
 
-python ~/DeepMP/deepmp/miscellaneous/fix_read_names.py -dt Ecoli -f Basecall_1D_000_BaseCalled_template.fastq -o dict_reads.pkl
+python ../../../../deepmp/miscellaneous/fix_read_names.py -dt Ecoli -f Basecall_1D_000_BaseCalled_template.fastq -o dict_reads.pkl
+
+cd ../treated/
+
+python ../../../../deepmp/miscellaneous/fix_read_names.py -dt Ecoli -f Basecall_1D_000_BaseCalled_template.fastq -o dict_reads.pkl
 ```
 
-With all these steps done, we can now extract the combined features from the reads (paths should point to the right directories): 
+## Running DeepMP 
+
+First, go back to the DeepMP folder to run the commands: 
 
 ```
-DeepMP combine-extraction -fr ~/DeepMP/docs/reads/treated/ -re output/path/treated/tmp/ -rp  ~/DeepMP/docs/ref/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.toplevel.fa -ml 1 -cpu 56 -m CG -dn output/path/treated/dict_reads.pkl -o treated_features.tsv
+cd ../../../../
+```
 
-DeepMP combine-extraction -fr ~/DeepMP/docs/reads/untreated/ -re output/path/untreated/tmp/ -rp  ~/DeepMP/docs/ref/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.toplevel.fa -ml 0 -cpu 56 -m CG -dn output/path/untreated/dict_reads.pkl -o treated_features.tsv
+With the data ready, we can now extract the combined features from the reads:
+
+```
+DeepMP combine-extraction -fr docs/reads/treated/ -re docs/output_example/error_features/treated/tmp/ -rp  docs/ref/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.toplevel.fa -ml 1 -cpu 56 -m CG -dn docs/output_example/error_features/treated/dict_reads.pkl -o docs/output_example/treated_features.tsv
+
+DeepMP combine-extraction -fr docs/reads/untreated/ -re docs/output_example/error_features/untreated/tmp/ -rp  docs/ref/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.toplevel.fa -ml 0 -cpu 56 -m CG -dn docs/output_example/error_features/untreated/dict_reads.pkl -o docs/output_example/untreated_features.tsv
 ```
 
 Once the features are extracted one can concat the resulting features of the treated and untreated samples into a single file to then perform the preprocess step: 
 
 ```
+cd docs/output_example/
+
 cat untreated_features.tsv treated_features.tsv > features.tsv
 
-DeepMP preprocess -f features.tsv -ft combined -o . -cpu 4
+DeepMP preprocess -f features.tsv -ft combined -o . -cpu 56
 ```
 
-With the test_file.h5 available we can now use one of the trained models to get the predictions from the model at read and position level: 
+With the test folder available we can now use one of the trained models to get the predictions from the model at read and position level: 
 
 ```
-DeepMP call-modifications -m joint -md ~/DeepMP/trained_models/K12ER2925_joint_202101/ -tf test_file.h5 -pos
+DeepMP call-modifications -m joint -md ../../trained_models/K12ER2925_joint_202101/ -tf test/ -pos -cpu 56 
 ```
 
 The resulting files of the analysis should be the read and position calling predictions from DeepMP: 
