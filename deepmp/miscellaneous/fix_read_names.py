@@ -1,4 +1,4 @@
-#!/usr/bin/env pyhton3
+#!/usr/bin/envs pyhton3
 import ast
 import click
 import pickle
