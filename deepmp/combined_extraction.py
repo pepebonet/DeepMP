@@ -341,7 +341,7 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
                 except: 
                     try:
                         error_read = os.path.join(
-                            errors, '{}.txt'.format(dict_names[readname])
+                            errors, '{}'.format(dict_names[readname])
                         )
                     except:
                         error_read = os.path.join(
@@ -454,7 +454,11 @@ def _extract_features(fast5s, errors, corrected_group, basecall_subgroup,
 
 
 
-                    pos_err = [item[0] - 1 for item in error_features]
+                    # pos_err = [item[0] - 1 for item in error_features]
+                    if alignstrand == '-':
+                        pos_err = [item[0] for item in error_features]
+                    else:
+                        pos_err = [item[0] - 1 for item in error_features]
                     comb_err = error_features[np.argwhere(np.asarray(pos_err) == pos)[0][0]]
                     try: 
                         qual = comb_err[-4]
@@ -577,8 +581,8 @@ def combine_extraction(fast5_dir, read_errors, ref, cor_g, base_g, dna, motifs,
 
     if dict_names:
         dict_names = ut.load_obj(dict_names)  
-        dict_names = {v: k for k, v in dict_names.items()}
-
+        # dict_names = {v: k for k, v in dict_names.items()}
+    import pdb;pdb.set_trace()
     featurestr_q = mp.Queue()
     errornum_q = mp.Queue()
 
