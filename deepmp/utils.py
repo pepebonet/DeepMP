@@ -149,10 +149,10 @@ def get_data_sequence(file, kmer, err_features = False):
     ## preprocess data
     if err_features:
         bases, signal_means, signal_stds, signal_medians, signal_range, \
-            signal_lens, base_qual, base_mis, base_ins, base_del, label = load_jm_data(file)
+            base_qual, base_mis, base_ins, base_del, label = load_jm_data(file)
     else:
         bases, signal_means, signal_stds, signal_medians, \
-            signal_range, signal_lens, label = load_seq_data(file)
+            signal_range, label = load_seq_data(file)
 
     ## embed bases
     embedding_size = 5
@@ -161,10 +161,10 @@ def get_data_sequence(file, kmer, err_features = False):
     ## prepare inputs for NNs
     if err_features:
         data = concat_tensors_seq_all(embedded_bases, signal_means, signal_stds, signal_medians,
-            signal_range, signal_lens, base_qual, base_mis, base_ins, base_del, kmer)
+            signal_range, base_qual, base_mis, base_ins, base_del, kmer)
     else:
         data = concat_tensors_seq(embedded_bases, signal_means, signal_stds, signal_medians,
-            signal_range, signal_lens, kmer)
+            signal_range, kmer)
 
     return data, label
 
@@ -186,7 +186,7 @@ def get_data_errors(file, kmer):
 def get_data_jm(file, kmer, get_id=False):
     ## preprocess data
     bases, signal_means, signal_stds, signal_medians, signal_range, \
-        signal_lens, base_qual, base_mis, base_ins, base_del, label, \
+        base_qual, base_mis, base_ins, base_del, label, \
             chrom, readname, pos, strand, pos_in_strand = load_jm_data(file)
 
     ## embed bases
@@ -195,7 +195,7 @@ def get_data_jm(file, kmer, get_id=False):
 
     ## prepare inputs for NNs
     data_sequence = concat_tensors_seq(embedded_bases, signal_means, signal_stds,
-                                        signal_medians, signal_range, signal_lens, kmer)
+                                        signal_medians, signal_range, kmer)
     data_errors = concat_tensors_err(embedded_bases, base_qual, base_mis, base_ins, base_del, kmer)
     
     if get_id: 
@@ -212,7 +212,7 @@ def get_data_incep(file, get_id=False):
 
 
 def concat_tensors_seq(bases, signal_means, signal_stds, signal_medians,
-                        signal_range, signal_lens, kmer):
+                        signal_range, kmer):
     return tf.concat([bases,
                                 tf.reshape(signal_means, [-1, kmer, 1]),
                                 tf.reshape(signal_stds, [-1, kmer, 1]),
@@ -222,13 +222,12 @@ def concat_tensors_seq(bases, signal_means, signal_stds, signal_medians,
                                 axis=2)
 
 def concat_tensors_seq_all(bases, signal_means, signal_stds, signal_medians,
-                        signal_range, signal_lens, base_qual, base_mis, base_ins, base_del, kmer):
+                        signal_range, base_qual, base_mis, base_ins, base_del, kmer):
     return tf.concat([bases,
                                 tf.reshape(signal_means, [-1, kmer, 1]),
                                 tf.reshape(signal_stds, [-1, kmer, 1]),
                                 tf.reshape(signal_medians, [-1, kmer, 1]),
                                 tf.reshape(signal_range, [-1, kmer, 1]),
-                                tf.reshape(signal_lens, [-1, kmer, 1]),
                                 tf.reshape(base_qual, [-1, kmer, 1]),
                                 tf.reshape(base_mis, [-1, kmer, 1]),
                                 tf.reshape(base_ins, [-1, kmer, 1]),
@@ -252,14 +251,14 @@ def load_seq_data(file):
         signal_stds = hf['signal_stds'][:]
         signal_medians = hf['signal_median'][:]
         signal_range = hf['signal_diff'][:]
-        signal_lens = hf['signal_lens'][:]
+        # signal_lens = hf['signal_lens'][:]
         try:
             label = hf['label'][:]
         except:
             label = hf['methyl_label'][:]
 
     return bases, signal_means, signal_stds, signal_medians, \
-        signal_range, signal_lens, label
+        signal_range, label
 
 
 def load_jm_data(file):
@@ -270,7 +269,7 @@ def load_jm_data(file):
         signal_stds = hf['signal_stds'][:]
         signal_medians = hf['signal_median'][:]
         signal_range = hf['signal_diff'][:]
-        signal_lens = hf['signal_lens'][:]
+        # signal_lens = hf['signal_lens'][:]
         base_qual = hf['qual'][:]
         base_mis = hf['mis'][:]
         base_ins = hf['ins'][:]
@@ -283,7 +282,7 @@ def load_jm_data(file):
         pos_in_strand = hf['pos_in_strand'][:]
 
     return bases, signal_means, signal_stds, signal_medians, signal_range, \
-        signal_lens, base_qual, base_mis, base_ins, base_del, label, \
+        base_qual, base_mis, base_ins, base_del, label, \
         chrom, readname, pos, strand, pos_in_strand
 
 
