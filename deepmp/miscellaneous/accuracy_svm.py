@@ -655,10 +655,10 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies, deepmp
             plot_ROC_deepmp(deepmp, deepmp_seq, fig_deepmp)
             import pdb;pdb.set_trace()
 
-        # out_prere = os.path.join(output, 'AUC_prec_recall.png')
-        # plot_precision_recall_curve(deepmp['labels'].values, deepmp['probs'].values, out_prere)
-        # out_fig_deepmp = os.path.join(output, 'AUC_comparison_deepmp.pdf')
-        # plot_ROC_alone(deepmp, out_fig_deepmp)
+        out_prere = os.path.join(output, 'AUC_prec_recall.png')
+        plot_precision_recall_curve(deepmp['labels'].values, deepmp['probs'].values, out_prere)
+        out_fig_deepmp = os.path.join(output, 'AUC_comparison_deepmp.pdf')
+        plot_ROC_alone(deepmp, out_fig_deepmp)
 
     if svm_output:
         svm = pd.read_csv(svm_output, sep=',')
