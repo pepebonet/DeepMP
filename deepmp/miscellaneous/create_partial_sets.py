@@ -23,17 +23,17 @@ names_all=['chrom', 'pos', 'strand', 'pos_in_strand', 'readname',
     '-o', '--output', help='output path', default=''
 )
 def main(features, output):
-    # sets = [(0, 100), (10, 90), (20, 80), (30, 70), (40, 60), (50,50), (60, 40), (70, 30), (80, 20), (90, 10), (100, 0)]
+    sets = [(0, 100), (10, 90), (20, 80), (30, 70), (40, 60), (50,50), (60, 40), (70, 30), (80, 20), (90, 10), (100, 0)]
     # sets = [(0, 100), (1, 99), (2, 98), (3, 97), (4, 96), (5, 95), (6, 94), (7, 93), (8, 92), (9, 91), (10, 90)]
-    sets = [(8, 92)]
+    # sets = [(8, 92)]
 
-    feats = pd.read_csv(features, header=None, sep='\t', names=names_all)
+    feats = pd.read_csv(features, header=None, sep='\t', names=names_all, nrows=4000000)
 
     treated = feats[feats['methyl_label'] == 1]
     untreated = feats[feats['methyl_label'] == 0]
 
     treat_shape = treated.shape[0]
-
+    import pdb;pdb.set_trace()
     for el in tqdm(sets): 
         if el[0] == 0:
             partial_set = untreated.sample(int(round(treat_shape * el[1] / 100, 0)))
