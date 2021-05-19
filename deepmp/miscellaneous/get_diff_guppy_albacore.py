@@ -197,9 +197,7 @@ def main(reads, reference, output):
 
     # plot_read_features_dist(read_f_000, read_f_001)
     plot_gc_features_dist(cgs_f_000, cgs_f_001, output)
-    import pdb;pdb.set_trace()
-
-
+    import pdb;pdb.set_trace()  
 
 
 if __name__ == '__main__':
