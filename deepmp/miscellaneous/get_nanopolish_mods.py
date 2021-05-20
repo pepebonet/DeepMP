@@ -1,10 +1,14 @@
 #!/usr/bin/envs python3
 
 import os 
+import sys
 import click
 import numpy as np 
 import pandas as pd 
 from tqdm import tqdm 
+
+sys.path.append('../')
+import deepmp.utils as ut
 
 
 def split_multiple_cpgs(record):
@@ -16,11 +20,12 @@ def split_multiple_cpgs(record):
     sequence = record['sequence']
     cg_pos = sequence.find("CG")
     first_cg_pos = cg_pos
-
+    
     while cg_pos != -1:
         key = [chrom, start + cg_pos - first_cg_pos, start + cg_pos - first_cg_pos]
         cpgs.append(np.concatenate([key, static]))
         cg_pos = sequence.find("CG", cg_pos + 1)
+
 
     return list(cpgs)
 
@@ -51,16 +56,24 @@ def get_labels(df):
     return pd.concat([infer_neg, infer_pos])
 
 
+def get_readname_column(df, dict):
+    df['readname'] = dict[df['read_name'] + '.txt']
+    return df
+
+
 @click.command(short_help='get modifications from nanopolish')
 @click.option(
     '-no', '--nanopolish_output', required=True, 
     help='call methylation output from Nanopolish'
 )
 @click.option(
+    '-dr', '--dict_reads', default='', help='dictionary with readnames'
+)
+@click.option(
     '-o', '--output', required=True, 
     help='Path to save modifications called'
 )
-def main(nanopolish_output, output):
+def main(nanopolish_output, dict_reads, output):
 
     nanopolish = pd.read_csv(nanopolish_output, sep='\t')
 
@@ -71,10 +84,17 @@ def main(nanopolish_output, output):
         np.vstack(output_cpgs.tolist()), columns=nanopolish.columns
     )
 
-    final_df_calling = get_labels(pd.concat([single_cpgs, multiple_df]))
+    df_calling = get_labels(pd.concat([single_cpgs, multiple_df]))
 
-    final_df_calling.to_csv(
-        os.path.join(output, 'mods_nanopolish.tsv'), sep='\t', index=None
+    if dict_reads: 
+        dict_names = ut.load_obj(dict_reads)  
+        dict_names = {v: k for k, v in dict_names.items()}
+        aa = df_calling['read_name'] + '.txt'
+        bb = [dict_names[x] for x in aa.tolist()]
+        df_calling['readnames'] = bb
+    import pdb;pdb.set_trace()
+    df_calling.to_csv(
+        os.path.join(output, 'mods_nanopolish_readnames.tsv'), sep='\t', index=None
     )
 
 
