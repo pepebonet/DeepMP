@@ -346,6 +346,82 @@ def plot_ROC_nanopolish(deepmp, deepsignal, Nanopolish, fig_out, kn='Linear'):
     plt.close()
 
 
+def plot_ROC_guppy(deepmp, deepsignal, Nanopolish, Guppy, fig_out, kn='Linear'):
+
+    fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
+    custom_lines = []
+
+    fpr_dmp, tpr_dmp, thresholds = roc_curve(
+        deepmp['labels'].values, deepmp['probs'].values
+    )
+    fpr_ds, tpr_ds, thresholds = roc_curve(
+        deepsignal[11].values, deepsignal['7_x'].values
+    )
+    fpr_dmo, tpr_dmo, thresholds = roc_curve(
+        Nanopolish[11].values, Nanopolish['prob_meth'].values
+    )
+    fpr_guppy, tpr_guppy, thresholds = roc_curve(
+        Guppy[11].values, Guppy['prob_meth'].values
+    )
+
+    roc_auc_dmp = auc(fpr_dmp, tpr_dmp)
+    roc_auc_ds = auc(fpr_ds, tpr_ds)
+    roc_auc_dmo = auc(fpr_dmo, tpr_dmo)
+    roc_auc_guppy = auc(fpr_guppy, tpr_guppy)
+
+    # plt.plot (fpr_dmp, tpr_dmp, lw=2, label ='DeepMP: {}'.format(round(roc_auc_dmp, 3)), c='#08519c')
+    
+    custom_lines.append(
+        plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
+        mew=0, color='#08519c', label='DeepMP AUC: {}'.format(round(roc_auc_dmp, 3)))[0] 
+    )
+    # plt.plot (fpr_ds, tpr_ds, lw=2, label ='Deepsignal: {}'.format(round(roc_auc_ds, 3)), c='#f03b20')
+    
+    custom_lines.append(
+        plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
+        mew=0, color='#f03b20', label='DeepSignal AUC: {}'.format(round(roc_auc_ds, 3)))[0] 
+    )
+    # plt.plot (fpr_dmo, tpr_dmo, lw=2, label ='Nanopolish: {}'.format(round(roc_auc_dmo, 3)), c='#238443')
+    
+    custom_lines.append(
+        plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
+        mew=0, color='#238443', label='Nanopolish AUC: {}'.format(round(roc_auc_dmo, 3)))[0] 
+    )
+
+    custom_lines.append(
+        plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
+        mew=0, color='#fed976', label='Guppy AUC: {}'.format(round(roc_auc_guppy, 3)))[0] 
+    )
+
+    plt.plot (fpr_dmo, tpr_dmo, lw=2, c='#238443')
+    plt.plot (fpr_ds, tpr_ds, lw=2, c='#f03b20')
+    plt.plot (fpr_dmp, tpr_dmp, lw=2, c='#08519c')
+    plt.plot (fpr_guppy, tpr_guppy, lw=2, c='#fed976')
+
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.xlim([-0.05, 1.05])
+    plt.ylim([-0.05, 1.05])
+
+    ax.set_xlabel("False Positive Rate", fontsize=12)
+    ax.set_ylabel("True Positive Rate", fontsize=12)
+    # plt.xlabel('False Positive Rate')
+    # plt.ylabel('True Positive Rate')
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    # plt.title('Ecoli data')
+    # plt.legend(loc="lower right", title='AUC',  fontsize=8, frameon=False, facecolor='white', handles=custom_lines)
+    ax.legend(
+        bbox_to_anchor=(0., 1.2, 1., .102),
+        handles=custom_lines, loc='upper center', 
+        facecolor='white', ncol=1, fontsize=8, frameon=False
+    )
+
+    plt.tight_layout()
+    plt.savefig(fig_out)
+    plt.close()
+
+
 def plot_precision_recall_curve(labels, probs, fig_out):
     lr_precision, lr_recall, _ = precision_recall_curve(labels, probs)
     lr_auc = auc(lr_recall, lr_precision)
@@ -762,6 +838,10 @@ def save_output(acc, output):
     help='nanopolish output table'
 )
 @click.option(
+    '-go', '--guppy_output', default='', 
+    help='nanopolish output table'
+)
+@click.option(
     '-ot', '--original_test', default='', 
     help='original_test'
 )
@@ -771,7 +851,7 @@ def save_output(acc, output):
 )
 def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies, 
     deepmp_accuracies_seq, deepsignal_output, deepsignal_probs, deepmod_accuracies, 
-    deepmod_output, nanopolish_output, original_test, output):
+    deepmod_output, nanopolish_output, guppy_output, original_test, output):
     out_fig = os.path.join(output, 'AUC_comparison.pdf')
 
     if deepmod_output:
@@ -779,6 +859,7 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
 
     if deepmp_output:
         deepmp = pd.read_csv(deepmp_output, sep='\t')
+        import pdb;pdb.set_trace()
 
         if deepmp_output_seq: 
             deepmp_acc = pd.read_csv(deepmp_accuracies, sep='\t')
@@ -858,6 +939,29 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
         
         out_prere = os.path.join(output, 'AUC_prec_recall_nanopolish.pdf')
         plot_precision_recall_curve_nanopolish(deepmp, merge, nanopolish_test, out_prere)
+
+    
+    if guppy_output:
+        
+        guppy = pd.read_csv(guppy_output, sep='\t')
+        guppy['id'] = guppy['#chromosome'] + '_' + \
+            guppy['start'].astype(str) + '_' + guppy['strand'] + '_' + \
+                guppy['start'].astype(str) + '_' + guppy['readnames']
+        import pdb;pdb.set_trace()
+        guppy_test = pd.merge(guppy, original, on='id', how='inner')
+        precision, recall, f_score, _ = precision_recall_fscore_support(
+            guppy_test[11].values, guppy_test['Prediction'].values, average='binary'
+        )
+
+        guppy_acc = round(1 - np.argwhere(guppy_test[11].values != \
+            guppy_test['Prediction'].values).shape[0] / \
+                len(guppy_test[11].values), 5)
+        import pdb;pdb.set_trace()
+        fig_out = os.path.join(output, 'comparison_guppy.pdf')
+        plot_ROC_guppy(deepmp, merge, nanopolish_test, guppy_test, fig_out)   
+        
+        # out_prere = os.path.join(output, 'AUC_prec_recall_guppy.pdf')
+        # plot_precision_recall_curve_guppy(deepmp, merge, guppy_test, out_prere)
         
     
     # save_output([precision, recall, f_score], output) 
