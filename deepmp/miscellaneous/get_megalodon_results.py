@@ -1,38 +1,34 @@
 #!/usr/bin/envs python3
 
 import os
+import sys
 import click 
 import numpy as np
 import pandas as pd 
 
 from tqdm import tqdm
 
-
-def _write_to_file(file, content, attach=False):
-    if attach and os.path.exists(file):
-        open_flag = 'a'
-    else:
-        open_flag = 'w'
-
-    with open(file, open_flag) as f:
-        f.write(str(content))
-
+sys.path.append('../')
+import deepmp.utils as ut
 
 def load_txt(path):
-    chrom, read_id, loc_in_genome_start, loc_in_genome_end, prob_cs = [], [], [], [], []
+    chrom, read_id, loc_in_genome_start, loc_in_genome_end, \
+        prob_cs, strands = [], [], [], [], [], []
     with open(path, 'r') as f:
         for line in tqdm(f.readlines()):
-            ch, rid, gen_s, gen_e, pcs = arrange_line(line.split('\t'))
+            ch, rid, gen_s, gen_e, pcs, strand = arrange_line(line.split('\t'))
             chrom.append(ch); read_id.append(rid); prob_cs.append(pcs)
             loc_in_genome_start.append(gen_s); loc_in_genome_end.append(gen_e)
+            strands.append(strand)
 
     chrom_all = np.concatenate(chrom)        
+    strand_all = np.concatenate(strands)        
     read_id_all = np.concatenate(read_id)        
     prob_cs_all = np.concatenate(prob_cs)        
     loc_in_genome_start_all = np.concatenate(loc_in_genome_start)        
     loc_in_genome_end_all = np.concatenate(loc_in_genome_end)        
-    import pdb;pdb.set_trace()
-    return pd.DataFrame(list(zip(chrom_all, read_id_all, \
+
+    return pd.DataFrame(list(zip(chrom_all, read_id_all, strand_all, \
         loc_in_genome_start_all, loc_in_genome_end_all, prob_cs_all)))
 
 
@@ -54,6 +50,7 @@ def arrange_line(line):
             loc_in_genome_start.append(start_read + pos_cs[j + sum_pre])
             loc_in_genome_end.append(start_read + pos_cs[j + sum_pre] + 1)
             sum_pre += j + 1
+            strand.append('+')
         except:
             pos_cs = [i for i, ltr in enumerate(line[4]) if ltr == 'G']
             loc_in_read_start.append(pos_cs[j + sum_pre])
@@ -61,30 +58,41 @@ def arrange_line(line):
             loc_in_genome_start.append(start_read + pos_cs[j + sum_pre])
             loc_in_genome_end.append(start_read + pos_cs[j + sum_pre] + 1)
             sum_pre += j + 1
+            strand.append('-')
 
-    return chrom, read_id, loc_in_genome_start, loc_in_genome_end, prob_cs
-    
-    
-def arrange_results(data):
-    import pdb;pdb.set_trace()
+    return chrom, read_id, loc_in_genome_start, loc_in_genome_end, prob_cs, strand
 
 
 # ------------------------------------------------------------------------------
 # Click
 # ------------------------------------------------------------------------------
 
-@click.command(short_help='SVM accuracy output')
+@click.command(short_help='Script to obtain megalodon output')
 @click.option(
     '-mp', '--megalodon_path', required=True, 
     help='Output table from megalodon from sam'
 )
 @click.option(
+    '-dr', '--dict_reads', required=True, 
+    help='dict reads'
+)
+@click.option(
     '-o', '--output', default='', help='output path'
 )
-def main(megalodon_path, output):
+def main(megalodon_path, dict_reads, output):
     megalodon = load_txt(megalodon_path)
 
-    df_megalodon = arrange_results(megalodon)
+    if dict_reads: 
+        dict_names = ut.load_obj(dict_reads)  
+        dict_names = {v: k for k, v in dict_names.items()}
+        aa = megalodon[1] + '.txt'
+        bb = [dict_names[x] for x in aa.tolist()]
+        import pdb;pdb.set_trace()
+        megalodon[6] = bb
+    megalodon.to_csv(
+        os.path.join(output, 'megalodon_results.tsv'), sep='\t', 
+        index=None, header=None
+    )
     import pdb;pdb.set_trace()
 
 
