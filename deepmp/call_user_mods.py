@@ -240,12 +240,17 @@ def call_mods_user(model_type, test_file, trained_model, kmer, output,
             test = build_test_df(data_id)
             #TODO DELETE
             test['methyl_label'] = labels
+            test['pred_prob'] = pred
+            test['inferred_label'] = inferred
 
+        
+        test.to_csv(os.path.join(output, 'mod_unmod_pred_table.tsv'), sep='\t', index=None)
+        import pdb;pdb.set_trace()
         #TODO output proper df with all the information. put columns at different thresholds as well as the min max for testing
         all_preds = do_per_position_analysis(test, pred, inferred, output, pred_type)
 
         all_preds.to_csv(os.path.join(output, 'human_chr1_table.tsv'), sep='\t', index=None)
-        # test.to_csv(os.path.join(output, '60_mod_40_unmod_pred_table.tsv'), sep='\t', index=None)
+        
         
         uu = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_005'], average='binary')
         xx = precision_recall_fscore_support(all_preds['meth_label'], all_preds['pred_01'], average='binary')

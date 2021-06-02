@@ -457,7 +457,7 @@ def plot_ROC_megalodon(deepmp, deepsignal, Nanopolish, Guppy, megalodon, fig_out
         Guppy[11].values, Guppy['prob_meth'].values
     )
     fpr_megalodon, tpr_megalodon, thresholds = roc_curve(
-        megalodon[11].values, megalodon['5_x'].values
+        megalodon[11].values, megalodon['7_x'].values
     )
 
     roc_auc_dmp = auc(fpr_dmp, tpr_dmp)
@@ -1236,19 +1236,17 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
         
 
     if megalodon_output:
-        
         megalodon = pd.read_csv(megalodon_output, sep='\t', header=None)
-        meg_pos = megalodon[megalodon[5] > 0.8]
-        meg_neg = megalodon[megalodon[5] < 0.2]
+        meg_pos = megalodon[megalodon[7] > 0.8]
+        meg_neg = megalodon[megalodon[7] < 0.2]
         megalodon = pd.concat([meg_pos, meg_neg])
-
-        megalodon['Prediction']  = megalodon[5].apply(lambda x: 1 if x > 0.5 else 0)
+        
+        megalodon['Prediction']  = megalodon[7].apply(lambda x: 1 if x > 0.5 else 0)
         original = pd.read_csv(original_test, sep='\t', header=None).drop_duplicates()
-        original['id'] =  original[0] + '_' + (original[1] + 2).astype(str) + '_' + \
-            original[2] + '_' + (original[3] + 2).astype(str) + '_' + original[4]
-        megalodon['id'] = megalodon[0] + '_' + \
-            megalodon[4].astype(str) + '_' + megalodon[2] + '_' + \
-                megalodon[4].astype(str) + '_' + megalodon[6]
+        original['id'] =  original[0] + '_' + (original[1]).astype(str) + '_' + \
+            original[2] + '_' + (original[3]).astype(str) + '_' + original[4]
+        megalodon['id'] = megalodon[1] + '_' + megalodon[3].astype(str) + '_' + \
+            megalodon[2] + '_' + megalodon[3].astype(str) + '_' + megalodon[9]
         
         megalodon_test = pd.merge(megalodon, original, on='id', how='inner')
 

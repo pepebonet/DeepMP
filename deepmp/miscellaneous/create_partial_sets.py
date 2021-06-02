@@ -27,11 +27,11 @@ def main(features, output):
     # sets = [(0, 100), (1, 99), (2, 98), (3, 97), (4, 96), (5, 95), (6, 94), (7, 93), (8, 92), (9, 91), (10, 90)]
     # sets = [(8, 92)]
 
-    feats = pd.read_csv(features, header=None, sep='\t', names=names_all, nrows=4000000)
+    feats = pd.read_csv(features, header=None, sep='\t', names=names_all)
 
     treated = feats[feats['methyl_label'] == 1]
     untreated = feats[feats['methyl_label'] == 0]
-
+    
     treat_shape = treated.shape[0]
     import pdb;pdb.set_trace()
     for el in tqdm(sets): 
