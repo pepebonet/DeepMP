@@ -230,6 +230,11 @@ def extract_preds_deepmp(predictions_file):
 
     for file in tqdm(predictions_file):
         test = pd.read_csv(file, sep='\t').drop_duplicates()
+
+        test_min = test[test['pred_prob'] < 0.2]
+        test_max = test[test['pred_prob'] > 0.8]
+        test = pd.concat([test_min, test_max])
+
         label.append(file.rsplit('/')[-2].split('_')[1])
         test['id'] = test['chrom'] + '_' + test['strand'] + '_' + test['pos'].astype(str)
 
@@ -431,7 +436,7 @@ def extract_preds_guppy(guppy_path, ids):
     accuracy_01, accuracy_005, accuracy_001 = [], [], []
 
     guppy = pd.read_csv(guppy_path, sep='\t')
-    import pdb;pdb.set_trace()
+
     guppy['inferred_label'] = guppy['Prediction']
     guppy['pred_prob'] = guppy['prob_meth']
     guppy['id_per_read'] = guppy['#chromosome'] + '_' + \
@@ -489,8 +494,8 @@ def extract_preds_megalodon(megalodon_path, ids):
     meg_pos = megalodon[megalodon[7] > 0.8]
     meg_neg = megalodon[megalodon[7] < 0.2]
     megalodon = pd.concat([meg_pos, meg_neg])
+
     megalodon['inferred_label']  = megalodon[7].apply(lambda x: 1 if x > 0.5 else 0)
-    import pdb;pdb.set_trace()
     megalodon['pred_prob'] = megalodon[7]
     megalodon['id_per_read'] = megalodon[1] + '_' + \
         megalodon[3].astype(str)  + '_' + megalodon[9]
@@ -536,21 +541,25 @@ def extract_preds_megalodon(megalodon_path, ids):
             (q1_fn, median_fn, q3_fn, label, 'Megalodon')
 
 
-def plot_comparison(deepmp, deepsignal, deepmod, output):
+def plot_comparison(deepmp, deepsignal, nanopolish, guppy, megalodon, output):
     # sns.set_theme(style="darkgrid", palette = "Set2")
     fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
 
     custom_lines = []
-    for pred in [deepmp, deepsignal, deepmod]:
+    for pred in [deepmp, deepsignal, nanopolish, guppy, megalodon]:
         custom_lines.append(
             plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
             mew=1, color=palette_dict[pred[4]], label=pred[4])[0] 
         )
 
         if pred[4] == 'DeepMP':
-            pos = -3
-        elif pred[4] == 'DeepMod':
-            pos = 3
+            pos = -4
+        elif pred[4] == 'Megalodon':
+            pos = -2
+        elif pred[4] == 'Nanopolish':
+            pos = 2
+        elif pred[4] == 'Guppy':
+            pos = 4
         else:
             pos = 0
 
@@ -582,21 +591,25 @@ def plot_comparison(deepmp, deepsignal, deepmod, output):
     plt.close()
 
 
-def plot_fp_fn(deepmp, deepsignal, deepmod, output, label):
+def plot_fp_fn(deepmp, deepsignal, nanopolish, guppy, megalodon, output, label):
     # sns.set_theme(style="darkgrid", palette = "Set2")
     fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
 
     custom_lines = []
-    for pred in [deepmp, deepsignal, deepmod]:
+    for pred in [deepmp, deepsignal, nanopolish, guppy, megalodon]:
         custom_lines.append(
             plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
             mew=1, color=palette_dict[pred[4]], label=pred[4])[0] 
         )
 
         if pred[4] == 'DeepMP':
-            pos = -3
-        elif pred[4] == 'DeepMod':
-            pos = 3
+            pos = -4
+        elif pred[4] == 'Megalodon':
+            pos = -2
+        elif pred[4] == 'Nanopolish':
+            pos = 2
+        elif pred[4] == 'Guppy':
+            pos = 4
         else:
             pos = 0
 
@@ -902,30 +915,43 @@ def main(predictions_deepmp, predictions_deepsignal, predictions_deepmod,
     #     predictions_deepmod, output
     # )
     
-    # preds_nanopolish, nanopolish_fp, nanopolish_fn = extract_preds_nanopolish(
-    #     predictions_nanopolish, ids
-    # )
-    # import pdb;pdb.set_trace()
-    # preds_guppy, guppy_fp, guppy_fn = extract_preds_guppy(
-    #     predictions_guppy, ids
-    # )
-    import pdb;pdb.set_trace()
+    preds_nanopolish, nanopolish_fp, nanopolish_fn = extract_preds_nanopolish(
+        predictions_nanopolish, ids
+    )
+    preds_guppy, guppy_fp, guppy_fn = extract_preds_guppy(
+        predictions_guppy, ids
+    )
     preds_megalodon, megalodon_fp, megalodon_fn = extract_preds_megalodon(
         predictions_megalodon, ids
     )
-    
+    import pdb;pdb.set_trace()
     
 
     if around_zero:
-        plot_pos_barplot_around_0(preds_deepmp, preds_deepsignal, preds_deepmod, output)
-        # plot_pos_accuracy_around_0(preds_deepmp, preds_deepsignal, preds_deepmod, output) 
+        plot_pos_barplot_around_0(
+            preds_deepmp, preds_deepsignal, preds_nanopolish, 
+            preds_guppy, preds_megalodon, output
+        )
+        # plot_pos_accuracy_around_0(preds_deepmp, preds_deepsignal, preds_nanopolish, preds_guppy, preds_megalodon, output) 
     
     else:
-        plot_comparison(preds_deepmp, preds_deepsignal, preds_deepmod, output)
-        plot_pos_accuracy(preds_deepmp, preds_deepsignal, preds_deepmod, output)
-        plot_pos_accuracy_beta(preds_deepmp, preds_deepsignal, preds_deepmod, output)
-        plot_fp_fn(deepmp_fp, deepsignal_fp, deepmod_fp, output, 'Positive')
-        plot_fp_fn(deepmp_fn, deepsignal_fn, deepmod_fn, output, 'Negative')
+        plot_comparison(
+            preds_deepmp, preds_deepsignal, preds_nanopolish, 
+            preds_guppy, preds_megalodon, output)
+        # plot_pos_accuracy(
+        #     preds_deepmp, preds_deepsignal, preds_nanopolish, 
+        #     preds_guppy, preds_megalodon, output)
+        # plot_pos_accuracy_beta(
+        #     preds_deepmp, preds_deepsignal, preds_nanopolish, 
+        #     preds_guppy, preds_megalodon, output)
+        plot_fp_fn(
+            deepmp_fp, deepsignal_fp, nanopolish_fp, guppy_fp, 
+            megalodon_fp, output, 'Positive'
+        )
+        plot_fp_fn(
+            deepmp_fn, deepsignal_fn, nanopolish_fn, guppy_fn, 
+            megalodon_fn, output, 'Negative'
+        )
 
 
 if __name__ == '__main__':
