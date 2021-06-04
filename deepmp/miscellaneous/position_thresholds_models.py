@@ -15,8 +15,8 @@ from sklearn.metrics import precision_recall_fscore_support
 epsilon = 0.05  
 gamma_val = 0.80
 beta_a = 1
-beta_b = 22
-beta_c = 14.5
+beta_b = 20.86
+beta_c = 21.25
 fp = 0.02  
 fn = 0.03  
 
@@ -163,7 +163,7 @@ def pred_deepsignal_pos(df, pred_deepsignal):
     return pred_deepsignal
 
 
-def do_per_position_analysis(df):
+def do_per_position_analysis(df, label):
 
     cov = []; pred_005 = []; pred_01 = []; pred_02 = []
     meth_label = []; ids = []; pred_beta = []; prob_beta_mod = []
@@ -171,25 +171,29 @@ def do_per_position_analysis(df):
     true_meth_freq = []; pred_deepsignal = []; pred_001 = []
 
     for i, j in df.groupby('id'):
-        meth_freq_diff.append(1 - (np.absolute(j.inferred_label.values - j.methyl_label).sum() / len(j)))
-        true_meth_freq.append(j.methyl_label.sum() / len(j))
-        fp_freq.append(j.inferred_label.values[np.argwhere(j.methyl_label.values == 0)].sum() \
-            / len(np.argwhere(j.methyl_label.values == 0)))
-        fn_freq.append((len(np.argwhere(j.methyl_label.values == 1)) - \
-            j.inferred_label.values[np.argwhere(j.methyl_label.values == 1)].sum()) \
-            / len(np.argwhere(j.methyl_label.values == 1)))
+            meth_freq = j['inferred_label'].sum() / j.shape[0] * 100
+            if meth_freq < int(label[0]) + 10 and meth_freq > int(label[0]) - 10 and j.shape[0] >= 5:
+                # import pdb;pdb.set_trace()
+                meth_freq_diff.append(1 - (np.absolute(j.inferred_label.values - j.methyl_label).sum() / len(j)))
+                true_meth_freq.append(j.methyl_label.sum() / len(j))
+                fp_freq.append(j.inferred_label.values[np.argwhere(j.methyl_label.values == 0)].sum() \
+                    / len(np.argwhere(j.methyl_label.values == 0)))
+                fn_freq.append((len(np.argwhere(j.methyl_label.values == 1)) - \
+                    j.inferred_label.values[np.argwhere(j.methyl_label.values == 1)].sum()) \
+                    / len(np.argwhere(j.methyl_label.values == 1)))
 
-        pred_deepsignal = pred_deepsignal_pos(j, pred_deepsignal)
+                pred_deepsignal = pred_deepsignal_pos(j, pred_deepsignal)
 
-        pred_001, pred_005, pred_01, pred_02, meth_label = pred_site_all(
-            j, pred_001, pred_005, pred_01, pred_02, meth_label
-        )
+                pred_001, pred_005, pred_01, pred_02, meth_label = pred_site_all(
+                    j, pred_001, pred_005, pred_01, pred_02, meth_label
+                )
 
-        pred_beta, prob_beta_mod, prob_beta_unmod = beta_stats(
-            j['pred_prob'].values, pred_beta, prob_beta_mod, prob_beta_unmod
-        )
-        
-        cov.append(len(j)); ids.append(i)
+                pred_beta, prob_beta_mod, prob_beta_unmod = beta_stats(
+                    j['pred_prob'].values, pred_beta, prob_beta_mod, prob_beta_unmod
+                )
+                
+                cov.append(len(j)); ids.append(i)
+
 
     preds = pd.DataFrame()
     preds['id'] = ids
@@ -207,7 +211,6 @@ def do_per_position_analysis(df):
     preds['true_meth_freq'] = true_meth_freq
     preds['fn_freq'] = fn_freq
     preds['fp_freq'] = fp_freq
-
     #TODO be careful with this. You might need to end up using bigger partial sets
     return preds[preds['cov'] >= 5]
 
@@ -238,7 +241,7 @@ def extract_preds_deepmp(predictions_file):
         label.append(file.rsplit('/')[-2].split('_')[1])
         test['id'] = test['chrom'] + '_' + test['strand'] + '_' + test['pos'].astype(str)
 
-        all_preds = do_per_position_analysis(test)
+        all_preds = do_per_position_analysis(test, label)
 
         labels = all_preds['meth_label'].values
         inf_beta = all_preds['pred_beta'].values
@@ -291,7 +294,7 @@ def extract_preds_deepsignal(predictions_file, ids):
 
         label.append(file.rsplit('/')[-2].split('_')[1])
 
-        all_preds = do_per_position_analysis(test)
+        all_preds = do_per_position_analysis(test, label)
 
         labels = all_preds['meth_label'].values
         inf_dps = all_preds['pred_deepsignal'].values
@@ -338,7 +341,7 @@ def extract_preds_deepmod(predictions_file, output):
         
         label.append(file.rsplit('/', 2)[1].split('_')[0])
 
-        all_preds = do_per_position_analysis(test)
+        all_preds = do_per_position_analysis(test, label)
 
         labels = all_preds['meth_label'].values
         inf_02 = all_preds['pred_02'].values
@@ -393,7 +396,7 @@ def extract_preds_nanopolish(nanopolish_path, ids):
 
         test = pd.merge(file[0], nanopolish, on='id_per_read', how='inner')
 
-        all_preds = do_per_position_analysis(test)
+        all_preds = do_per_position_analysis(test, label)
 
         labels = all_preds['meth_label'].values
         inf_02 = all_preds['pred_02'].values
@@ -448,7 +451,7 @@ def extract_preds_guppy(guppy_path, ids):
 
         test = pd.merge(file[0], guppy, on='id_per_read', how='inner')
 
-        all_preds = do_per_position_analysis(test)
+        all_preds = do_per_position_analysis(test, label)
 
         labels = all_preds['meth_label'].values
         inf_02 = all_preds['pred_02'].values
@@ -506,7 +509,7 @@ def extract_preds_megalodon(megalodon_path, ids):
 
         test = pd.merge(file[0], megalodon, on='id_per_read', how='inner')
 
-        all_preds = do_per_position_analysis(test)
+        all_preds = do_per_position_analysis(test, label)
 
         labels = all_preds['meth_label'].values
         inf_02 = all_preds['pred_02'].values
@@ -546,30 +549,30 @@ def plot_comparison(deepmp, deepsignal, nanopolish, guppy, megalodon, output):
     fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
 
     custom_lines = []
-    for pred in [deepmp, deepsignal, nanopolish, guppy, megalodon]:
+    for pred in [deepmp, megalodon, deepsignal, nanopolish, guppy]:
         custom_lines.append(
-            plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
-            mew=1, color=palette_dict[pred[4]], label=pred[4])[0] 
+            plt.plot([],[], marker="o", ms=8, ls="", mec='black', 
+            mew=0.5, color=palette_dict[pred[4]], label=pred[4])[0] 
         )
 
         if pred[4] == 'DeepMP':
-            pos = -4
+            pos = -3
         elif pred[4] == 'Megalodon':
-            pos = -2
+            pos = -1.5
         elif pred[4] == 'Nanopolish':
-            pos = 2
+            pos = 1.5
         elif pred[4] == 'Guppy':
-            pos = 4
+            pos = 3
         else:
             pos = 0
-
+        # import pdb;pdb.set_trace()
         yerr = np.array([[np.asarray(pred[1]) - np.asarray(pred[0])], [np.asarray(pred[2]) - np.asarray(pred[1])]])
         yerr = yerr.reshape(2, yerr.shape[2])
 
         plt.errorbar(
             np.asarray(pred[3]).astype(np.int) + pos, np.asarray(pred[1]), yerr=yerr, 
-            marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
-            ecolor='black', capsize=2.5, elinewidth=1, capthick=1, c=palette_dict[pred[4]]
+            marker='o', mfc=palette_dict[pred[4]], mec='black', ms=8, mew=0.5, 
+            ecolor='black', capsize=1, capthick=0.5,  fmt=' ', elinewidth=0.8
         )
 
     ax.set_xlabel("Methylation percentage", fontsize=12)
@@ -603,13 +606,13 @@ def plot_fp_fn(deepmp, deepsignal, nanopolish, guppy, megalodon, output, label):
         )
 
         if pred[4] == 'DeepMP':
-            pos = -4
+            pos = -3
         elif pred[4] == 'Megalodon':
-            pos = -2
+            pos = -1.5
         elif pred[4] == 'Nanopolish':
-            pos = 2
+            pos = 1.5
         elif pred[4] == 'Guppy':
-            pos = 4
+            pos = 3
         else:
             pos = 0
 
@@ -625,8 +628,8 @@ def plot_fp_fn(deepmp, deepsignal, nanopolish, guppy, megalodon, output, label):
 
         plt.errorbar(
             np.asarray(y_axis_labels).astype(np.int) + pos, np.asarray(pred[1]), yerr=yerr, 
-            marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
-            ecolor='black', capsize=2.5, elinewidth=1, capthick=1, c=palette_dict[pred[4]]
+            marker='o', mfc=palette_dict[pred[4]], mec='black', ms=8, mew=0.5, 
+            ecolor='black', capsize=1, capthick=0.5,  fmt=' ', elinewidth=0.8
         )
 
     ax.set_xlabel("Methylation percentage", fontsize=12)
@@ -655,34 +658,44 @@ def plot_fp_fn(deepmp, deepsignal, nanopolish, guppy, megalodon, output, label):
     plt.close()
 
 
-def plot_pos_accuracy(deepmp, deepsignal, deepmod, output):
+def plot_pos_accuracy(deepmp, deepsignal, nanopolish, guppy, megalodon, output):
     fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
 
     custom_lines = []
-    for pred in [deepmp, deepsignal, deepmod]:
+    for pred in [deepmp, deepsignal, nanopolish, guppy, megalodon]:
         custom_lines.append(
             plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
             mew=1, color=palette_dict[pred[4]], label=pred[4])[0] 
         )
-
+        import pdb;pdb.set_trace()
         if pred[4] == 'DeepMP':
             pos = -3
-            plt.plot(
-                np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[5][1:], 
-                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
-                c=palette_dict[pred[4]]
-            )
-        elif pred[4] == 'DeepMod':
+        elif pred[4] == 'Megalodon':
+            pos = -1.5
+        elif pred[4] == 'Nanopolish':
+            pos = 1.5
+        elif pred[4] == 'Guppy':
             pos = 3
-            plt.plot(
-                np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[6][1:], 
-                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
-                c=palette_dict[pred[4]]
-            )
         else:
             pos = 0
+
+        if pred[4] == 'DeepMPsafas':
             plt.plot(
-                np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[6][1:], 
+                np.asarray(pred[3]).astype(np.int)[:-1] + pos, pred[5][:-1], 
+                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
+                c=palette_dict[pred[4]]
+            )
+        # elif pred[4] == 'DeepSignal':
+        #     pos = 3
+        #     plt.plot(
+        #         np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[6][1:], 
+        #         marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
+        #         c=palette_dict[pred[4]]
+        #     )
+        else:
+            # import pdb; pdb.set_trace()
+            plt.plot(
+                np.asarray(pred[3]).astype(np.int)[:-1] + pos, pred[6][:-1], 
                 marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
                 c=palette_dict[pred[4]]
             )
@@ -706,11 +719,11 @@ def plot_pos_accuracy(deepmp, deepsignal, deepmod, output):
     plt.close()
 
 
-def plot_pos_accuracy_beta(deepmp, deepsignal, deepmod, output):
+def plot_pos_accuracy_beta(deepmp, deepsignal, nanopolish, guppy, megalodon, output):
     fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
 
     custom_lines = []
-    for pred in [deepmp, deepsignal, deepmod]:
+    for pred in [deepmp, deepsignal, nanopolish, guppy, megalodon]:
         custom_lines.append(
             plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
             mew=1, color=palette_dict[pred[4]], label=pred[4])[0] 
@@ -718,25 +731,36 @@ def plot_pos_accuracy_beta(deepmp, deepsignal, deepmod, output):
 
         if pred[4] == 'DeepMP':
             pos = -3
-            plt.plot(
-                np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[5][1:], 
-                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
-                c=palette_dict[pred[4]]
-            )
-        elif pred[4] == 'DeepMod':
+        elif pred[4] == 'Megalodon':
+            pos = -1.5
+        elif pred[4] == 'Nanopolish':
+            pos = 1.5
+        elif pred[4] == 'Guppy':
             pos = 3
-            plt.plot(
-                np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[5][1:], 
-                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
-                c=palette_dict[pred[4]]
-            )
         else:
             pos = 0
-            plt.plot(
-                np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[5][1:], 
-                marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
-                c=palette_dict[pred[4]]
-            )
+
+        # if pred[4] == 'DeepMP':
+        #     pos = -3
+        plt.plot(
+            np.asarray(pred[3]).astype(np.int)[:-1] + pos, pred[5][:-1], 
+            marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
+            c=palette_dict[pred[4]]
+        )
+        # elif pred[4] == 'DeepSignal':
+        #     pos = 3
+        #     plt.plot(
+        #         np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[5][1:], 
+        #         marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
+        #         c=palette_dict[pred[4]]
+        #     )
+        # else:
+        #     pos = 0
+        #     plt.plot(
+        #         np.asarray(pred[3]).astype(np.int)[1:] + pos, pred[5][1:], 
+        #         marker='o', mfc=palette_dict[pred[4]], mec='black', ms=7, mew=1, 
+        #         c=palette_dict[pred[4]]
+        #     )
 
     ax.set_xlabel("Methylation percentage", fontsize=12)
     ax.set_ylabel("Position Accuracy", fontsize=12)
@@ -868,6 +892,16 @@ def plot_pos_barplot_around_0(deepmp, deepsignal, deepmod, output):
     plt.close()
 
 
+def clean_preds(preds):
+    import ast; cleaned = []; 
+    for el in preds: 
+        try:
+            cleaned.append(ast.literal_eval(el))
+        except: 
+            cleaned.append(el)
+    return cleaned
+
+
 @click.command(short_help='Convert DeepMod output into accuracy scores.')
 @click.option(
     '-pd', '--predictions_deepmp', multiple=True,
@@ -924,9 +958,27 @@ def main(predictions_deepmp, predictions_deepsignal, predictions_deepmod,
     preds_megalodon, megalodon_fp, megalodon_fn = extract_preds_megalodon(
         predictions_megalodon, ids
     )
-    import pdb;pdb.set_trace()
-    
 
+    import pdb;pdb.set_trace()
+    #TODO remove 
+    # preds_deepmp = clean_preds(pd.read_csv(os.path.join(output, 'preds_deepmp.tsv'), sep='\t', header=None).values[0])
+    # preds_deepsignal = clean_preds(pd.read_csv(os.path.join(output, 'preds_deepsignal.tsv'), sep='\t', header=None).values[0])
+    # preds_guppy = clean_preds(pd.read_csv(os.path.join(output, 'preds_guppy.tsv'), sep='\t', header=None).values[0])
+    # preds_nanopolish = clean_preds(pd.read_csv(os.path.join(output, 'preds_nanopolish.tsv'), sep='\t', header=None).values[0])
+    # preds_megalodon = clean_preds(pd.read_csv(os.path.join(output, 'preds_megalodon.tsv'), sep='\t', header=None).values[0])
+
+    # deepmp_fp = clean_preds(pd.read_csv(os.path.join(output, 'deepmp_fp.tsv'), sep='\t', header=None).values[0])
+    # deepsignal_fp = clean_preds(pd.read_csv(os.path.join(output, 'deepsignal_fp.tsv'), sep='\t', header=None).values[0])
+    # guppy_fp = clean_preds(pd.read_csv(os.path.join(output, 'guppy_fp.tsv'), sep='\t', header=None).values[0])
+    # nanopolish_fp = clean_preds(pd.read_csv(os.path.join(output, 'nanopolish_fp.tsv'), sep='\t', header=None).values[0])
+    # megalodon_fp = clean_preds(pd.read_csv(os.path.join(output, 'megalodon_fp.tsv'), sep='\t', header=None).values[0])
+
+    # deepmp_fn = clean_preds(pd.read_csv(os.path.join(output, 'deepmp_fn.tsv'), sep='\t', header=None).values[0])
+    # deepsignal_fn = clean_preds(pd.read_csv(os.path.join(output, 'deepsignal_fn.tsv'), sep='\t', header=None).values[0])
+    # guppy_fn = clean_preds(pd.read_csv(os.path.join(output, 'guppy_fn.tsv'), sep='\t', header=None).values[0])
+    # nanopolish_fn = clean_preds(pd.read_csv(os.path.join(output, 'nanopolish_fn.tsv'), sep='\t', header=None).values[0])
+    # megalodon_fn = clean_preds(pd.read_csv(os.path.join(output, 'megalodon_fn.tsv'), sep='\t', header=None).values[0])
+    import pdb;pdb.set_trace()
     if around_zero:
         plot_pos_barplot_around_0(
             preds_deepmp, preds_deepsignal, preds_nanopolish, 
@@ -938,12 +990,13 @@ def main(predictions_deepmp, predictions_deepsignal, predictions_deepmod,
         plot_comparison(
             preds_deepmp, preds_deepsignal, preds_nanopolish, 
             preds_guppy, preds_megalodon, output)
-        # plot_pos_accuracy(
-        #     preds_deepmp, preds_deepsignal, preds_nanopolish, 
-        #     preds_guppy, preds_megalodon, output)
-        # plot_pos_accuracy_beta(
-        #     preds_deepmp, preds_deepsignal, preds_nanopolish, 
-        #     preds_guppy, preds_megalodon, output)
+        # import pdb;pdb.set_trace()
+        plot_pos_accuracy(
+            preds_deepmp, preds_deepsignal, preds_nanopolish, 
+            preds_guppy, preds_megalodon, output)
+        plot_pos_accuracy_beta(
+            preds_deepmp, preds_deepsignal, preds_nanopolish, 
+            preds_guppy, preds_megalodon, output)
         plot_fp_fn(
             deepmp_fp, deepsignal_fp, nanopolish_fp, guppy_fp, 
             megalodon_fp, output, 'Positive'
