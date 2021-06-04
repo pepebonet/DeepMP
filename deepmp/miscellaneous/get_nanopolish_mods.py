@@ -61,6 +61,19 @@ def get_readname_column(df, dict):
     return df
 
 
+def get_positions_only(df, positions):
+    
+    df = pd.merge(df, positions, right_on=['chr', 'start'], \
+        left_on=['chromosome', 'start'])
+
+    label = np.zeros(len(df), dtype=int)
+    label[np.argwhere(df['status'].values == 'mod')] = 1
+
+    df['methyl_label'] = label
+    import pdb;pdb.set_trace()
+    return df
+
+
 @click.command(short_help='get modifications from nanopolish')
 @click.option(
     '-no', '--nanopolish_output', required=True, 
@@ -70,10 +83,13 @@ def get_readname_column(df, dict):
     '-dr', '--dict_reads', default='', help='dictionary with readnames'
 )
 @click.option(
+    '-p', '--positions', default='', help='position to filter out'
+)
+@click.option(
     '-o', '--output', required=True, 
     help='Path to save modifications called'
 )
-def main(nanopolish_output, dict_reads, output):
+def main(nanopolish_output, dict_reads, positions, output):
 
     nanopolish = pd.read_csv(nanopolish_output, sep='\t')
 
@@ -86,13 +102,17 @@ def main(nanopolish_output, dict_reads, output):
 
     df_calling = get_labels(pd.concat([single_cpgs, multiple_df]))
 
+    if positions:
+        positions = pd.read_csv(positions, sep='\t')
+        df_calling = get_positions_only(df_calling, positions)
+
     if dict_reads: 
         dict_names = ut.load_obj(dict_reads)  
         dict_names = {v: k for k, v in dict_names.items()}
         aa = df_calling['read_name'] + '.txt'
         bb = [dict_names[x] for x in aa.tolist()]
         df_calling['readnames'] = bb
-    import pdb;pdb.set_trace()
+
     df_calling.to_csv(
         os.path.join(output, 'mods_nanopolish_readnames.tsv'), sep='\t', index=None
     )

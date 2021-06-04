@@ -57,6 +57,21 @@ def get_readname_column(df, dict):
     return df
 
 
+def get_positions_only(df, positions):
+    
+    df = pd.merge(
+        df, positions, right_on=['chr', 'start', 'strand'], 
+        left_on=['#chromosome', 'start', 'strand']
+    )
+
+    label = np.zeros(len(df), dtype=int)
+    label[np.argwhere(df['status'].values == 'mod')] = 1
+
+    df['methyl_label'] = label
+
+    return df
+
+
 @click.command(short_help='get modifications from guppy')
 @click.option(
     '-go', '--guppy_output', required=True, 
@@ -66,24 +81,31 @@ def get_readname_column(df, dict):
     '-dr', '--dict_reads', default='', help='dictionary with readnames'
 )
 @click.option(
+    '-p', '--positions', default='', help='position to filter out'
+)
+@click.option(
     '-o', '--output', required=True, 
     help='Path to save modifications called'
 )
-def main(guppy_output, dict_reads, output):
+def main(guppy_output, dict_reads, positions, output):
 
     guppy = pd.read_csv(guppy_output, sep='\t')
     
     guppy = get_filters_and_probs(guppy)
 
     df_calling = get_labels(guppy)
-    import pdb;pdb.set_trace()
+
+    if positions:
+        positions = pd.read_csv(positions, sep='\t')
+        df_calling = get_positions_only(df_calling, positions)
+    
     if dict_reads: 
         dict_names = ut.load_obj(dict_reads)  
         dict_names = {v: k for k, v in dict_names.items()}
         aa = df_calling['read_name'] + '.txt'
         bb = [dict_names[x] for x in aa.tolist()]
         df_calling['readnames'] = bb
-    import pdb;pdb.set_trace()
+
     df_calling.to_csv(
         os.path.join(output, 'mods_guppy_readnames.tsv'), sep='\t', index=None
     )
