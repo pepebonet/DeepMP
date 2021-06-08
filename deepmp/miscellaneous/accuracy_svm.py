@@ -60,7 +60,8 @@ def get_barplot(deepmp_accuracies, deepsignal_accs, nanopolish_accs, guppy_accs,
     df_acc = pd.concat(
         [deepmp_acc, megalodon_acc, deepsignal_acc, nanopolish_acc, guppy_acc]
     )
-
+    import pdb;pdb.set_trace()
+    df_acc.to_csv(os.path.join(output, 'accuracy_measurements_all_methods.tsv'), sep='\t', index=None)
     plot_barplot(df_acc, output)
 
 
@@ -548,6 +549,15 @@ def plot_ROC_megalodon(deepmp, deepsignal, Nanopolish, Guppy, megalodon, fig_out
     ax.set_ylabel("True Positive Rate", fontsize=12)
     # plt.xlabel('False Positive Rate')
     # plt.ylabel('True Positive Rate')
+    import pdb;pdb.set_trace()
+    aucs_df = pd.DataFrame([['AUC', 'AUC','AUC','AUC','AUC'], \
+        [roc_auc_dmp, roc_auc_ds, roc_auc_guppy, roc_auc_dmo, roc_auc_megalodon], \
+            ['DeepMP', 'DeepSignal','Guppy','Nanopolish','Megalodon']]).T
+            
+    aucs_df.to_csv(
+        os.path.join(fig_out.rsplit('/', 1)[0], 'aucs_all_methods.tsv'), 
+        sep='\t', index=None
+    )
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -1391,8 +1401,6 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
 
         accs_deepmp = [deepmp_acc, precision, recall, f_score]
 
-        import pdb;pdb.set_trace()
-
         if deepmp_output_seq: 
             deepmp_acc = pd.read_csv(deepmp_accuracies, sep='\t')
             deepmp_acc = deepmp_acc.T.reset_index()
@@ -1427,7 +1435,7 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
         plot_precision_recall_curve(deepmp['labels'].values, deepmp['probs'].values, out_prere)
         out_fig_deepmp = os.path.join(output, 'AUC_comparison_deepmp.pdf')
         plot_ROC_alone(deepmp, out_fig_deepmp)
-    import pdb;pdb.set_trace()
+
     if svm_output:
         svm = pd.read_csv(svm_output, sep=',')
         accuracy_svm = get_accuracy(svm)
@@ -1447,14 +1455,14 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
         merge = pd.merge(deepsignal, original, on='id', how='inner') 
 
         #TODO delete
-        merge_max = merge[merge['7_x'] > 0.55]
-        merge_min = merge[merge['7_x'] < 0.45]
-        merge = pd.concat([merge_min, merge_max]) 
+        # merge_max = merge[merge['7_x'] > 0.55]
+        # merge_min = merge[merge['7_x'] < 0.45]
+        # merge = pd.concat([merge_min, merge_max]) 
 
         precision, recall, f_score, _ = precision_recall_fscore_support(
             merge[11].values, merge['8_x'].values, average='binary'
         )
-        import pdb;pdb.set_trace()
+        # import pdb;pdb.set_trace()
         deepsignal_acc = round(1 - np.argwhere(merge[11].values != merge['8_x'].values).shape[0] / len(merge[11].values), 5)
         accs_deepsignal = [deepsignal_acc, precision, recall, f_score]
         # ut.save_output([test_acc, precision, recall, f_score], output, 'accuracy_measurements.txt')
@@ -1571,7 +1579,7 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
     if deepmod_output:
         fig_out = os.path.join(output, 'comparison_all.pdf')
         plot_ROC_all(deepmp, merge, deepmod, nanopolish_test, fig_out)   
-        import pdb;pdb.set_trace()
+        
         out_prere = os.path.join(output, 'AUC_prec_recall_all.pdf')
         plot_precision_recall_curve_all(deepmp, merge, deepmod, nanopolish_test, out_prere)
 
