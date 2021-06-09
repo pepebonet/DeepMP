@@ -11,26 +11,25 @@ sys.path.append('../')
 import deepmp.utils as ut
 
 
-def split_multiple_cpgs(record):
-    cpgs = []; static = record.values[3:]
+def split_multiple(record, motif):
+    motifs = []; static = record.values[3:]
     chrom = str(record['chromosome'])
     start = int(record['start'])
     end = int(record['end'])
     # find the position of the first CG dinucleotide
     sequence = record['sequence']
-    cg_pos = sequence.find("CG")
-    first_cg_pos = cg_pos
+    motif_pos = sequence.find(motif)
+    first_motif_pos = motif_pos
     
-    while cg_pos != -1:
-        key = [chrom, start + cg_pos - first_cg_pos, start + cg_pos - first_cg_pos]
-        cpgs.append(np.concatenate([key, static]))
-        cg_pos = sequence.find("CG", cg_pos + 1)
+    while motif_pos != -1:
+        key = [chrom, start + motif_pos - first_motif_pos, start + motif_pos - first_motif_pos]
+        motifs.append(np.concatenate([key, static]))
+        motif_pos = sequence.find(motif, motif_pos + 1)
+
+    return list(motifs)
 
 
-    return list(cpgs)
-
-
-def get_filters_and_probs(nanopolish):
+def get_filters_and_probs(nanopolish, motif):
     conf_pos = nanopolish[nanopolish['log_lik_ratio'] > 2.0]
     conf_neg = nanopolish[nanopolish['log_lik_ratio'] < -2.0]
     nanopolish = pd.concat([conf_pos, conf_neg])
@@ -40,10 +39,14 @@ def get_filters_and_probs(nanopolish):
     nanopolish['prob_unmeth'] = 1 \
          / (1 + np.exp(nanopolish['log_lik_ratio']))
 
-    single_cpgs = nanopolish[nanopolish['num_cpgs'] == 1]
-    multiple_cpgs = nanopolish[nanopolish['num_cpgs'] >= 2]
+    if motif == 'CG':
+        single = nanopolish[nanopolish['num_cpgs'] == 1]
+        multiple = nanopolish[nanopolish['num_cpgs'] >= 2]
+    else:
+        single = nanopolish[nanopolish['num_motifs'] == 1]
+        multiple = nanopolish[nanopolish['num_motifs'] >= 2]
 
-    return nanopolish, single_cpgs, multiple_cpgs
+    return nanopolish, single, multiple
 
     
 def get_labels(df):
@@ -70,7 +73,7 @@ def get_positions_only(df, positions):
     label[np.argwhere(df['status'].values == 'mod')] = 1
 
     df['methyl_label'] = label
-    import pdb;pdb.set_trace()
+
     return df
 
 
@@ -86,21 +89,31 @@ def get_positions_only(df, positions):
     '-p', '--positions', default='', help='position to filter out'
 )
 @click.option(
+    '-m', '--motif', default='CG', help='motif to obtain'
+)
+@click.option(
+    '-ml', '--methyl_label', default='', 
+    help='whether to include the methyl lable as an additional column'
+)
+@click.option(
     '-o', '--output', required=True, 
     help='Path to save modifications called'
 )
-def main(nanopolish_output, dict_reads, positions, output):
+def main(nanopolish_output, dict_reads, positions, motif, methyl_label, output):
 
     nanopolish = pd.read_csv(nanopolish_output, sep='\t')
 
-    nanopolish, single_cpgs, multiple_cpgs = get_filters_and_probs(nanopolish)
+    nanopolish, single, multiple = get_filters_and_probs(nanopolish, motif)
     
-    output_cpgs = multiple_cpgs.apply(split_multiple_cpgs, axis=1)
+    output_motifs = multiple.apply(split_multiple, motif=motif, axis=1)
     multiple_df = pd.DataFrame(
-        np.vstack(output_cpgs.tolist()), columns=nanopolish.columns
+        np.vstack(output_motifs.tolist()), columns=nanopolish.columns
     )
 
-    df_calling = get_labels(pd.concat([single_cpgs, multiple_df]))
+    df_calling = get_labels(pd.concat([single, multiple_df]))
+
+    if methyl_label:
+        df_calling['methyl_label'] = int(methyl_label)
 
     if positions:
         positions = pd.read_csv(positions, sep='\t')
@@ -113,8 +126,9 @@ def main(nanopolish_output, dict_reads, positions, output):
         bb = [dict_names[x] for x in aa.tolist()]
         df_calling['readnames'] = bb
 
+    import pdb; pdb.set_trace()
     df_calling.to_csv(
-        os.path.join(output, 'mods_nanopolish_readnames.tsv'), sep='\t', index=None
+        os.path.join(output, 'mods_nanopolish_labels.tsv'), sep='\t', index=None
     )
 
 
