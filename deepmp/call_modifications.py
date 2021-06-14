@@ -160,6 +160,23 @@ def preprocess_error(data, bases):
     return tf.concat([embedded_bases, tf.reshape(data, [-1, 5, size_feat])], axis=2)
 
 
+def build_test_df(data, pred_vec, inferred_vec, labels, output):
+    df = pd.DataFrame()
+    df['chrom'] = data[0].astype(str)
+    df['pos'] = data[2]
+
+    df['strand'] = data[3].astype(str)
+    df['pos_in_strand'] = data[4]
+    df['readname'] = data[1].astype(str)
+    
+    df['probs'] = pred_vec
+    df['Prediction'] = inferred_vec
+
+    df['labels'] = labels
+
+    df.to_csv(os.path.join(output, 'df_test.tsv'), sep='\t', index=None)
+
+
 def call_mods(model_type, test_file, trained_model, kmer, output,
                     err_features = False, pos_based = False ,
                     pred_type = 'min_max', figures=False):
@@ -174,7 +191,7 @@ def call_mods(model_type, test_file, trained_model, kmer, output,
     ## read-based calling
     if model_type == 'seq':
 
-        data_seq, labels = ut.get_data_sequence(test_file, kmer, err_features)
+        data_seq, labels, ids = ut.get_data_sequence(test_file, kmer, err_features, get_id=True)
         try:
             model = load_model(trained_model)
         except:
@@ -203,7 +220,7 @@ def call_mods(model_type, test_file, trained_model, kmer, output,
         acc, pred, inferred = acc_test_single(data_err, labels, model)
 
     elif model_type == 'joint':
-        data_seq, data_err, labels = ut.get_data_jm(test_file, kmer)
+        data_seq, data_err, labels, ids = ut.get_data_jm(test_file, kmer, get_id=True)
         try:
             model = load_model(trained_model)
         except:
@@ -223,6 +240,7 @@ def call_mods(model_type, test_file, trained_model, kmer, output,
     ut.save_probs(pred, labels, output)
     ut.save_output(acc, output, 'accuracy_measurements.txt')
 
+    build_test_df(ids, pred, inferred, labels, output)
     ## position-based calling
     # TODO store position info in test file
     if pos_based:
