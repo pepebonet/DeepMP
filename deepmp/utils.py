@@ -145,14 +145,14 @@ def slice_chunks(l, n):
 # TRAIN AND CALL MODIFICATIONS
 # ------------------------------------------------------------------------------
 
-def get_data_sequence(file, kmer, err_features = False):
+def get_data_sequence(file, kmer, err_features = False, get_id=False):
     ## preprocess data
     if err_features:
         bases, signal_means, signal_stds, signal_medians, signal_range, \
             base_qual, base_mis, base_ins, base_del, label = load_jm_data(file)
     else:
         bases, signal_means, signal_stds, signal_medians, \
-            signal_range, label = load_seq_data(file)
+            signal_range, label, chrom, readname, pos, strand, pos_in_strand = load_seq_data(file)
 
     ## embed bases
     embedding_size = 5
@@ -166,7 +166,10 @@ def get_data_sequence(file, kmer, err_features = False):
         data = concat_tensors_seq(embedded_bases, signal_means, signal_stds, signal_medians,
             signal_range, kmer)
 
-    return data, label
+    if get_id: 
+        return data, label, (chrom, readname, pos, strand, pos_in_strand)
+    else:
+        return data, label
 
 
 def get_data_errors(file, kmer):
@@ -256,9 +259,15 @@ def load_seq_data(file):
             label = hf['label'][:]
         except:
             label = hf['methyl_label'][:]
+        
+        chrom = hf['chrom'][:]
+        readname = hf['readname'][:]
+        pos = hf['pos'][:]
+        strand = hf['strand'][:]
+        pos_in_strand = hf['pos_in_strand'][:]
 
     return bases, signal_means, signal_stds, signal_medians, \
-        signal_range, label
+        signal_range, label, chrom, readname, pos, strand, pos_in_strand
 
 
 def load_jm_data(file):
