@@ -1723,7 +1723,9 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
         deepmod = pd.read_csv(deepmod_output, sep='\t')
     if deepmp_output:
         deepmp = pd.read_csv(deepmp_output, sep='\t')
-        
+
+        deepmp['id'] = deepmp['chrom'] + '_' + deepmp['pos'].astype(str) + '_' + deepmp['strand'] \
+            + '_' + deepmp['pos'].astype(str) + '_' + deepmp['readname']
         # deepmp_min = deepmp[deepmp['probs'] < 0.2]
         # deepmp_max = deepmp[deepmp['probs'] > 0.8]
         # deepmp = pd.concat([deepmp_min, deepmp_max])
@@ -1744,11 +1746,15 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
             deepmp_acc['Model'] = 'DeepMP'
 
             deepmp_seq = pd.read_csv(deepmp_output_seq, sep='\t')
+
+            deepmp_seq['id'] = deepmp_seq['chrom'] + '_' \
+                + deepmp_seq['pos'].astype(str) + '_' + deepmp_seq['strand'] \
+                    + '_' + deepmp['pos'].astype(str) + '_' + deepmp['readname']
             # deepmp_seq_min = deepmp_seq[deepmp_seq['probs'] < 0.4]
             # deepmp_seq_max = deepmp_seq[deepmp_seq['probs'] > 0.6]
             # deepmp_seq = pd.concat([deepmp_seq_min, deepmp_seq_max])
 
-            deepmp_seq['Prediction'] = deepmp_seq['probs'].apply(lambda x: 1 if x > 0.5 else 0)
+            # deepmp_seq['Prediction'] = deepmp_seq['probs'].apply(lambda x: 1 if x > 0.5 else 0)
             precision, recall, f_score, _ = precision_recall_fscore_support(
                 deepmp_seq['labels'].values, deepmp_seq['Prediction'].values, average='binary'
             )
@@ -1787,14 +1793,14 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
 
         original['id'] =  original[0] + '_' + original[1].astype(str) + '_' + original[2] \
             + '_' + original[1].astype(str) + '_' + original[4]
-        # deepsignal['id'] = deepsignal[0] + '_' + deepsignal[1].astype(str) + '_' + deepsignal[2] \
-        #     + '_' + deepsignal[3].astype(str) + '_'  + deepsignal[4]
+        deepsignal['id'] = deepsignal[0] + '_' + deepsignal[1].astype(str) + '_' + deepsignal[2] \
+            + '_' + deepsignal[1].astype(str) + '_'  + deepsignal[4]
         # merge = pd.merge(deepsignal, original, on='id', how='inner') 
-
-        assert deepsignal.shape[0] == original.shape[0]
+        
+        assert deepsignal.shape[0] == deepmp.shape[0]
         deepsignal = deepsignal.sort_values(by=[1, 4]).reset_index(drop=True)
-        original = original.sort_values(by=[1, 4]).reset_index(drop=True)
-        deepsignal[11] = original[11]
+        deepmp = deepmp.sort_values(by=['pos', 'readname']).reset_index(drop=True)
+        deepsignal[11] = deepmp['labels']
         merge = deepsignal.copy()
         merge['7_x'] = merge[7]
         merge['8_x'] = merge[8]
@@ -1807,7 +1813,7 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
         precision, recall, f_score, _ = precision_recall_fscore_support(
             merge[11].values, merge['8_x'].values, average='binary'
         )
-        # import pdb;pdb.set_trace()
+        import pdb;pdb.set_trace()
         deepsignal_acc = round(1 - np.argwhere(merge[11].values != merge['8_x'].values).shape[0] / len(merge[11].values), 5)
         accs_deepsignal = [deepsignal_acc, precision, recall, f_score]
         # ut.save_output([test_acc, precision, recall, f_score], output, 'accuracy_measurements.txt')
@@ -1821,6 +1827,7 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
     if nanopolish_output:
         
         nanopolish = pd.read_csv(nanopolish_output, sep='\t')
+
         nanopolish['id'] = nanopolish['chromosome'] + '_' + \
             nanopolish['start'].astype(str) + '_+_' + \
                 nanopolish['end'].astype(str) + '_' + nanopolish['readnames']
@@ -1840,7 +1847,7 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
                 len(nanopolish_test[11].values), 5)
 
         accs_nanopolish = [nano_acc, precision, recall, f_score]
-        
+
         fig_out = os.path.join(output, 'comparison_nanopolish.pdf')
         plot_ROC_nanopolish(deepmp, merge, nanopolish_test, fig_out)  
         
@@ -1865,7 +1872,7 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
                 len(guppy_test[11].values), 5)
         
         accs_guppy = [guppy_acc, precision, recall, f_score]
-        
+
         fig_out = os.path.join(output, 'comparison_guppy.pdf')
         plot_ROC_guppy(deepmp, merge, nanopolish_test, guppy_test, fig_out)   
         
@@ -1874,7 +1881,7 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
         
 
     if megalodon_output:
-
+        import pdb;pdb.set_trace()
         megalodon = pd.read_csv(megalodon_output, sep='\t', header=None)
         # meg_pos = megalodon[megalodon[7] > 0.8]
         # meg_neg = megalodon[megalodon[7] < 0.2]
@@ -1884,6 +1891,7 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
         original = pd.read_csv(original_test, sep='\t', header=None).drop_duplicates()
         original['id'] =  original[0] + '_' + (original[1]).astype(str) + '_' + \
             original[2] + '_' + (original[1]).astype(str) + '_' + original[4]
+        
         megalodon['id'] = megalodon[1] + '_' + megalodon[3].astype(str) + '_' + \
             megalodon[2] + '_' + megalodon[3].astype(str) + '_' + megalodon[9]
 
@@ -1899,6 +1907,27 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
         
         accs_megalodon = [megalodon_acc, precision, recall, f_score]
         import pdb;pdb.set_trace()
+        deepmp = pd.merge(megalodon_test, deepmp, on='id', how='inner')
+        precision, recall, f_score, _ = precision_recall_fscore_support(
+            deepmp['labels'].values, deepmp['Prediction_y'].values, average='binary'
+        )
+        deepmp_acc = round(1 - np.argwhere(deepmp['labels'].values != \
+            deepmp['Prediction_y'].values).shape[0] / len(deepmp['labels'].values), 5)
+        accs_deepmp = [deepmp_acc, precision, recall, f_score]
+
+        merge = pd.merge(megalodon_test, merge, on='id', how='inner')
+        merge['8_x'] = merge['8_x_y']
+        merge['7_x'] = merge['7_x_y']
+        merge[11] = merge['11_y']
+        import pdb;pdb.set_trace()
+        precision, recall, f_score, _ = precision_recall_fscore_support(
+            merge[11].values, merge['8_x'].values, average='binary')
+        deepsignal_acc = round(1 - np.argwhere(merge[11].values \
+            != merge['8_x'].values).shape[0] / len(merge[11].values), 5)
+        import pdb;pdb.set_trace()
+        accs_deepsignal = [deepsignal_acc, precision, recall, f_score]
+
+        import pdb;pdb.set_trace()
         if deepmp_accuracies:
             try:
                 get_barplot(
@@ -1911,7 +1940,16 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
                     accs_nanopolish, accs_megalodon, output
                 )
         
-        if accs_deepmp_seq:
+        if 'accs_deepmp_seq' in locals():
+
+            deepmp_seq = pd.merge(megalodon_test, deepmp_seq, on='id', how='inner')
+            precision, recall, f_score, _ = precision_recall_fscore_support(
+                deepmp['labels'].values, deepmp['Prediction_y'].values, average='binary'
+            )
+            deepmp_acc = round(1 - np.argwhere(deepmp['labels'].values != \
+                deepmp['Prediction_y'].values).shape[0] / len(deepmp['labels'].values), 5)
+            accs_deepmp = [deepmp_acc, precision, recall, f_score]
+
             if 'guppy_test' in locals():
                 get_barplot_seq(
                     accs_deepmp, accs_deepmp_seq, accs_deepsignal, 
