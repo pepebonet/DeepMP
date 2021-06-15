@@ -128,10 +128,10 @@ def get_barplot_seq(deepmp_accuracies, deepmp_seq_accuracies, deepsignal_accs,
     megalodon_acc['Model'] = 'Megalodon'
     
     df_acc = pd.concat(
-        [deepmp_acc, megalodon_acc, deepmp_seq_acc, deepsignal_acc, \
+        [deepmp_acc, deepmp_seq_acc, megalodon_acc, deepsignal_acc, \
             nanopolish_acc, guppy_acc]
     )
-
+    df_acc.to_csv(os.path.join(output, 'accuracy_measurements_all_methods_seq.tsv'), sep='\t', index=None)
     plot_barplot_seq(df_acc, output)
 
 
@@ -163,10 +163,10 @@ def get_barplot_seq_pUC19(deepmp_accuracies, deepmp_seq_accuracies, deepsignal_a
     megalodon_acc['Model'] = 'Megalodon'
     
     df_acc = pd.concat(
-        [deepmp_acc, megalodon_acc, deepmp_seq_acc, deepsignal_acc, \
+        [deepmp_acc, deepmp_seq_acc, megalodon_acc, deepsignal_acc, \
             nanopolish_acc]
     )
-
+    df_acc.to_csv(os.path.join(output, 'accuracy_measurements_all_methods_seq.tsv'), sep='\t', index=None)
     plot_barplot_seq_pUC19(df_acc, output)
 
 
@@ -790,6 +790,15 @@ def plot_ROC_deepmpseq(deepmp, deepmpseq, deepsignal, Nanopolish, Guppy, megalod
     plt.xlim([-0.05, 1.05])
     plt.ylim([-0.05, 1.05])
 
+    aucs_df = pd.DataFrame([['AUC', 'AUC', 'AUC','AUC','AUC','AUC'], \
+        [roc_auc_dmp, roc_auc_dmpseq, roc_auc_ds, roc_auc_guppy, roc_auc_dmo, roc_auc_megalodon], \
+            ['DeepMP', 'DeepMP Seq', 'DeepSignal','Guppy','Nanopolish','Megalodon']]).T
+            
+    aucs_df.to_csv(
+        os.path.join(fig_out.rsplit('/', 1)[0], 'aucs_all_methods_seq.tsv'), 
+        sep='\t', index=None
+    )
+
     ax.set_xlabel("False Positive Rate", fontsize=12)
     ax.set_ylabel("True Positive Rate", fontsize=12)
 
@@ -869,6 +878,14 @@ def plot_ROC_deepmpseq_pUC19(deepmp, deepmpseq, deepsignal, Nanopolish, megalodo
     ax.set_xlabel("False Positive Rate", fontsize=12)
     ax.set_ylabel("True Positive Rate", fontsize=12)
 
+    aucs_df = pd.DataFrame([['AUC', 'AUC', 'AUC', 'AUC', 'AUC'], \
+        [roc_auc_dmp, roc_auc_dmpseq, roc_auc_ds, roc_auc_dmo, roc_auc_megalodon], \
+            ['DeepMP', 'DeepMP Seq', 'DeepSignal', 'Nanopolish','Megalodon']]).T
+            
+    aucs_df.to_csv(
+        os.path.join(fig_out.rsplit('/', 1)[0], 'aucs_all_methods_seq.tsv'), 
+        sep='\t', index=None
+    )
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -1425,11 +1442,11 @@ def plot_barplot_seq(df, output):
     ax.set_ylim(.60, 1.) 
     ax2.set_ylim(0, .12)
 
-    sns.barplot(x="index", y=0, hue='Model', data=df, ax=ax, palette=['#08519c', '#e7298a', '#a6cee3', '#f03b20', '#238443', '#fed976'])
-    sns.barplot(x="index", y=0, hue='Model', data=df, ax=ax2, palette=['#08519c', '#e7298a', '#a6cee3', '#f03b20', '#238443', '#fed976'])
+    sns.barplot(x="index", y=0, hue='Model', data=df, ax=ax, palette=['#08519c', '#a6cee3', '#e7298a', '#f03b20', '#238443', '#fed976'])
+    sns.barplot(x="index", y=0, hue='Model', data=df, ax=ax2, palette=['#08519c', '#a6cee3', '#e7298a', '#f03b20', '#238443', '#fed976'])
 
     custom_lines = []
-    for el in [('DeepMP', '#08519c'), ('Megalodon', '#e7298a'), ('DeepMP Seq', '#a6cee3'), ('DeepSignal', '#f03b20'), ('Nanopolish', '#238443'), ('Guppy', '#fed976')]:
+    for el in [('DeepMP', '#08519c'), ('DeepMP Seq', '#a6cee3'), ('Megalodon', '#e7298a'), ('DeepSignal', '#f03b20'), ('Nanopolish', '#238443'), ('Guppy', '#fed976')]:
         custom_lines.append(
                 plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
                 mew=0, color=el[1], label=el[0])[0] 
@@ -1481,11 +1498,11 @@ def plot_barplot_seq_pUC19(df, output):
     ax.set_ylim(.60, 1.) 
     ax2.set_ylim(0, .12)
 
-    sns.barplot(x="index", y=0, hue='Model', data=df, ax=ax, palette=['#08519c', '#e7298a', '#a6cee3', '#f03b20', '#238443'])
-    sns.barplot(x="index", y=0, hue='Model', data=df, ax=ax2, palette=['#08519c', '#e7298a', '#a6cee3', '#f03b20', '#238443'])
+    sns.barplot(x="index", y=0, hue='Model', data=df, ax=ax, palette=['#08519c', '#a6cee3', '#e7298a', '#f03b20', '#238443'])
+    sns.barplot(x="index", y=0, hue='Model', data=df, ax=ax2, palette=['#08519c', '#a6cee3', '#e7298a', '#f03b20', '#238443'])
 
     custom_lines = []
-    for el in [('DeepMP', '#08519c'), ('Megalodon', '#e7298a'), ('DeepMP Seq', '#a6cee3'), ('DeepSignal', '#f03b20'), ('Nanopolish', '#238443')]:
+    for el in [('DeepMP', '#08519c'), ('DeepMP Seq', '#a6cee3'), ('Megalodon', '#e7298a'), ('DeepSignal', '#f03b20'), ('Nanopolish', '#238443')]:
         custom_lines.append(
                 plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
                 mew=0, color=el[1], label=el[0])[0] 
@@ -1788,6 +1805,7 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
         )
         plot_ROC_svm(svm, deepmp, out_fig)
     if deepsignal_output:
+
         deepsignal = pd.read_csv(deepsignal_output, sep='\t', header=None).drop_duplicates()
         original = pd.read_csv(original_test, sep='\t', header=None).drop_duplicates()
 
@@ -1796,7 +1814,8 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
         deepsignal['id'] = deepsignal[0] + '_' + deepsignal[1].astype(str) + '_' + deepsignal[2] \
             + '_' + deepsignal[1].astype(str) + '_'  + deepsignal[4]
         # merge = pd.merge(deepsignal, original, on='id', how='inner') 
-        
+
+        # import pdb;pdb.set_trace()
         assert deepsignal.shape[0] == deepmp.shape[0]
         deepsignal = deepsignal.sort_values(by=[1, 4]).reset_index(drop=True)
         deepmp = deepmp.sort_values(by=['pos', 'readname']).reset_index(drop=True)
@@ -1813,7 +1832,7 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
         precision, recall, f_score, _ = precision_recall_fscore_support(
             merge[11].values, merge['8_x'].values, average='binary'
         )
-        import pdb;pdb.set_trace()
+
         deepsignal_acc = round(1 - np.argwhere(merge[11].values != merge['8_x'].values).shape[0] / len(merge[11].values), 5)
         accs_deepsignal = [deepsignal_acc, precision, recall, f_score]
         # ut.save_output([test_acc, precision, recall, f_score], output, 'accuracy_measurements.txt')
@@ -1841,7 +1860,7 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
         precision, recall, f_score, _ = precision_recall_fscore_support(
             nanopolish_test[11].values, nanopolish_test['Prediction'].values, average='binary'
         )
-
+        
         nano_acc = round(1 - np.argwhere(nanopolish_test[11].values != \
             nanopolish_test['Prediction'].values).shape[0] / \
                 len(nanopolish_test[11].values), 5)
@@ -1872,7 +1891,7 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
                 len(guppy_test[11].values), 5)
         
         accs_guppy = [guppy_acc, precision, recall, f_score]
-
+        import pdb;pdb.set_trace()
         fig_out = os.path.join(output, 'comparison_guppy.pdf')
         plot_ROC_guppy(deepmp, merge, nanopolish_test, guppy_test, fig_out)   
         
@@ -1906,7 +1925,7 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
                 len(megalodon_test[11].values), 5)
         
         accs_megalodon = [megalodon_acc, precision, recall, f_score]
-        import pdb;pdb.set_trace()
+        
         deepmp = pd.merge(megalodon_test, deepmp, on='id', how='inner')
         precision, recall, f_score, _ = precision_recall_fscore_support(
             deepmp['labels'].values, deepmp['Prediction_y'].values, average='binary'
@@ -1919,12 +1938,12 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
         merge['8_x'] = merge['8_x_y']
         merge['7_x'] = merge['7_x_y']
         merge[11] = merge['11_y']
-        import pdb;pdb.set_trace()
+        
         precision, recall, f_score, _ = precision_recall_fscore_support(
             merge[11].values, merge['8_x'].values, average='binary')
         deepsignal_acc = round(1 - np.argwhere(merge[11].values \
             != merge['8_x'].values).shape[0] / len(merge[11].values), 5)
-        import pdb;pdb.set_trace()
+        
         accs_deepsignal = [deepsignal_acc, precision, recall, f_score]
 
         import pdb;pdb.set_trace()
@@ -1944,12 +1963,12 @@ def main(svm_output, deepmp_output, deepmp_output_seq, deepmp_accuracies,
 
             deepmp_seq = pd.merge(megalodon_test, deepmp_seq, on='id', how='inner')
             precision, recall, f_score, _ = precision_recall_fscore_support(
-                deepmp['labels'].values, deepmp['Prediction_y'].values, average='binary'
+                deepmp_seq['labels'].values, deepmp_seq['Prediction_y'].values, average='binary'
             )
-            deepmp_acc = round(1 - np.argwhere(deepmp['labels'].values != \
-                deepmp['Prediction_y'].values).shape[0] / len(deepmp['labels'].values), 5)
-            accs_deepmp = [deepmp_acc, precision, recall, f_score]
-
+            deepmp_seq_acc = round(1 - np.argwhere(deepmp_seq['labels'].values != \
+                deepmp_seq['Prediction_y'].values).shape[0] / len(deepmp_seq['labels'].values), 5)
+            accs_deepmp_seq = [deepmp_seq_acc, precision, recall, f_score]
+            import pdb;pdb.set_trace()
             if 'guppy_test' in locals():
                 get_barplot_seq(
                     accs_deepmp, accs_deepmp_seq, accs_deepsignal, 
