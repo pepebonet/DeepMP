@@ -15,8 +15,8 @@ from sklearn.metrics import precision_recall_fscore_support
 epsilon = 0.05  
 gamma_val = 0.80
 beta_a = 1
-beta_b = 20.86
-beta_c = 21.25
+beta_b = 10.09
+beta_c = 9.04
 fp = 0.02  
 fn = 0.03  
 
@@ -218,31 +218,44 @@ def do_per_position_analysis(df, label):
     return preds[preds['cov'] >= 5]
 
 
-def get_ids(paths):
+def get_ids(paths, megalodon_path):
     ids = []
+    megalodon = pd.read_csv(megalodon_path, sep='\t', header=None)
+    megalodon['id_per_read'] = megalodon[1] + '_' + \
+        megalodon[3].astype(str)  + '_' + megalodon[9]
     for path in paths: 
         df = pd.read_csv(path, sep='\t')
         df['id_per_read'] = df['chrom'] + '_' + df['pos'].astype(str) + '_' + df['readname']
+        df = pd.merge(df, megalodon, on='id_per_read', how='inner')
         ids.append((df[['id_per_read', 'methyl_label']], path.rsplit('/')[-2].split('_')[1]))
 
     return ids
 
 
-def extract_preds_deepmp(predictions_file):
+def extract_preds_deepmp(predictions_file, ids):
     q1, median, q3 = [], [], []
     q1_fp, median_fp, q3_fp = [], [], []
     q1_fn, median_fn, q3_fn = [], [], []
     label = []; accuracy_beta, accuracy_01, accuracy_005, accuracy_001 = [], [], [], []
 
     for file in tqdm(predictions_file):
+        mod_perc = file.rsplit('/')[-2].split('_')[1]
+        for el in ids: 
+            if el[1] == mod_perc:
+                id_labels = el[0]
+                break
+        
         test = pd.read_csv(file, sep='\t').drop_duplicates()
 
-        test_min = test[test['pred_prob'] < 0.2]
-        test_max = test[test['pred_prob'] > 0.8]
-        test = pd.concat([test_min, test_max])
+        # test_min = test[test['pred_prob'] < 0.2]
+        # test_max = test[test['pred_prob'] > 0.8]
+        # test = pd.concat([test_min, test_max])
 
         label.append(file.rsplit('/')[-2].split('_')[1])
         test['id'] = test['chrom'] + '_' + test['strand'] + '_' + test['pos'].astype(str)
+        test['id_per_read'] = test['chrom'] + '_' + test['pos'].astype(str) + '_' + test['readname']
+        test = pd.merge(test, id_labels, on='id_per_read', how='inner')
+        test['methyl_label'] = test['methyl_label_x']
 
         all_preds = do_per_position_analysis(test, label)
 
@@ -497,9 +510,9 @@ def extract_preds_megalodon(megalodon_path, ids):
     accuracy_01, accuracy_005, accuracy_001 = [], [], []
 
     megalodon = pd.read_csv(megalodon_path, sep='\t', header=None)
-    meg_pos = megalodon[megalodon[7] > 0.8]
-    meg_neg = megalodon[megalodon[7] < 0.2]
-    megalodon = pd.concat([meg_pos, meg_neg])
+    # meg_pos = megalodon[megalodon[7] > 0.8]
+    # meg_neg = megalodon[megalodon[7] < 0.2]
+    # megalodon = pd.concat([meg_pos, meg_neg])
 
     megalodon['inferred_label']  = megalodon[7].apply(lambda x: 1 if x > 0.5 else 0)
     megalodon['pred_prob'] = megalodon[7]
@@ -915,63 +928,63 @@ def clean_preds(preds):
 def main(predictions_deepmp, predictions_deepsignal, predictions_deepmod, 
     predictions_nanopolish, predictions_guppy, predictions_megalodon, 
     around_zero, output):
-    # ids = get_ids(predictions_deepmp)
+    ids = get_ids(predictions_deepmp, predictions_megalodon)
 
-    # preds_deepmp, deepmp_fp, deepmp_fn = extract_preds_deepmp(
-    #     predictions_deepmp
+    preds_deepmp, deepmp_fp, deepmp_fn = extract_preds_deepmp(
+        predictions_deepmp, ids
+    )
+    preds_deepsignal, deepsignal_fp, deepsignal_fn = extract_preds_deepsignal(
+        predictions_deepsignal, ids
+    )
+    # preds_deepmod, deepmod_fp, deepmod_fn = extract_preds_deepmod(
+    #     predictions_deepmod, output
     # )
-    # preds_deepsignal, deepsignal_fp, deepsignal_fn = extract_preds_deepsignal(
-    #     predictions_deepsignal, ids
-    # )
-    # # preds_deepmod, deepmod_fp, deepmod_fn = extract_preds_deepmod(
-    # #     predictions_deepmod, output
-    # # )
     
-    # preds_nanopolish, nanopolish_fp, nanopolish_fn = extract_preds_nanopolish(
-    #     predictions_nanopolish, ids
-    # )
-    # preds_guppy, guppy_fp, guppy_fn = extract_preds_guppy(
-    #     predictions_guppy, ids
-    # )
-    # preds_megalodon, megalodon_fp, megalodon_fn = extract_preds_megalodon(
-    #     predictions_megalodon, ids
-    # )
+    preds_nanopolish, nanopolish_fp, nanopolish_fn = extract_preds_nanopolish(
+        predictions_nanopolish, ids
+    )
+    preds_guppy, guppy_fp, guppy_fn = extract_preds_guppy(
+        predictions_guppy, ids
+    )
+    preds_megalodon, megalodon_fp, megalodon_fn = extract_preds_megalodon(
+        predictions_megalodon, ids
+    )
 
-    # import pdb;pdb.set_trace()
-    # pd.DataFrame([preds_megalodon]).to_csv(os.path.join(output, 'preds_megalodon.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([preds_deepmp]).to_csv(os.path.join(output, 'preds_deepmp.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([preds_deepsignal]).to_csv(os.path.join(output, 'preds_deepsignal.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([preds_nanopolish]).to_csv(os.path.join(output, 'preds_nanopolish.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([preds_guppy]).to_csv(os.path.join(output, 'preds_guppy.tsv'), sep='\t', header=None, index=None)
+    import pdb;pdb.set_trace()
+    pd.DataFrame([preds_megalodon]).to_csv(os.path.join(output, 'preds_megalodon.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([preds_deepmp]).to_csv(os.path.join(output, 'preds_deepmp.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([preds_deepsignal]).to_csv(os.path.join(output, 'preds_deepsignal.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([preds_nanopolish]).to_csv(os.path.join(output, 'preds_nanopolish.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([preds_guppy]).to_csv(os.path.join(output, 'preds_guppy.tsv'), sep='\t', header=None, index=None)
     
-    # pd.DataFrame([deepmp_fp]).to_csv(os.path.join(output, 'deepmp_fp.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([deepmp_fn]).to_csv(os.path.join(output, 'deepmp_fn.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([guppy_fp]).to_csv(os.path.join(output, 'guppy_fp.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([guppy_fn]).to_csv(os.path.join(output, 'guppy_fn.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([nanopolish_fp]).to_csv(os.path.join(output, 'nanopolish_fp.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([nanopolish_fn]).to_csv(os.path.join(output, 'nanopolish_fn.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([deepsignal_fp]).to_csv(os.path.join(output, 'deepsignal_fp.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([deepsignal_fn]).to_csv(os.path.join(output, 'deepsignal_fn.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([megalodon_fp]).to_csv(os.path.join(output, 'megalodon_fp.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([megalodon_fn]).to_csv(os.path.join(output, 'megalodon_fn.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([deepmp_fp]).to_csv(os.path.join(output, 'deepmp_fp.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([deepmp_fn]).to_csv(os.path.join(output, 'deepmp_fn.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([guppy_fp]).to_csv(os.path.join(output, 'guppy_fp.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([guppy_fn]).to_csv(os.path.join(output, 'guppy_fn.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([nanopolish_fp]).to_csv(os.path.join(output, 'nanopolish_fp.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([nanopolish_fn]).to_csv(os.path.join(output, 'nanopolish_fn.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([deepsignal_fp]).to_csv(os.path.join(output, 'deepsignal_fp.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([deepsignal_fn]).to_csv(os.path.join(output, 'deepsignal_fn.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([megalodon_fp]).to_csv(os.path.join(output, 'megalodon_fp.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([megalodon_fn]).to_csv(os.path.join(output, 'megalodon_fn.tsv'), sep='\t', header=None, index=None)
     #TODO remove 
-    preds_deepmp = clean_preds(pd.read_csv(os.path.join(output, 'preds_deepmp.tsv'), sep='\t', header=None).values[0])
-    preds_deepsignal = clean_preds(pd.read_csv(os.path.join(output, 'preds_deepsignal.tsv'), sep='\t', header=None).values[0])
-    preds_guppy = clean_preds(pd.read_csv(os.path.join(output, 'preds_guppy.tsv'), sep='\t', header=None).values[0])
-    preds_nanopolish = clean_preds(pd.read_csv(os.path.join(output, 'preds_nanopolish.tsv'), sep='\t', header=None).values[0])
-    preds_megalodon = clean_preds(pd.read_csv(os.path.join(output, 'preds_megalodon.tsv'), sep='\t', header=None).values[0])
+    # preds_deepmp = clean_preds(pd.read_csv(os.path.join(output, 'preds_deepmp.tsv'), sep='\t', header=None).values[0])
+    # preds_deepsignal = clean_preds(pd.read_csv(os.path.join(output, 'preds_deepsignal.tsv'), sep='\t', header=None).values[0])
+    # preds_guppy = clean_preds(pd.read_csv(os.path.join(output, 'preds_guppy.tsv'), sep='\t', header=None).values[0])
+    # preds_nanopolish = clean_preds(pd.read_csv(os.path.join(output, 'preds_nanopolish.tsv'), sep='\t', header=None).values[0])
+    # preds_megalodon = clean_preds(pd.read_csv(os.path.join(output, 'preds_megalodon.tsv'), sep='\t', header=None).values[0])
 
-    deepmp_fp = clean_preds(pd.read_csv(os.path.join(output, 'deepmp_fp.tsv'), sep='\t', header=None).values[0])
-    deepsignal_fp = clean_preds(pd.read_csv(os.path.join(output, 'deepsignal_fp.tsv'), sep='\t', header=None).values[0])
-    guppy_fp = clean_preds(pd.read_csv(os.path.join(output, 'guppy_fp.tsv'), sep='\t', header=None).values[0])
-    nanopolish_fp = clean_preds(pd.read_csv(os.path.join(output, 'nanopolish_fp.tsv'), sep='\t', header=None).values[0])
-    megalodon_fp = clean_preds(pd.read_csv(os.path.join(output, 'megalodon_fp.tsv'), sep='\t', header=None).values[0])
+    # deepmp_fp = clean_preds(pd.read_csv(os.path.join(output, 'deepmp_fp.tsv'), sep='\t', header=None).values[0])
+    # deepsignal_fp = clean_preds(pd.read_csv(os.path.join(output, 'deepsignal_fp.tsv'), sep='\t', header=None).values[0])
+    # guppy_fp = clean_preds(pd.read_csv(os.path.join(output, 'guppy_fp.tsv'), sep='\t', header=None).values[0])
+    # nanopolish_fp = clean_preds(pd.read_csv(os.path.join(output, 'nanopolish_fp.tsv'), sep='\t', header=None).values[0])
+    # megalodon_fp = clean_preds(pd.read_csv(os.path.join(output, 'megalodon_fp.tsv'), sep='\t', header=None).values[0])
 
-    deepmp_fn = clean_preds(pd.read_csv(os.path.join(output, 'deepmp_fn.tsv'), sep='\t', header=None).values[0])
-    deepsignal_fn = clean_preds(pd.read_csv(os.path.join(output, 'deepsignal_fn.tsv'), sep='\t', header=None).values[0])
-    guppy_fn = clean_preds(pd.read_csv(os.path.join(output, 'guppy_fn.tsv'), sep='\t', header=None).values[0])
-    nanopolish_fn = clean_preds(pd.read_csv(os.path.join(output, 'nanopolish_fn.tsv'), sep='\t', header=None).values[0])
-    megalodon_fn = clean_preds(pd.read_csv(os.path.join(output, 'megalodon_fn.tsv'), sep='\t', header=None).values[0])
+    # deepmp_fn = clean_preds(pd.read_csv(os.path.join(output, 'deepmp_fn.tsv'), sep='\t', header=None).values[0])
+    # deepsignal_fn = clean_preds(pd.read_csv(os.path.join(output, 'deepsignal_fn.tsv'), sep='\t', header=None).values[0])
+    # guppy_fn = clean_preds(pd.read_csv(os.path.join(output, 'guppy_fn.tsv'), sep='\t', header=None).values[0])
+    # nanopolish_fn = clean_preds(pd.read_csv(os.path.join(output, 'nanopolish_fn.tsv'), sep='\t', header=None).values[0])
+    # megalodon_fn = clean_preds(pd.read_csv(os.path.join(output, 'megalodon_fn.tsv'), sep='\t', header=None).values[0])
     import pdb;pdb.set_trace()
     if around_zero:
         import pdb;pdb.set_trace()
