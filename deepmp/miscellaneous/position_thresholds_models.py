@@ -29,20 +29,25 @@ palette_dict = {
         'DeepMod':'#238443',
         'Nanopolish':'#238443',
         'Guppy': '#fed976',
-        'Megalodon': '#e7298a'
+        'Megalodon': '#984ea3ff'
 }
 palette_dict_2 = {
         'DeepMP_1':'#08519c', 'DeepMP_2':'#6baed6', 
         'DeepMP_3':'#a6bddb', 'DeepMP_4':'#f1eef6'
 }
 
+palette_dict_deepmp = {
+        'Beta Model':'#08519c', '50% Threshold':'#6baed6', 
+        '20% Threshold':'#a6bddb', '10% Threshold':'#f1eef6'
+}
+
 
 names_deepsignal = ['chrom', 'pos', 'strand', 'pos_in_strand', 'readname', 't/c', 'pred_unmod', 'pred_prob', 'inferred_label', 'kmer']
 
-def pred_site_all(df, pred_001, pred_005, pred_01, pred_02, meth_label):
+def pred_site_all(df, pred_001, pred_005, pred_01, pred_02, pred_05, meth_label):
         
     ## threshold prediction
-    for i in [(pred_001, 0.01), (pred_005, 0.05), (pred_01, 0.1), (pred_02, 0.2)]:
+    for i in [(pred_001, 0.01), (pred_005, 0.05), (pred_01, 0.1), (pred_02, 0.2), (pred_05, 0.5)]:
         inferred = df['inferred_label'].values
         if np.sum(inferred) / len(inferred) >= i[1]:
             i[0].append(1)
@@ -55,7 +60,7 @@ def pred_site_all(df, pred_001, pred_005, pred_01, pred_02, meth_label):
         meth_label.append(df.methyl_label.unique()[0])
     
     return pred_001, pred_005, \
-        pred_01, pred_02, meth_label
+        pred_01, pred_02, pred_05, meth_label
 
 
 #obs_reads is the vector of inferred labels
@@ -168,7 +173,7 @@ def do_per_position_analysis(df, label):
     cov = []; pred_005 = []; pred_01 = []; pred_02 = []
     meth_label = []; ids = []; pred_beta = []; prob_beta_mod = []
     prob_beta_unmod = []; meth_freq_diff = []; fp_freq = []; fn_freq = []
-    true_meth_freq = []; pred_deepsignal = []; pred_001 = []
+    true_meth_freq = []; pred_deepsignal = []; pred_001 = []; pred_05 = []
 
     for i, j in df.groupby('id'):
             meth_freq = j['methyl_label'].sum() / j.shape[0] * 100
@@ -185,8 +190,8 @@ def do_per_position_analysis(df, label):
 
                 pred_deepsignal = pred_deepsignal_pos(j, pred_deepsignal)
 
-                pred_001, pred_005, pred_01, pred_02, meth_label = pred_site_all(
-                    j, pred_001, pred_005, pred_01, pred_02, meth_label
+                pred_001, pred_005, pred_01, pred_02, pred_05, meth_label = pred_site_all(
+                    j, pred_001, pred_005, pred_01, pred_02, pred_05, meth_label
                 )
 
                 pred_beta, prob_beta_mod, prob_beta_unmod = beta_stats(
@@ -203,6 +208,7 @@ def do_per_position_analysis(df, label):
     preds['pred_005'] = pred_005
     preds['pred_01'] = pred_01
     preds['pred_02'] = pred_02 
+    preds['pred_05'] = pred_05 
     preds['pred_beta'] = pred_beta
     preds['prob_beta_mod'] = prob_beta_mod
     preds['prob_beta_unmod'] = prob_beta_unmod 
@@ -237,6 +243,7 @@ def extract_preds_deepmp(predictions_file, ids):
     q1_fp, median_fp, q3_fp = [], [], []
     q1_fn, median_fn, q3_fn = [], [], []
     label = []; accuracy_beta, accuracy_01, accuracy_005, accuracy_001 = [], [], [], []
+    accuracy_02, accuracy_05 = [], []
 
     for file in tqdm(predictions_file):
         mod_perc = file.rsplit('/')[-2].split('_')[1]
@@ -261,17 +268,21 @@ def extract_preds_deepmp(predictions_file, ids):
 
         labels = all_preds['meth_label'].values
         inf_beta = all_preds['pred_beta'].values
+        inf_05 = all_preds['pred_05'].values
+        inf_02 = all_preds['pred_02'].values
         inf_01 = all_preds['pred_01'].values
         inf_005 = all_preds['pred_005'].values
         inf_001 = all_preds['pred_001'].values
 
         acc_beta = round(1 - np.argwhere(labels != inf_beta).shape[0] / len(labels), 5)
+        acc_05 = round(1 - np.argwhere(labels != inf_05).shape[0] / len(labels), 5)
+        acc_02 = round(1 - np.argwhere(labels != inf_02).shape[0] / len(labels), 5)
         acc_01 = round(1 - np.argwhere(labels != inf_01).shape[0] / len(labels), 5)
         acc_005 = round(1 - np.argwhere(labels != inf_005).shape[0] / len(labels), 5)
         acc_001 = round(1 - np.argwhere(labels != inf_001).shape[0] / len(labels), 5)
 
-        accuracy_beta.append(acc_beta); accuracy_01.append(acc_01)
-        accuracy_005.append(acc_005); accuracy_001.append(acc_001)
+        accuracy_beta.append(acc_beta); accuracy_02.append(acc_02); accuracy_01.append(acc_01)
+        accuracy_005.append(acc_005); accuracy_001.append(acc_001); accuracy_05.append(acc_05)
         
         Q1, med, Q3 = np.percentile(all_preds['meth_freq_diff'].values, [25, 50, 75])
         q1.append(Q1); median.append(med); q3.append(Q3)
@@ -286,7 +297,8 @@ def extract_preds_deepmp(predictions_file, ids):
     
     return (q1, median, q3, label, 'DeepMP', accuracy_beta, accuracy_beta, \
         accuracy_01, accuracy_005, accuracy_001), (q1_fp, median_fp, q3_fp, label, 'DeepMP'), \
-            (q1_fn, median_fn, q3_fn, label, 'DeepMP')
+            (q1_fn, median_fn, q3_fn, label, 'DeepMP'), \
+                (accuracy_beta, accuracy_05, accuracy_02, accuracy_01, label)
 
 
 def extract_preds_deepsignal(predictions_file, ids):
@@ -883,6 +895,62 @@ def plot_pos_barplot_around_0(deepmp, deepsignal, nanopolish, guppy, megalodon, 
     plt.close()
 
 
+def plot_deepmp_beta_comparison(deepmp, output):
+    fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
+
+    custom_lines = []
+    palette_list = list(palette_dict_deepmp.keys())
+
+    for key, val in palette_dict_deepmp.items():
+        custom_lines.append(
+            plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
+            mew=0, color=val, label=key)[0] 
+        )
+
+    import pdb;pdb.set_trace()
+    for i in range(len(deepmp[:-1])):
+
+        if palette_list[i] == 'Beta Model':
+            pos = -2
+        elif palette_list[i] == '10% Threshold':
+            pos = -1
+        elif palette_list[i] == '20% Threshold':
+            pos = 1
+        elif palette_list[i] == '50% Threshold':
+            pos = 2
+        
+        plt.plot(
+            np.asarray(deepmp[-1]).astype(np.int)[1:] + pos, deepmp[i][1:], 
+            marker='o', mfc=palette_dict_deepmp[palette_list[i]], mec='black', ms=5, mew=0.5, 
+            c=palette_dict_deepmp[palette_list[i]]
+        )
+
+        plt.plot(
+            np.asarray(deepmp[-1]).astype(np.int)[0] + pos, deepmp[i][0], 
+            marker='o', mfc=palette_dict_deepmp[palette_list[i]], mec='black', ms=5, mew=0.5
+        )
+
+    ax.set_xlabel("", fontsize=12)
+    ax.set_ylabel("Position Accuracy", fontsize=12)
+    plt.xticks(rotation=0, fontsize=9)
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    plt.ylim(bottom=0, top=1.05)
+
+    ax.legend(
+        bbox_to_anchor=(0., 1.2, 1., .102),
+        handles=custom_lines, loc='upper center', 
+        facecolor='white', ncol=1, fontsize=8, frameon=False
+    )
+    plt.vlines(x=5, ls='dashed', colors='grey', ymin=-0.02, ymax=1.02, lw=0.6)
+    plt.tight_layout()
+    out_dir = os.path.join(output, 'position_accuracy_DeepMP_beta_comparison.pdf')
+    plt.savefig(out_dir)
+    plt.close()
+
+
 def clean_preds(preds):
     import ast; cleaned = []; 
     for el in preds: 
@@ -930,9 +998,12 @@ def main(predictions_deepmp, predictions_deepsignal, predictions_deepmod,
     around_zero, output):
     ids = get_ids(predictions_deepmp, predictions_megalodon)
 
-    preds_deepmp, deepmp_fp, deepmp_fn = extract_preds_deepmp(
+    preds_deepmp, deepmp_fp, deepmp_fn, extra = extract_preds_deepmp(
         predictions_deepmp, ids
     )
+    import pdb;pdb.set_trace()
+    plot_deepmp_beta_comparison(extra, output)
+
     preds_deepsignal, deepsignal_fp, deepsignal_fn = extract_preds_deepsignal(
         predictions_deepsignal, ids
     )
@@ -951,22 +1022,22 @@ def main(predictions_deepmp, predictions_deepsignal, predictions_deepmod,
     )
 
     import pdb;pdb.set_trace()
-    pd.DataFrame([preds_megalodon]).to_csv(os.path.join(output, 'preds_megalodon.tsv'), sep='\t', header=None, index=None)
-    pd.DataFrame([preds_deepmp]).to_csv(os.path.join(output, 'preds_deepmp.tsv'), sep='\t', header=None, index=None)
-    pd.DataFrame([preds_deepsignal]).to_csv(os.path.join(output, 'preds_deepsignal.tsv'), sep='\t', header=None, index=None)
-    pd.DataFrame([preds_nanopolish]).to_csv(os.path.join(output, 'preds_nanopolish.tsv'), sep='\t', header=None, index=None)
-    pd.DataFrame([preds_guppy]).to_csv(os.path.join(output, 'preds_guppy.tsv'), sep='\t', header=None, index=None)
+    # pd.DataFrame([preds_megalodon]).to_csv(os.path.join(output, 'preds_megalodon.tsv'), sep='\t', header=None, index=None)
+    # pd.DataFrame([preds_deepmp]).to_csv(os.path.join(output, 'preds_deepmp.tsv'), sep='\t', header=None, index=None)
+    # pd.DataFrame([preds_deepsignal]).to_csv(os.path.join(output, 'preds_deepsignal.tsv'), sep='\t', header=None, index=None)
+    # pd.DataFrame([preds_nanopolish]).to_csv(os.path.join(output, 'preds_nanopolish.tsv'), sep='\t', header=None, index=None)
+    # pd.DataFrame([preds_guppy]).to_csv(os.path.join(output, 'preds_guppy.tsv'), sep='\t', header=None, index=None)
     
-    pd.DataFrame([deepmp_fp]).to_csv(os.path.join(output, 'deepmp_fp.tsv'), sep='\t', header=None, index=None)
-    pd.DataFrame([deepmp_fn]).to_csv(os.path.join(output, 'deepmp_fn.tsv'), sep='\t', header=None, index=None)
-    pd.DataFrame([guppy_fp]).to_csv(os.path.join(output, 'guppy_fp.tsv'), sep='\t', header=None, index=None)
-    pd.DataFrame([guppy_fn]).to_csv(os.path.join(output, 'guppy_fn.tsv'), sep='\t', header=None, index=None)
-    pd.DataFrame([nanopolish_fp]).to_csv(os.path.join(output, 'nanopolish_fp.tsv'), sep='\t', header=None, index=None)
-    pd.DataFrame([nanopolish_fn]).to_csv(os.path.join(output, 'nanopolish_fn.tsv'), sep='\t', header=None, index=None)
-    pd.DataFrame([deepsignal_fp]).to_csv(os.path.join(output, 'deepsignal_fp.tsv'), sep='\t', header=None, index=None)
-    pd.DataFrame([deepsignal_fn]).to_csv(os.path.join(output, 'deepsignal_fn.tsv'), sep='\t', header=None, index=None)
-    pd.DataFrame([megalodon_fp]).to_csv(os.path.join(output, 'megalodon_fp.tsv'), sep='\t', header=None, index=None)
-    pd.DataFrame([megalodon_fn]).to_csv(os.path.join(output, 'megalodon_fn.tsv'), sep='\t', header=None, index=None)
+    # pd.DataFrame([deepmp_fp]).to_csv(os.path.join(output, 'deepmp_fp.tsv'), sep='\t', header=None, index=None)
+    # pd.DataFrame([deepmp_fn]).to_csv(os.path.join(output, 'deepmp_fn.tsv'), sep='\t', header=None, index=None)
+    # pd.DataFrame([guppy_fp]).to_csv(os.path.join(output, 'guppy_fp.tsv'), sep='\t', header=None, index=None)
+    # pd.DataFrame([guppy_fn]).to_csv(os.path.join(output, 'guppy_fn.tsv'), sep='\t', header=None, index=None)
+    # pd.DataFrame([nanopolish_fp]).to_csv(os.path.join(output, 'nanopolish_fp.tsv'), sep='\t', header=None, index=None)
+    # pd.DataFrame([nanopolish_fn]).to_csv(os.path.join(output, 'nanopolish_fn.tsv'), sep='\t', header=None, index=None)
+    # pd.DataFrame([deepsignal_fp]).to_csv(os.path.join(output, 'deepsignal_fp.tsv'), sep='\t', header=None, index=None)
+    # pd.DataFrame([deepsignal_fn]).to_csv(os.path.join(output, 'deepsignal_fn.tsv'), sep='\t', header=None, index=None)
+    # pd.DataFrame([megalodon_fp]).to_csv(os.path.join(output, 'megalodon_fp.tsv'), sep='\t', header=None, index=None)
+    # pd.DataFrame([megalodon_fn]).to_csv(os.path.join(output, 'megalodon_fn.tsv'), sep='\t', header=None, index=None)
     #TODO remove 
     # preds_deepmp = clean_preds(pd.read_csv(os.path.join(output, 'preds_deepmp.tsv'), sep='\t', header=None).values[0])
     # preds_deepsignal = clean_preds(pd.read_csv(os.path.join(output, 'preds_deepsignal.tsv'), sep='\t', header=None).values[0])
