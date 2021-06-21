@@ -13,7 +13,7 @@ plt.switch_backend('agg')
 from sklearn.metrics import precision_recall_fscore_support
 
 epsilon = 0.05  
-gamma_val = 0.80
+gamma_val = 0.83
 beta_a = 1
 beta_b = 10.09
 beta_c = 9.04
@@ -603,7 +603,7 @@ def plot_comparison(deepmp, deepsignal, nanopolish, guppy, megalodon, output):
             ecolor='black', capsize=1, capthick=0.5, elinewidth=0.8, c=palette_dict[pred[4]]
         )
 
-    ax.set_xlabel("Methylation percentage", fontsize=12)
+    ax.set_xlabel("Proportion of Methylated Reads", fontsize=12)
     ax.set_ylabel("1 - (Inferred Frequency - True Frequency)", fontsize=12)
     plt.xticks(rotation=0)
 
@@ -660,7 +660,7 @@ def plot_fp_fn(deepmp, deepsignal, nanopolish, guppy, megalodon, output, label):
             ecolor='black', capsize=1, capthick=0.5, elinewidth=0.8, c=palette_dict[pred[4]]
         )
 
-    ax.set_xlabel("Methylation percentage", fontsize=12)
+    ax.set_xlabel("Proportion of Methylated Reads", fontsize=12)
     if label == 'Positive':
         ax.set_ylabel("False Positive Rate", fontsize=12)
     else:
@@ -718,7 +718,7 @@ def plot_pos_accuracy(deepmp, deepsignal, nanopolish, guppy, megalodon, output):
             marker='o', mfc=palette_dict[pred[4]], mec='black', ms=5, mew=0.5, 
         )
 
-    ax.set_xlabel("Methylation percentage", fontsize=12)
+    ax.set_xlabel("Proportion of Methylated Reads", fontsize=12)
     ax.set_ylabel("Position Accuracy", fontsize=12)
     plt.xticks(rotation=0)
 
@@ -765,7 +765,7 @@ def plot_pos_accuracy_beta(deepmp, deepsignal, nanopolish, guppy, megalodon, out
             c=palette_dict[pred[4]]
         )
 
-    ax.set_xlabel("Methylation percentage", fontsize=12)
+    ax.set_xlabel("Proportion of Methylated Reads", fontsize=12)
     ax.set_ylabel("Position Accuracy", fontsize=12)
     plt.xticks(rotation=0)
 
@@ -830,7 +830,7 @@ def plot_pos_accuracy_around_0(deepmp, deepsignal, deepmod, output):
                     c=palette_dict[pred[4]]
                 )
 
-    ax.set_xlabel("Methylation percentage", fontsize=12)
+    ax.set_xlabel("Proportion of Methylated Reads", fontsize=12)
     ax.set_ylabel("Position Accuracy", fontsize=12)
     plt.xticks(rotation=0)
 
@@ -911,13 +911,13 @@ def plot_deepmp_beta_comparison(deepmp, output):
     for i in range(len(deepmp[:-1])):
 
         if palette_list[i] == 'Beta Model':
-            pos = -2
+            pos = -3
         elif palette_list[i] == '10% Threshold':
             pos = -1
         elif palette_list[i] == '20% Threshold':
             pos = 1
         elif palette_list[i] == '50% Threshold':
-            pos = 2
+            pos = 3
         
         plt.plot(
             np.asarray(deepmp[-1]).astype(np.int)[1:] + pos, deepmp[i][1:], 
@@ -930,7 +930,8 @@ def plot_deepmp_beta_comparison(deepmp, output):
             marker='o', mfc=palette_dict_deepmp[palette_list[i]], mec='black', ms=5, mew=0.5
         )
 
-    ax.set_xlabel("", fontsize=12)
+    # ax.set_xlabel("", fontsize=12)
+    ax.set_xlabel("Proportion of Methylated Reads", fontsize=12)
     ax.set_ylabel("Position Accuracy", fontsize=12)
     plt.xticks(rotation=0, fontsize=9)
 
@@ -947,6 +948,55 @@ def plot_deepmp_beta_comparison(deepmp, output):
     plt.vlines(x=5, ls='dashed', colors='grey', ymin=-0.02, ymax=1.02, lw=0.6)
     plt.tight_layout()
     out_dir = os.path.join(output, 'position_accuracy_DeepMP_beta_comparison.pdf')
+    plt.savefig(out_dir)
+    plt.close()
+
+
+def plot_deepmp_beta_comparison_barplot(deepmp, output):
+    fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
+
+    custom_lines = []
+    palette_list = list(palette_dict_deepmp.keys())
+    palette_bars = ['#08306b', '#2171b5', '#6baed6','#c6dbef']
+    order = ['Beta Model', '10% Threshold' , '20% Threshold' , '50% Threshold']
+
+    for x, y in zip(palette_bars, order):
+        custom_lines.append(
+            plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
+            mew=0, color=x, label=y)[0] 
+        )
+
+    df = pd.DataFrame()
+    
+    for i in range(len(deepmp[:-1])):
+        # import pdb;pdb.set_trace()
+        df_int = pd.DataFrame([deepmp[i], deepmp[-1], [palette_list[i]]*len(deepmp[i])]).T
+        df = pd.concat([df, df_int])
+    
+    sns.barplot(
+        x=1, y=0, hue=2, data=df, 
+        palette=['#08306b', '#2171b5', '#6baed6','#c6dbef'],
+        hue_order=['Beta Model', '10% Threshold' , '20% Threshold' , '50% Threshold']
+    )
+
+    # ax.set_xlabel("", fontsize=12)
+    ax.set_xlabel("Proportion of Methylated Reads", fontsize=12)
+    ax.set_ylabel("Position Accuracy", fontsize=12)
+    plt.xticks(rotation=0, fontsize=9)
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    plt.ylim(bottom=0, top=1.05)
+
+    ax.legend(
+        bbox_to_anchor=(0., 1.2, 1., .102),
+        handles=custom_lines, loc='upper center', 
+        facecolor='white', ncol=1, fontsize=8, frameon=False
+    )
+
+    plt.tight_layout()
+    out_dir = os.path.join(output, 'position_accuracy_DeepMP_beta_comparison_barplot.pdf')
     plt.savefig(out_dir)
     plt.close()
 
@@ -1001,9 +1051,10 @@ def main(predictions_deepmp, predictions_deepsignal, predictions_deepmod,
     preds_deepmp, deepmp_fp, deepmp_fn, extra = extract_preds_deepmp(
         predictions_deepmp, ids
     )
-    import pdb;pdb.set_trace()
+    # import pdb;pdb.set_trace()
+    plot_deepmp_beta_comparison_barplot(extra, output)
     plot_deepmp_beta_comparison(extra, output)
-
+    # import pdb;pdb.set_trace()
     preds_deepsignal, deepsignal_fp, deepsignal_fn = extract_preds_deepsignal(
         predictions_deepsignal, ids
     )
@@ -1022,22 +1073,22 @@ def main(predictions_deepmp, predictions_deepsignal, predictions_deepmod,
     )
 
     import pdb;pdb.set_trace()
-    # pd.DataFrame([preds_megalodon]).to_csv(os.path.join(output, 'preds_megalodon.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([preds_deepmp]).to_csv(os.path.join(output, 'preds_deepmp.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([preds_deepsignal]).to_csv(os.path.join(output, 'preds_deepsignal.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([preds_nanopolish]).to_csv(os.path.join(output, 'preds_nanopolish.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([preds_guppy]).to_csv(os.path.join(output, 'preds_guppy.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([preds_megalodon]).to_csv(os.path.join(output, 'preds_megalodon.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([preds_deepmp]).to_csv(os.path.join(output, 'preds_deepmp.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([preds_deepsignal]).to_csv(os.path.join(output, 'preds_deepsignal.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([preds_nanopolish]).to_csv(os.path.join(output, 'preds_nanopolish.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([preds_guppy]).to_csv(os.path.join(output, 'preds_guppy.tsv'), sep='\t', header=None, index=None)
     
-    # pd.DataFrame([deepmp_fp]).to_csv(os.path.join(output, 'deepmp_fp.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([deepmp_fn]).to_csv(os.path.join(output, 'deepmp_fn.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([guppy_fp]).to_csv(os.path.join(output, 'guppy_fp.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([guppy_fn]).to_csv(os.path.join(output, 'guppy_fn.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([nanopolish_fp]).to_csv(os.path.join(output, 'nanopolish_fp.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([nanopolish_fn]).to_csv(os.path.join(output, 'nanopolish_fn.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([deepsignal_fp]).to_csv(os.path.join(output, 'deepsignal_fp.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([deepsignal_fn]).to_csv(os.path.join(output, 'deepsignal_fn.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([megalodon_fp]).to_csv(os.path.join(output, 'megalodon_fp.tsv'), sep='\t', header=None, index=None)
-    # pd.DataFrame([megalodon_fn]).to_csv(os.path.join(output, 'megalodon_fn.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([deepmp_fp]).to_csv(os.path.join(output, 'deepmp_fp.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([deepmp_fn]).to_csv(os.path.join(output, 'deepmp_fn.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([guppy_fp]).to_csv(os.path.join(output, 'guppy_fp.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([guppy_fn]).to_csv(os.path.join(output, 'guppy_fn.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([nanopolish_fp]).to_csv(os.path.join(output, 'nanopolish_fp.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([nanopolish_fn]).to_csv(os.path.join(output, 'nanopolish_fn.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([deepsignal_fp]).to_csv(os.path.join(output, 'deepsignal_fp.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([deepsignal_fn]).to_csv(os.path.join(output, 'deepsignal_fn.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([megalodon_fp]).to_csv(os.path.join(output, 'megalodon_fp.tsv'), sep='\t', header=None, index=None)
+    pd.DataFrame([megalodon_fn]).to_csv(os.path.join(output, 'megalodon_fn.tsv'), sep='\t', header=None, index=None)
     #TODO remove 
     # preds_deepmp = clean_preds(pd.read_csv(os.path.join(output, 'preds_deepmp.tsv'), sep='\t', header=None).values[0])
     # preds_deepsignal = clean_preds(pd.read_csv(os.path.join(output, 'preds_deepsignal.tsv'), sep='\t', header=None).values[0])
