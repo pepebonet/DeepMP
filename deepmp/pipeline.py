@@ -36,7 +36,7 @@ def get_fastqs_multi(reads, basecall_g, basecall_sg, output, cpus):
     _write_list_to_file(out_file, fastqs_sep)
 
 
-def fast_call(input, ref, model_path, javafile):
+def fast_call(input, ref, model_path, javafile, cpus, fix_names, data_type):
 
     reads = glob.glob(os.path.join(input, '*.fast5'))
     get_fastqs_multi(reads, 'Basecall_1D_000', 'BaseCalled_template', './', 24)
@@ -46,13 +46,13 @@ def fast_call(input, ref, model_path, javafile):
     map = subprocess.Popen(cmd1, stdout=subprocess.PIPE)
     cmd2 = ['samtools', 'view','-hSb']
     sam1 = subprocess.Popen(cmd2, stdin=map.stdout, stdout=subprocess.PIPE)
-    cmd3 = ['samtools', 'sort', '-@', '56', '-o', 'sample.bam']
+    cmd3 = ['samtools', 'sort', '-@', cpus, '-o', 'sample.bam']
     sam2 = subprocess.Popen(cmd3, stdin=sam1.stdout)
     ## wait for the command to complete
     sam2.communicate()
     map.stdout.close()
     sam1.stdout.close()
-
+    
     print("indexing...")
     subprocess.run(['samtools', 'index', 'sample.bam'])
     print('calling variants...')
@@ -64,20 +64,26 @@ def fast_call(input, ref, model_path, javafile):
     ja.communicate()
     sam3.stdout.close()
 
+    
+    cmd6 = ['python', fix_names, '-dt', data_type, '-f',  \
+        'Basecall_1D_000_BaseCalled_template.fastq', '-o', 'dict_reads.pkl']
+    dic = subprocess.Popen(cmd6, stdout=subprocess.PIPE)
+    dic.communicate()
+
     print('preparing for feature extraction...')
     subprocess.run(['mkdir', 'tmp'])
     sep = subprocess.Popen(["""awk 'NR==1{ h=$0 }NR>1{ print (!a[$2]++? h ORS $0 : $0) > "tmp/"$1".txt" }' sample.tsv"""],shell=True)
     sep.communicate()
 
     print('running feature extraction...')
-    ce.combine_extraction(input,'tmp/',ref,'RawGenomeCorrected_000',
-                            'BaseCalled_template','yes','CG',56,'mad',
-                            0,17,'1','./features.tsv',100, False,'')
+    ce.combine_extraction(input, 'tmp/', ref, 'RawGenomeCorrected_000',
+                            'BaseCalled_template', 'yes', 'CG', cpus, 'mad',
+                            0, 17, '1', './features.tsv', 100, False, 'dict_reads.pkl')
 
     print('writing h5...')
-    pre.no_split_preprocess('features.tsv', '.', 4,'combined')
+    pre.no_split_preprocess('features.tsv', '.', cpus,'combined')
 
-    cl.call_mods_user('joint', 'test_file.h5', model_path,
-            17, './', False, True, False, 0.1, 4)
+    cl.call_mods_user('joint', 'test/', model_path,
+            17, './', False, True, False, 0.1, cpus)
 
     return None

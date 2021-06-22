@@ -108,14 +108,25 @@ def call_modifications(**kwargs):
     '-j', '--jar', required=True,
     help='path to sam2tsv.jar'
 )
-
+@click.option(
+    '-cpu', '--cpus', default=1, 
+    help='number of processes to be used, default 1'
+)
+@click.option(
+    '-fn', '--fix_names', 
+    help='path to fix names script to get dict of read names'
+)
+@click.option(
+    '-dt', '--data_type', type=click.Choice(['Ecoli', 'Human']), 
+    required=True
+    )
 def fast_call_joint(**kwargs):
     """fast call modifications"""
     args = Namespace(**kwargs)
 
     fast_call(
         args.files, args.reference, args.model_dir,
-        args.jar
+        args.jar, args.cpus, args.fix_names, args.data_type
     )
 
 # ------------------------------------------------------------------------------
