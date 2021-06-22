@@ -77,7 +77,7 @@ def _write_list_to_file(file, data):
     help='Whether to obtain fastqs from the fast5s to new file'
 )
 @click.option(
-    '-bs', '--basecall-group', default='Basecall_1D_000',  
+    '-bg', '--basecall-group', default='Basecall_1D_000',  
     help='Corrected group of fast5 files. default Basecall_1D_000'
 )
 @click.option(
