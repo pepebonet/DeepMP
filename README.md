@@ -124,9 +124,9 @@ Step by step process to detect modifications employing DeepMP on a sample (10 re
 First, extract the fastqs from the reads (output paths need to be generated and updated for the following commands): 
 
 ```
-python deepmp/miscellaneous/parse_fast5.py docs/reads/treated/ -ff5 True -o docs/output_example/error_features/treated/ -cpu 56
+python deepmp/miscellaneous/parse_fast5.py docs/reads/treated/ -ff5 True -o docs/output_example/error_features/treated/ -cpu 56 -bg Basecall_1D_001
 
-python deepmp/miscellaneous/parse_fast5.py docs/reads/untreated/ -ff5 True -o docs/output_example/error_features/untreated/ -cpu 56
+python deepmp/miscellaneous/parse_fast5.py docs/reads/untreated/ -ff5 True -o docs/output_example/error_features/untreated/ -cpu 56 -bg Basecall_1D_001
 ```
 
 Next, for both fastqs extracted, the reads are mapped to the reference genome. For that to be done, first load the following packages in your environment if you do not have them already. 
@@ -141,7 +141,7 @@ Then, map reads to the genome with the reference genome available in /docs/ref/ 
 ```
 cd docs/output_example/error_features/treated/
 
- minimap2 -ax map-ont ../../../ref/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.toplevel.fa Basecall_1D_000_BaseCalled_template.fastq | samtools view -hSb | samtools sort -@ 56 -o sample.bam
+ minimap2 -ax map-ont ../../../ref/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.toplevel.fa Basecall_1D_001_BaseCalled_template.fastq | samtools view -hSb | samtools sort -@ 56 -o sample.bam
 
 samtools index sample.bam
 ```
@@ -151,7 +151,7 @@ Repeat for the untreated folder:
 ```
 cd ../untreated/
 
- minimap2 -ax map-ont ../../../ref/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.toplevel.fa Basecall_1D_000_BaseCalled_template.fastq | samtools view -hSb | samtools sort -@ 56 -o sample.bam
+ minimap2 -ax map-ont ../../../ref/Escherichia_coli_str_k_12_substr_mg1655.ASM584v2.dna.toplevel.fa Basecall_1D_001_BaseCalled_template.fastq | samtools view -hSb | samtools sort -@ 56 -o sample.bam
 
 samtools index sample.bam
 ```
@@ -181,16 +181,16 @@ mkdir tmp
 awk 'NR==1{ h=$0 }NR>1{ print (!a[$2]++? h ORS $0 : $0) > "tmp/"$1".txt" }' sample.tsv
 ```
 
-As in  some scenarios the readnames of the fastqs do not match the fast5 readnames, a dictionary to parse each read pair may be needed. That is the case of E. coli: 
+As in  some scenarios the readnames of the fastqs do not match the fast5 readnames, a dictionary to parse each read pair may be needed. To do so, we employ the sequencing summary output after running Guppy. That is the case of E. coli: 
 
 ```
 pip install biopython
 
-python ../../../../deepmp/miscellaneous/fix_read_names.py -dt Ecoli -f Basecall_1D_000_BaseCalled_template.fastq -o dict_reads.pkl
+python ../../../../deepmp/miscellaneous/get_dict_guppy.py -ss ../../../../docs/reads/sequencing_summary_untreated.txt -o dict_reads.pkl
 
 cd ../treated/
 
-python ../../../../deepmp/miscellaneous/fix_read_names.py -dt Ecoli -f Basecall_1D_000_BaseCalled_template.fastq -o dict_reads.pkl
+python ../../../../deepmp/miscellaneous/get_dict_guppy.py -ss ../../../../docs/reads/sequencing_summary_treated.txt -o dict_reads.pkl
 ```
 
 ## Running DeepMP 
