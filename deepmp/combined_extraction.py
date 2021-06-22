@@ -193,17 +193,18 @@ def get_error_read(errors, dict_names, readname):
     else:
         try:
             error_read = os.path.join(
-                errors, '{}.txt'.format(dict_names[readname.split('.')[0]])
+                errors, '{}'.format(dict_names[readname.split('.')[0]])
             )
         except: 
             try:
                 error_read = os.path.join(
-                    errors, '{}.txt'.format(dict_names[readname])
+                    errors, '{}'.format(dict_names[readname])
                 )
             except:
                 error_read = os.path.join(
-                    errors, '{}.txt'.format(dict_names[readname.split('.')[0].rsplit('_', 1)[0]])
+                    errors, '{}'.format(dict_names[readname.split('.')[0].rsplit('_', 1)[0]])
                 )
+
         return error_read
 
 
@@ -375,7 +376,6 @@ def combine_extraction(fast5_dir, read_errors, ref, cor_g, base_g, dna, motifs,
 
     if dict_names:
         dict_names = ut.load_obj(dict_names)  
-        dict_names = {v: k for k, v in dict_names.items()}
 
     featurestr_q = mp.Queue()
     errornum_q = mp.Queue()
