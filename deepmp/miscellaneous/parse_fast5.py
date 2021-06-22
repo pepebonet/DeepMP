@@ -44,7 +44,8 @@ def get_fastqs_multi(reads, basecall_g, basecall_sg, output, cpus):
         for i, rval in enumerate(p.imap_unordered(f, tqdm(reads))):
             fastqs += rval
             
-    fastqs_sep = fastqs.split('\n')[:-1]
+    fastqs_sep = fastqs.split('\n')
+    
     out_file = os.path.join(output, '{}_{}.fastq'.format(basecall_g, basecall_sg))
     _write_list_to_file(out_file, fastqs_sep)
 
@@ -98,7 +99,7 @@ def main(input, rename_fast5, pattern, replacement, cpus, fastq_fast5, output,
         reads = [i for sub in rec_reads for i in sub]
     else:
         reads = glob.glob(os.path.join(input, '*.fast5'))
-
+    
     if rename_fast5:
         rename_multiprocess(reads, pattern, replacement, cpus)
 
