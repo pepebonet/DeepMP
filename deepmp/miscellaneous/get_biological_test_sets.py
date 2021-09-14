@@ -21,6 +21,17 @@ def chr2num(df):
     return df
 
 
+def num2chr(df):
+    df['chr'] = df.chr.apply(lambda x : find_chr(x))
+    return df
+
+
+def find_chr(x):
+    for k, v in chr_dict.items():
+        if v == x: 
+            return k
+
+
 def get_replicate_mods(rep1, rep2):
     df = pd.DataFrame()
 
@@ -157,6 +168,8 @@ def main(replicate_1, replicate_2, line_regions, imprinting_regions,
     
     if methylation_filter:
         pos_bis, label2 = filter_positions(pos_bis)
+
+    pos_bis = num2chr(pos_bis)
 
     out_file = os.path.join(
         output, 'positions_bisulfite_{}_{}.tsv').format(label, label2)
