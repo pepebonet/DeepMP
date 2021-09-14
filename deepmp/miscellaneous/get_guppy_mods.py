@@ -58,16 +58,19 @@ def get_readname_column(df, dict):
 
 
 def get_positions_only(df, positions):
-    
+    # import pdb;pdb.set_trace()
     df = pd.merge(
         df, positions, right_on=['chr', 'start', 'strand'], 
         left_on=['#chromosome', 'start', 'strand']
     )
+    try:
+        label = np.zeros(len(df), dtype=int)
+        label[np.argwhere(df['status'].values == 'mod')] = 1
 
-    label = np.zeros(len(df), dtype=int)
-    label[np.argwhere(df['status'].values == 'mod')] = 1
+        df['methyl_label'] = label
 
-    df['methyl_label'] = label
+    except: 
+        pass
 
     return df
 

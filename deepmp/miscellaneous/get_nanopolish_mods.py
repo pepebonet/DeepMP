@@ -69,10 +69,14 @@ def get_positions_only(df, positions):
     df = pd.merge(df, positions, right_on=['chr', 'start'], \
         left_on=['chromosome', 'start'])
 
-    label = np.zeros(len(df), dtype=int)
-    label[np.argwhere(df['status'].values == 'mod')] = 1
+    try:
+        label = np.zeros(len(df), dtype=int)
+        label[np.argwhere(df['status'].values == 'mod')] = 1
 
-    df['methyl_label'] = label
+        df['methyl_label'] = label
+    
+    except:
+        pass
 
     return df
 
