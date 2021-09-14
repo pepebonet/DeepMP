@@ -33,7 +33,7 @@ def get_replicate_mods(rep1, rep2):
         
         print(merged.shape)
         df = pd.concat([df, merged])
-    # import pdb;pdb.set_trace()
+    
     df = df.drop(columns=['0_y', '2_y', '5_y'])
     df.columns = ['chr', 'start', 'end', 'strand', 'cov_rep1', 
         'mod_rep1', 'cov_rep2', 'mod_rep2']
@@ -44,7 +44,7 @@ def get_replicate_mods(rep1, rep2):
     df_filt['average_freq'] = (df_filt['mod_rep1'] + df_filt['mod_rep2']) / 2
 
     df_filt = chr2num(df_filt)
-    import pdb; pdb.set_trace()
+
     return df_filt
 
 
@@ -65,8 +65,8 @@ def get_line_regions(regions):
 
     reg.columns = ['chr', 'start', 'end', 'strand']
     reg = chr2num(reg)
-    import pdb;pdb.set_trace()
-    return reg, 'line1'
+
+    return reg, 'line1', 'nofilt'
 
 
 def get_imprinting_regions(regions):
@@ -82,7 +82,7 @@ def get_imprinting_regions(regions):
     reg['chr'].replace('X', 23, inplace=True)
     reg['chr'] = reg['chr'].astype(int)
 
-    return reg, 'imprinting'
+    return reg, 'imprinting', 'nofilt'
 
 
 def find_regions_bisulfite(pos_bis, regions):
@@ -97,11 +97,22 @@ def find_regions_bisulfite(pos_bis, regions):
 
     df_overlap = df[df['Overlapped'] != 0]
 
-    import pdb;pdb.set_trace()
     return df_overlap
+
+
+def filter_positions(df):
+
+    mod = df[(df['mod_rep1'] > 90) & (df['mod_rep2'] > 90)]
+    mod['status'] = 'mod'
+
+    unmod = df[(df['mod_rep1'] == 0) & (df['mod_rep2'] == 0)]
+    unmod['status'] = 'unm'
+
+    return pd.concat([mod, unmod]), 'filtered'
+
     
 
-@click.command(short_help='Extract positions for NA12878 as DeepMod')
+@click.command(short_help='Extract WGBS positions for relevant biological sites')
 @click.option(
     '-r1', '--replicate_1', help='NA12878 replicate one'
 )
@@ -115,29 +126,40 @@ def find_regions_bisulfite(pos_bis, regions):
     '-ir', '--imprinting_regions', help='table containing regions of interest'
 )
 @click.option(
+    '-mf', '--methylation_filter', is_flag=True, 
+    help='Whether to select only sites which mehtylation status is known'
+    'both replicates > 90 % methylation or both with 0 %'
+)
+@click.option(
     '-o', '--output', help='output folder'
 )
-def main(replicate_1, replicate_2, line_regions, imprinting_regions, output):
+def main(replicate_1, replicate_2, line_regions, imprinting_regions,
+    methylation_filter, output):
 
     if line_regions:
-        reg, label = get_line_regions(line_regions)
+        reg, label, label2 = get_line_regions(line_regions)
 
     elif imprinting_regions:
-        reg, label = get_imprinting_regions(imprinting_regions)
+        reg, label, label2 = get_imprinting_regions(imprinting_regions)
     
     else: 
-        reg = ''; label = 'all'
+        reg = ''; label = 'all'; label2 = 'nofilt'
 
-    rep1 = pd.read_csv(replicate_1, header=None, sep='\t', nrows=10000000).drop(columns=[3, 4, 6, 7, 8])
-    rep2 = pd.read_csv(replicate_2, header=None, sep='\t', nrows=10000000).drop(columns=[3, 4, 6, 7, 8])
+    rep1 = pd.read_csv(
+        replicate_1, header=None, sep='\t').drop(columns=[3, 4, 6, 7, 8])
+    rep2 = pd.read_csv(
+        replicate_2, header=None, sep='\t').drop(columns=[3, 4, 6, 7, 8])
     
     pos_bis = get_replicate_mods(rep1, rep2)
 
     if isinstance(reg, pd.DataFrame):
         pos_bis = find_regions_bisulfite(pos_bis, reg)
     
-    import pdb;pdb.set_trace()
-    out_file = os.path.join(output, 'positions_bisulfite_{}.tsv').format(label)
+    if methylation_filter:
+        pos_bis, label2 = filter_positions(pos_bis)
+
+    out_file = os.path.join(
+        output, 'positions_bisulfite_{}_{}.tsv').format(label, label2)
     pos_bis.to_csv(out_file, sep='\t', index=None)
    
 
