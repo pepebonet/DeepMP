@@ -315,6 +315,201 @@ def linear_regression(df):
     return reg_dict
 
 
+def mean_confidence_interval(data, confidence=0.95):
+    import scipy.stats
+
+    a = 1.0 * np.array(data)
+    n = len(a)
+    m, se = np.mean(a), scipy.stats.sem(a)
+    h = se * scipy.stats.t.ppf((1 + confidence) / 2., n-1)
+    return m, m-h, m+h
+
+
+def plot_line_CI(df, reg, corr, label, output):
+
+    z = 1.96
+    if label == 'all':
+        df['Bisulfite_Frequency'] = df['Bisulfite_Frequency'].map(
+            lambda x: int(round(x/5.0)*5.0) 
+        )
+    else:
+        df['Bisulfite_Frequency'] = df['Bisulfite_Frequency'].map(
+            lambda x: int(round(x/25.0)*25.0) 
+        )
+    fig, ax = plt.subplots(figsize=(7, 6), facecolor='white')
+    custom_lines = []
+    
+    for i, j in df.groupby('Method'):
+
+        x_reg, y_reg, r2, slope, intercept = reg[i]
+        y_reg_set = list(dict.fromkeys(y_reg).keys())
+        x_reg_set = list(dict.fromkeys(x_reg.flatten()).keys())
+        x_reg_set.insert(0, 0); y_reg_set.insert(0, intercept)
+        
+        lab = '{} (r = {}, r² = {}, RMSE = {})'.format(
+            i, 
+            np.round(corr[corr['Method'] == i]['Pearson'].values[0], 3), 
+            np.round(reg[i][2], 3), 
+            np.round(corr[corr['Method'] == i]['RMSE'].values[0], 3)
+        )
+        
+        dmp = j[j['Method'] == i]
+        data = dmp.groupby(['Bisulfite_Frequency'], as_index=False).mean()
+        data2= dmp.groupby(['Bisulfite_Frequency'], as_index=False).std()
+        data3= dmp.groupby(['Bisulfite_Frequency'], as_index=False).count()
+        x = data['Bisulfite_Frequency'].values
+        y = data['Method_Frequency'].values
+        s = data2['Method_Frequency'].values
+        n = data3['Method_Frequency'].values
+
+        ci = z * s/np.sqrt(n)
+        plt.plot(x, y, label=i, color=palette_dict[i])
+        plt.fill_between(x, (y-ci), (y+ci), alpha=.3, color=palette_dict[i])
+        # import pdb;pdb.set_trace()
+        custom_lines.append(
+            plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
+            mew=0, color=palette_dict[i], label=lab)[0] 
+        )
+
+
+    plt.plot(dmp['Bisulfite_Frequency'], dmp['Bisulfite_Frequency'], 
+        '--', label='WGBS', color='grey')
+    
+    custom_lines.append(
+        plt.plot([],[], "--", color='grey', label='Identity')[0] 
+    )
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    plt.legend().set_visible(False)
+
+    plt.xlabel('Bisulfite Frequency')
+    plt.ylabel('Method Frequency')
+
+    ax.legend(
+        bbox_to_anchor=(0., 1.2, 1., .102),
+        handles=custom_lines, loc='upper center', 
+        facecolor='white', ncol=1, fontsize=8, frameon=False
+    )
+    
+    out_fig = os.path.join(output, '{}_genome_comparison.pdf'.format(label))
+    plt.tight_layout()
+    plt.savefig(out_fig)
+    plt.close()
+
+
+def plot_line_CI_regions(df, reg, corr, label, output):
+
+    z = 1.96
+
+    fig, ax = plt.subplots(figsize=(5, 5), facecolor='white')
+    custom_lines = []
+    
+    for i, j in df.groupby('Method'):
+
+        x_reg, y_reg, r2, slope, intercept = reg[i]
+        y_reg_set = list(dict.fromkeys(y_reg).keys())
+        x_reg_set = list(dict.fromkeys(x_reg.flatten()).keys())
+        x_reg_set.insert(0, 0); y_reg_set.insert(0, intercept)
+        
+        lab = '{} (r = {}, r² = {}, RMSE = {})'.format(
+            i, 
+            np.round(corr[corr['Method'] == i]['Pearson'].values[0], 3), 
+            np.round(reg[i][2], 3), 
+            np.round(corr[corr['Method'] == i]['RMSE'].values[0], 3)
+        )
+        
+        dmp = j[j['Method'] == i]
+        data = dmp.groupby(['Method_Frequency'], as_index=False).mean()
+        data2= dmp.groupby(['Method_Frequency'], as_index=False).std()
+        data3= dmp.groupby(['Method_Frequency'], as_index=False).count()
+        x = data['Bisulfite_Frequency'].values
+        y = data['Method_Frequency'].values
+        s = data2['Bisulfite_Frequency'].values
+        n = data3['Bisulfite_Frequency'].values
+
+        ci = z * s/np.sqrt(n)
+        plt.plot(x, y, label=i, color=palette_dict[i])
+        plt.fill_between(x, (y-ci), (y+ci), alpha=.3, color=palette_dict[i])
+        # import pdb;pdb.set_trace()
+        custom_lines.append(
+            plt.plot([],[], marker="o", ms=7, ls="", mec='black', 
+            mew=0, color=palette_dict[i], label=lab)[0] 
+        )
+
+
+    plt.plot(dmp['Bisulfite_Frequency'], dmp['Bisulfite_Frequency'], 
+        '--', label='WGBS', color='grey')
+    
+    custom_lines.append(
+        plt.plot([],[], "--", color='grey', label='Identity')[0] 
+    )
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    plt.legend().set_visible(False)
+
+    plt.xlabel('Bisulfite Frequency')
+    plt.ylabel('Method Frequency')
+
+    ax.legend(
+        bbox_to_anchor=(0., 1.2, 1., .102),
+        handles=custom_lines, loc='upper center', 
+        facecolor='white', ncol=1, fontsize=8, frameon=False
+    )
+    
+    out_fig = os.path.join(output, '{}_region_comparison.pdf'.format(label))
+    plt.tight_layout()
+    plt.savefig(out_fig)
+    plt.close()
+
+
+def boxplot_comparisons_ranges(df, label, output):
+
+    df1 = df
+    df2 = df[['Bisulfite_Frequency']]
+    df2['Method'] ='WGBS'
+    df2['Method_Frequency'] = df2['Bisulfite_Frequency']
+    df = pd.concat([df1,df2])
+
+    fig, axs = plt.subplots(figsize=(15, 5), facecolor='white', nrows=1, ncols=3)
+    axs = axs.flatten()
+
+    low = df[df['Bisulfite_Frequency']< 30].sort_values(by='Method')
+    sns.boxplot(x='Method', y='Method_Frequency',data=low, ax=axs[0])
+
+    mid = df[df['Bisulfite_Frequency'].between(30, 70)].sort_values(by='Method')
+    sns.boxplot(x='Method', y='Method_Frequency',data=mid, ax=axs[1])
+
+    high = df[df['Bisulfite_Frequency']>=70].sort_values(by='Method')
+    sns.boxplot(x='Method', y='Method_Frequency',data=high, ax=axs[2])
+
+    axs[0].spines['top'].set_visible(False)
+    axs[0].spines['right'].set_visible(False)
+
+
+    axs[1].spines['top'].set_visible(False)
+    axs[1].spines['right'].set_visible(False)
+
+
+    axs[2].spines['top'].set_visible(False)
+    axs[2].spines['right'].set_visible(False)
+    plt.legend().set_visible(False)
+
+    axs[0].set_xlabel('')
+    axs[1].set_xlabel('')
+    axs[2].set_xlabel('')
+    axs[0].set_ylabel('Method Frequency', fontsize=16)
+    axs[1].set_ylabel('Method Frequency', fontsize=16)
+    axs[2].set_ylabel('Method Frequency', fontsize=16)
+
+    out_fig = os.path.join(output, '{}_boxplot_region_comparison.pdf'.format(label))
+    plt.tight_layout()
+    plt.savefig(out_fig)
+    plt.close()
+
+
+
 # ------------------------------------------------------------------------------
 # Click
 # ------------------------------------------------------------------------------
@@ -322,39 +517,60 @@ def linear_regression(df):
 @click.command(short_help='SVM accuracy output')
 @click.option(
     '-ir', '--imprinting_results', default='', 
-    help='Output table from deepMP'
+    help='Output table from imprinting results'
 )
 @click.option(
     '-lr', '--line1_results', default='', 
-    help='Output table from deepMP'
+    help='Output table from line1 results'
 )
 @click.option(
     '-if', '--imprinting_freq', default='', 
-    help='Output table from deepMP'
+    help='Output table from imprinting frequencies'
 )
 @click.option(
     '-lf', '--line1_freq', default='', 
-    help='Output table from deepMP'
+    help='Output table from line1 frequencies'
+)
+@click.option(
+    '-ar', '--all_results', default='', 
+    help='Output table from all genome results'
+)
+@click.option(
+    '-af', '--all_freq', default='', 
+    help='Output table from all genome frequencies'
 )
 @click.option(
     '-o', '--output', default='', 
     help='Output file extension'
 )
-def main(imprinting_results, line1_results, imprinting_freq, line1_freq, output):
+def main(imprinting_results, line1_results, imprinting_freq, line1_freq,
+    all_freq, all_results, output):
 
-    imp_freq = pd.read_csv(imprinting_freq, sep='\t')
-    line1_freq = pd.read_csv(line1_freq, sep='\t')
+    if imprinting_results and imprinting_freq:
 
-    imp = pd.read_csv(imprinting_results, sep='\t')
-    line1 = pd.read_csv(line1_results, sep='\t')
+        imp_freq = pd.read_csv(imprinting_freq, sep='\t')
+        imp = pd.read_csv(imprinting_results, sep='\t')
+        reg_imp = linear_regression(imp_freq)
+        do_dotplot_comparisons(imp_freq, reg_imp, imp, 'Imprinting Genes', output)
+        plot_line_CI(imp_freq, reg_imp, imp, 'Imprinting Genes', output)
+        boxplot_comparisons_ranges(imp_freq, 'Imprinting Genes', output)
+    
+    if line1_results and line1_freq:
 
-    reg_imp = linear_regression(imp_freq)
-    reg_line1 = linear_regression(line1_freq)
-    #TODO include violin and then dot plot see which one is better
-    do_dotplot_comparisons(imp_freq, reg_imp, imp, 'Imprinting Genes', output)
-    do_dotplot_comparisons(line1_freq, reg_line1, line1, 'LINE1', output)
+        line1_freq = pd.read_csv(line1_freq, sep='\t')
+        line1 = pd.read_csv(line1_results, sep='\t')
+        reg_line1 = linear_regression(line1_freq)
+        do_dotplot_comparisons(line1_freq, reg_line1, line1, 'LINE1', output)
+        plot_line_CI(line1_freq, reg_line1, line1, 'LINE1', output)
+        boxplot_comparisons_ranges(line1_freq, 'LINE1', output)
 
-    do_heatmap(imp, line1, output)
+    if all_freq: 
+        all_freq = pd.read_csv(all_freq, sep='\t')
+        all_res = pd.read_csv(all_results, sep='\t')
+        reg_all = linear_regression(all_freq)
+        plot_line_CI(all_freq, reg_all, all_res, 'all', output)
+    
+    # do_heatmap(imp, line1, output)
  
     
 if __name__ == '__main__':
