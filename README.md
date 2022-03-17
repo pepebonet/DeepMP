@@ -43,7 +43,7 @@ Features for the model need to be extracted. We present 3 different options:
 
 `Option 1:` Extract combined features
 ```
-DeepMP combined-extraction -fr path/to/fast5/files/ -re path/to/error/folder/ -rp path/to/reference/file/ -dn path/to/dict_read_names -m CG -o CpG_methylated_combined.tsv -ml 1 -cpu 56
+DeepMP combine-extraction -fr path/to/fast5/files/ -re path/to/error/folder/ -rp path/to/reference/file/ -dn path/to/dict_read_names -m CG -o CpG_methylated_combined.tsv -ml 1 -cpu 56
 ```
 
 `Option 2:` Extract sequence features
@@ -222,7 +222,7 @@ DeepMP preprocess -f features.tsv -ft combined -o . -cpu 56
 With the test folder available we can now use one of the trained models to get the predictions from the model at read and position level: 
 
 ```
-DeepMP call-modifications -m joint -md ../../trained_models/K12ER2925_joint_202101/ -tf test/ -pos -cpu 56 
+DeepMP call-modifications -m joint -md ../../trained_models/K12ER2925_joint_202106/ -tf test/ -pos -cpu 56 
 ```
 
 The resulting files of the analysis should be the read and position calling predictions from DeepMP: 
