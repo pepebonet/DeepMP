@@ -8,7 +8,8 @@ Furthermore, DeepMP introduces a threshold-free position modification calling mo
 # Contents
 - [Installation](#Installation)
 - [Usage](#Usage)
-- [Example data](#Example-data)         
+- [Example data](#Example-data)
+- [Publication](#Publication)         
 
 # Installation
 ## Clone repository
@@ -231,3 +232,7 @@ The resulting files of the analysis should be the read and position calling pred
 read_predictions_joint_DeepMP.tsv
 position_calling_joint_DeepMP.tsv
 ```
+
+# Publication
+
+Bonet, J., Chen, M., Dabad, M., Heath, S., Gonzalez-Perez, A., Lopez-Bigas, N., & Lagergren, J. (2022). DeepMP: a deep learning tool to detect DNA base modifications on Nanopore sequencing data. Bioinformatics, 38(5), 1235-1243. [doi.org/10.1093/bioinformatics/btab745](https://doi.org/10.1093/bioinformatics/btab745)
